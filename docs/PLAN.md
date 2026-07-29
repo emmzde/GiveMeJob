@@ -440,7 +440,10 @@ Notion (типографика и сайдбар), Linear (плотность и
 - [ ] Docker Compose: Postgres 17 + pgvector, Redis. Миграции — Alembic.
 - [ ] CI: линт, типы, тесты, сборка десктопа под три ОС (GitHub Actions).
 - [ ] Sentry + структурные логи с первого дня.
-- [ ] Зарегистрировать ключи: Adzuna, Jooble, Groq, Google AI Studio, Cerebras, OpenRouter, Cohere. Сложить в `.env` / секреты CI.
+- [x] Зарегистрировать ключи Adzuna и Jooble и сохранить их в локальном `.env`
+  (файл исключён из Git).
+- [ ] Перед фазой 5 зарегистрировать LLM-ключи: Groq, Google AI Studio,
+  Cerebras, OpenRouter и Cohere; production-значения хранить только в secrets CI.
 
 ### Фаза 1. Данные (2–3 недели) — самая важная фаза
 

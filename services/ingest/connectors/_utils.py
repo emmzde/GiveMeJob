@@ -30,6 +30,16 @@ def optional_str(value: object) -> str | None:
     return text or None
 
 
+def optional_http_url(value: object) -> str | None:
+    url = optional_str(value)
+    if url is None:
+        return None
+    parsed = urlsplit(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None
+    return url
+
+
 def required_str(value: object, *, field: str) -> str:
     text = optional_str(value)
     if text is None:

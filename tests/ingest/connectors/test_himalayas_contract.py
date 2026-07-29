@@ -62,3 +62,17 @@ async def test_himalayas_prefetches_offsets_but_yields_pages_in_order() -> None:
     connector.fetch.assert_any_await(None)
     for cursor in ("20", "40", "60"):
         connector.fetch.assert_any_await(cursor)
+
+
+def test_himalayas_ignores_placeholder_logo_url() -> None:
+    job = HimalayasConnector().normalize(
+        {
+            "guid": "https://himalayas.app/jobs/example",
+            "applicationLink": "https://himalayas.app/jobs/example",
+            "companyName": "Example",
+            "companyLogo": "thumbnail_url",
+            "title": "Software Engineer",
+        }
+    )
+
+    assert job.company_logo_url is None

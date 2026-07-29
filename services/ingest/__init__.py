@@ -1,0 +1,1 @@
+"""Central vacancy ingestion service."""

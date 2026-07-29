@@ -33,3 +33,24 @@ def test_progress_reporter_emits_final_unknown_total() -> None:
     assert output.getvalue() == (
         "progress label=ats status=done processed=20 total=? rps=10.00 eta=unknown\n"
     )
+
+
+def test_progress_reporter_excludes_resumed_work_from_rps() -> None:
+    output = StringIO()
+    timestamps = iter([10.0, 20.0])
+    reporter = ProgressReporter(
+        "himalayas",
+        total=10_000,
+        initial_processed=4_500,
+        output=output,
+        interval_seconds=60.0,
+        clock=lambda: next(timestamps),
+    )
+
+    with reporter:
+        reporter.update(4_700)
+
+    assert output.getvalue() == (
+        "progress label=himalayas status=done processed=4700 "
+        "total=10000 rps=20.00 eta=00:04:25\n"
+    )

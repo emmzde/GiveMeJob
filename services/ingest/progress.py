@@ -14,9 +14,11 @@ def format_progress_line(
     processed: int,
     total: int | None,
     elapsed_seconds: float,
+    initial_processed: int = 0,
 ) -> str:
     safe_elapsed = max(elapsed_seconds, 0.001)
-    rps = processed / safe_elapsed
+    run_processed = max(processed - initial_processed, 0)
+    rps = run_processed / safe_elapsed
     if total is None:
         total_text = "?"
         eta_text = "unknown"
@@ -38,18 +40,22 @@ class ProgressReporter:
         label: str,
         *,
         total: int | None = None,
+        initial_processed: int = 0,
         interval_seconds: float = 10.0,
         output: TextIO | None = None,
         clock: Callable[[], float] = monotonic,
     ) -> None:
         if interval_seconds <= 0:
             raise ValueError("progress interval must be positive")
+        if initial_processed < 0:
+            raise ValueError("initial processed count cannot be negative")
         self._label = label
         self._total = total
         self._interval_seconds = interval_seconds
         self._output = output or sys.stderr
         self._clock = clock
-        self._processed = 0
+        self._processed = initial_processed
+        self._initial_processed = initial_processed
         self._started_at = 0.0
         self._lock = Lock()
         self._stop = Event()
@@ -96,6 +102,7 @@ class ProgressReporter:
             label=self._label,
             status=status,
             processed=processed,
+            initial_processed=self._initial_processed,
             total=total,
             elapsed_seconds=self._clock() - self._started_at,
         )

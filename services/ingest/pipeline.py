@@ -70,6 +70,7 @@ class IngestionPipeline:
         with ProgressReporter(
             f"connector:{connector.name}",
             total=total_hint,
+            initial_processed=fetched,
         ) as progress:
             progress.update(fetched, total=total_hint)
             async for page in connector.iter_pages(start_cursor=start_cursor):

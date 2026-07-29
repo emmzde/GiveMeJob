@@ -1,0 +1,34 @@
+{
+  "comments": "Fixture derived from the public Himalayas Jobs API schema.",
+  "updatedAt": 1785299403000,
+  "offset": 0,
+  "limit": 20,
+  "totalCount": 1,
+  "jobs": [
+    {
+      "title": "Senior Python Engineer",
+      "excerpt": "Build multilingual search.",
+      "companyName": "Example Labs",
+      "companySlug": "example-labs",
+      "companyLogo": "https://example.com/logo.png",
+      "employmentType": "Full Time",
+      "minSalary": 120000,
+      "maxSalary": 160000,
+      "salaryPeriod": "annual",
+      "seniority": ["Senior"],
+      "currency": "usd",
+      "locationRestrictions": [
+        {"alpha2": "DE", "name": "Germany", "slug": "germany"},
+        "Worldwide"
+      ],
+      "timezoneRestrictions": ["UTC+0", "UTC+4"],
+      "categories": ["Engineering"],
+      "parentCategories": ["Software Development"],
+      "description": "<p>Python, PostgreSQL and Docker.</p>",
+      "pubDate": 1785299403,
+      "expiryDate": 1787891403,
+      "applicationLink": "https://himalayas.app/companies/example-labs/jobs/senior-python-engineer-123",
+      "guid": "https://himalayas.app/companies/example-labs/jobs/senior-python-engineer-123"
+    }
+  ]
+}

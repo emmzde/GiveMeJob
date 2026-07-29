@@ -1,0 +1,32 @@
+{
+  "__CLASS__": "Adzuna::API::Response::JobSearchResults",
+  "count": 51,
+  "results": [
+    {
+      "salary_min": 70000,
+      "salary_max": 90000,
+      "salary_is_predicted": 0,
+      "location": {
+        "__CLASS__": "Adzuna::API::Response::Location",
+        "area": ["UK", "Remote"],
+        "display_name": "Remote, UK"
+      },
+      "description": "Build Python services remotely with PostgreSQL.",
+      "created": "2026-07-29T04:30:03Z",
+      "redirect_url": "https://www.adzuna.co.uk/jobs/land/ad/123456789",
+      "contract_time": "full_time",
+      "contract_type": "permanent",
+      "title": "Senior Python Developer",
+      "category": {
+        "__CLASS__": "Adzuna::API::Response::Category",
+        "label": "IT Jobs",
+        "tag": "it-jobs"
+      },
+      "id": "123456789",
+      "company": {
+        "__CLASS__": "Adzuna::API::Response::Company",
+        "display_name": "Example Systems"
+      }
+    }
+  ]
+}

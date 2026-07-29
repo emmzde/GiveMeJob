@@ -21,6 +21,7 @@ CREATE TABLE job_groups (      -- дедуплицированная сущно�
   id            BIGSERIAL PRIMARY KEY,
   canonical_job BIGINT,
   simhash       BIGINT,
+  blocking_key  TEXT NOT NULL,
   created_at    TIMESTAMPTZ DEFAULT now()
 );
 
@@ -47,8 +48,15 @@ CREATE TABLE jobs (
   posted_at        TIMESTAMPTZ,
   expires_at       TIMESTAMPTZ,
   source           TEXT NOT NULL,
+  source_scope     TEXT NOT NULL,
+  source_job_id    TEXT NOT NULL,
   source_url       TEXT NOT NULL,
   apply_url        TEXT,
+  attribution      TEXT NOT NULL,
+  is_active        BOOLEAN NOT NULL DEFAULT true,
+  last_seen_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ingested_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
   quality_score    REAL,        -- полнота полей, наличие зарплаты, прямой ATS-источник
   raw              JSONB,
   embedding        VECTOR(1024),
@@ -60,6 +68,8 @@ CREATE TABLE jobs (
 CREATE INDEX ON jobs USING hnsw (embedding vector_cosine_ops);
 CREATE INDEX ON jobs USING gin  (fts);
 CREATE INDEX ON jobs (posted_at DESC);
+CREATE UNIQUE INDEX ON jobs (source, source_job_id);
+CREATE INDEX ON jobs (is_active, posted_at DESC);
 
 -- ============================================================
 -- Таксономия навыков (ESCO / O*NET + свои алиасы)
@@ -69,7 +79,8 @@ CREATE TABLE skills (
   id       BIGSERIAL PRIMARY KEY,
   name     TEXT UNIQUE,
   aliases  TEXT[],
-  category TEXT
+  category TEXT,
+  esco_uri TEXT UNIQUE
 );
 
 CREATE TABLE job_skills (

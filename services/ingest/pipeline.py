@@ -8,7 +8,11 @@ from services.ingest.connectors.base import Connector
 from services.ingest.embeddings import EmbeddingService
 from services.ingest.normalize.models import NormalizedJob
 from services.ingest.normalize.pipeline import JobNormalizer
+from services.ingest.progress import ProgressReporter
 from services.ingest.repository import IngestionRepository
+
+PERSISTENCE_BATCH_MIN = 500
+PERSISTENCE_BATCH_MAX = 1000
 
 
 class IngestionResult(BaseModel):
@@ -27,8 +31,13 @@ class IngestionPipeline:
         repository: IngestionRepository,
         embedding_service: EmbeddingService,
         *,
-        batch_size: int = 32,
+        batch_size: int = PERSISTENCE_BATCH_MIN,
     ) -> None:
+        if not PERSISTENCE_BATCH_MIN <= batch_size <= PERSISTENCE_BATCH_MAX:
+            raise ValueError(
+                "persistence batch size must be between "
+                f"{PERSISTENCE_BATCH_MIN} and {PERSISTENCE_BATCH_MAX}"
+            )
         self._normalizer = normalizer
         self._repository = repository
         self._embedding_service = embedding_service
@@ -47,27 +56,32 @@ class IngestionPipeline:
         fetched = 0
         saved = 0
 
-        async for source_job in connector.iter_jobs(limit=limit):
-            normalized = self._normalizer.normalize(source_job)
-            batch.append(normalized)
-            scopes.add(source_job.company_slug or source_job.source)
-            fetched += 1
-            if len(batch) >= self._batch_size:
+        with ProgressReporter(f"connector:{connector.name}", total=limit) as progress:
+            async for source_job in connector.iter_jobs(limit=limit):
+                normalized = self._normalizer.normalize(source_job)
+                batch.append(normalized)
+                scopes.add(source_job.company_slug or source_job.source)
+                fetched += 1
+                total_hint = connector.total_hint
+                if total_hint is not None and limit is not None:
+                    total_hint = min(total_hint, limit)
+                progress.update(fetched, total=total_hint)
+                if len(batch) >= self._batch_size:
+                    saved += self._save_batch(batch, embed=embed)
+                    batch = []
+            if batch:
                 saved += self._save_batch(batch, embed=embed)
-                batch = []
-        if batch:
-            saved += self._save_batch(batch, embed=embed)
 
-        deactivated = 0
-        if limit is None:
-            if not scopes and hasattr(connector, "company_slug"):
-                scopes.add(str(connector.company_slug))
-            for scope in scopes:
-                deactivated += self._repository.deactivate_missing(
-                    source=connector.name,
-                    source_scope=scope,
-                    seen_since=started_at,
-                )
+            deactivated = 0
+            if limit is None:
+                if not scopes and hasattr(connector, "company_slug"):
+                    scopes.add(str(connector.company_slug))
+                for scope in scopes:
+                    deactivated += self._repository.deactivate_missing(
+                        source=connector.name,
+                        source_scope=scope,
+                        seen_since=started_at,
+                    )
         return IngestionResult(
             connector=connector.name,
             fetched=fetched,

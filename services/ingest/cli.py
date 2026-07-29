@@ -22,7 +22,8 @@ from services.ingest.normalize.currency import ExchangeRateClient
 from services.ingest.normalize.pipeline import JobNormalizer
 from services.ingest.normalize.salary import SalaryNormalizer
 from services.ingest.normalize.skills import SkillDefinition, SkillMatcher
-from services.ingest.pipeline import IngestionPipeline
+from services.ingest.pipeline import PERSISTENCE_BATCH_MIN, IngestionPipeline
+from services.ingest.progress import ProgressReporter
 from services.ingest.registry import ATSProvider, connector_for, load_ats_registry
 from services.ingest.repository import IngestionRepository
 from services.ingest.skills.esco import (
@@ -91,17 +92,20 @@ async def seed_skills(settings: Settings) -> dict[str, object]:
     failures: list[dict[str, str]] = []
     async with PoliteHttpClient(user_agent=settings.source_user_agent) as http:
         client = ESCOClient(http)
-        for query, aliases in queries.items():
-            try:
-                resolved.append(
-                    await client.resolve(
-                        query,
-                        aliases,
-                        expected_title=overrides.get(query),
+        with ProgressReporter("seed-skills", total=len(queries)) as progress:
+            for processed, (query, aliases) in enumerate(queries.items(), start=1):
+                try:
+                    resolved.append(
+                        await client.resolve(
+                            query,
+                            aliases,
+                            expected_title=overrides.get(query),
+                        )
                     )
-                )
-            except (ESCOResolutionError, ConnectorRequestError, ValueError) as exc:
-                failures.append({"query": query, "error": str(exc)})
+                except (ESCOResolutionError, ConnectorRequestError, ValueError) as exc:
+                    failures.append({"query": query, "error": str(exc)})
+                finally:
+                    progress.update(processed)
     with IngestionRepository(settings.database_url) as repository:
         saved = repository.seed_skills(resolved)
         pruned = repository.prune_unreferenced_skills(
@@ -164,27 +168,30 @@ async def run_ats(
                 repository,
                 batch_size=batch_size,
             )
-            for entry in entries:
-                connector = connector_for(entry, http)
-                try:
-                    result = await pipeline.run_connector(connector, embed=embed)
-                    results.append(
-                        {
-                            "provider": entry.provider.value,
-                            "company_slug": entry.company_slug,
-                            **result.model_dump(mode="json"),
-                        }
-                    )
-                    total_fetched += result.fetched
-                    total_saved += result.saved
-                except (ConnectorRequestError, ValueError) as exc:
-                    failures.append(
-                        {
-                            "provider": entry.provider.value,
-                            "company_slug": entry.company_slug,
-                            "error": str(exc),
-                        }
-                    )
+            with ProgressReporter("ats-companies", total=len(entries)) as progress:
+                for processed, entry in enumerate(entries, start=1):
+                    connector = connector_for(entry, http)
+                    try:
+                        result = await pipeline.run_connector(connector, embed=embed)
+                        results.append(
+                            {
+                                "provider": entry.provider.value,
+                                "company_slug": entry.company_slug,
+                                **result.model_dump(mode="json"),
+                            }
+                        )
+                        total_fetched += result.fetched
+                        total_saved += result.saved
+                    except (ConnectorRequestError, ValueError) as exc:
+                        failures.append(
+                            {
+                                "provider": entry.provider.value,
+                                "company_slug": entry.company_slug,
+                                "error": str(exc),
+                            }
+                        )
+                    finally:
+                        progress.update(processed)
     return {
         "companies": len(entries),
         "succeeded": len(results),
@@ -206,16 +213,23 @@ def backfill_embeddings(
         cache_dir=settings.embedding_cache_dir,
     )
     updated = 0
-    with IngestionRepository(settings.database_url) as repository:
+    with (
+        ProgressReporter("backfill-embeddings", total=limit) as progress,
+        IngestionRepository(settings.database_url) as repository,
+    ):
         while limit is None or updated < limit:
             remaining = batch_size if limit is None else min(batch_size, limit - updated)
             rows = repository.jobs_without_embeddings(limit=remaining)
             if not rows:
                 break
-            vectors = service.embed_passages([text for _, text in rows], batch_size=batch_size)
+            vectors = service.embed_passages(
+                [text for _, text in rows],
+                batch_size=batch_size,
+            )
             updated += repository.backfill_embeddings(
                 (job_id, vector) for (job_id, _), vector in zip(rows, vectors, strict=True)
             )
+            progress.update(updated)
     return {"updated": updated}
 
 
@@ -232,13 +246,13 @@ def _parser() -> argparse.ArgumentParser:
         choices=["adzuna", "jooble", "himalayas", "arbeitnow", "remotive", "jobicy"],
     )
     run_parser.add_argument("--limit", type=int)
-    run_parser.add_argument("--batch-size", type=int, default=32)
+    run_parser.add_argument("--batch-size", type=int, default=PERSISTENCE_BATCH_MIN)
     run_parser.add_argument("--no-embed", action="store_true")
 
     ats_parser = subparsers.add_parser("run-ats")
     ats_parser.add_argument("--provider", choices=[provider.value for provider in ATSProvider])
     ats_parser.add_argument("--limit-companies", type=int)
-    ats_parser.add_argument("--batch-size", type=int, default=32)
+    ats_parser.add_argument("--batch-size", type=int, default=PERSISTENCE_BATCH_MIN)
     ats_parser.add_argument("--no-embed", action="store_true")
 
     embedding_parser = subparsers.add_parser("backfill-embeddings")

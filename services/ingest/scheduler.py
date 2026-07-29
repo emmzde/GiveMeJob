@@ -7,6 +7,7 @@ from celery import Celery
 
 from services.api.config import get_settings
 from services.ingest.cli import run_ats, run_public
+from services.ingest.pipeline import PERSISTENCE_BATCH_MIN
 
 settings = get_settings()
 
@@ -67,7 +68,7 @@ def run_public_task(connector: str) -> dict[str, object]:
             name=connector,
             limit=None,
             embed=True,
-            batch_size=32,
+            batch_size=PERSISTENCE_BATCH_MIN,
         )
     )
 
@@ -79,7 +80,7 @@ def run_ats_task() -> dict[str, object]:
             provider=None,
             limit_companies=None,
             embed=True,
-            batch_size=32,
+            batch_size=PERSISTENCE_BATCH_MIN,
         )
     )
 

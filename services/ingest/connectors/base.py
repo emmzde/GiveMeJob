@@ -15,6 +15,11 @@ class Connector(ABC):
 
     def __init__(self, http: PoliteHttpClient | None = None) -> None:
         self._http = http
+        self._total_hint: int | None = None
+
+    @property
+    def total_hint(self) -> int | None:
+        return self._total_hint
 
     async def fetch(self, cursor: str | None = None) -> ConnectorPage:
         if self._http is None:
@@ -24,7 +29,10 @@ class Connector(ABC):
             request,
             requests_per_second=self.requests_per_second,
         )
-        return self.parse_page(payload, cursor)
+        page = self.parse_page(payload, cursor)
+        if page.total_hint is not None:
+            self._total_hint = page.total_hint
+        return page
 
     async def iter_jobs(self, *, limit: int | None = None) -> AsyncIterator[ConnectorJob]:
         if limit is not None and limit <= 0:

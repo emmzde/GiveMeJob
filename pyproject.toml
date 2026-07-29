@@ -45,6 +45,7 @@ addopts = "-ra"
 testpaths = ["tests"]
 markers = [
   "contract: validates a connector against a fixed provider response fixture",
+  "integration: exercises PostgreSQL-backed behavior when the service is available",
 ]
 
 [tool.ruff]

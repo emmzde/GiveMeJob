@@ -6,14 +6,21 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
   "alembic>=1.16,<2",
+  "celery[redis]>=5.6,<6",
+  "fastembed>=0.7,<1",
   "fastapi>=0.116,<1",
+  "httpx>=0.28,<1",
   "orjson>=3.11,<4",
+  "pgvector>=0.4,<1",
   "psycopg[binary]>=3.2,<4",
+  "pydantic>=2.11,<3",
   "pydantic-settings>=2.10,<3",
   "redis>=6,<7",
+  "selectolax>=0.3,<1",
   "sentry-sdk[fastapi]>=2.35,<3",
   "sqlalchemy>=2.0,<3",
   "structlog>=25.4,<26",
+  "trafilatura>=2,<3",
   "uvicorn[standard]>=0.35,<1",
 ]
 
@@ -22,6 +29,7 @@ dev = [
   "httpx2>=2.7,<3",
   "mypy>=1.17,<2",
   "pytest>=8.4,<9",
+  "pytest-asyncio>=1.2,<2",
   "ruff>=0.12,<1",
 ]
 
@@ -35,6 +43,9 @@ packages = ["services"]
 [tool.pytest.ini_options]
 addopts = "-ra"
 testpaths = ["tests"]
+markers = [
+  "contract: validates a connector against a fixed provider response fixture",
+]
 
 [tool.ruff]
 line-length = 100
@@ -54,5 +65,5 @@ packages = ["services"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["sentry_sdk.*"]
+module = ["celery.*", "sentry_sdk.*"]
 ignore_missing_imports = true

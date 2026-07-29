@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+from collections.abc import AsyncIterator
+
 from services.ingest.connectors._utils import (
     map_employment_type,
     map_salary_period,
@@ -22,6 +25,7 @@ class HimalayasConnector(Connector):
     requests_per_second = 2.0
     endpoint = "https://himalayas.app/jobs/api"
     page_size = 20
+    prefetch_pages = 8
 
     def build_request(self, cursor: str | None) -> RequestSpec:
         return RequestSpec(
@@ -37,6 +41,37 @@ class HimalayasConnector(Connector):
         next_offset = offset + len(jobs)
         next_cursor = str(next_offset) if jobs and next_offset < total else None
         return ConnectorPage(jobs=jobs, next_cursor=next_cursor, total_hint=total)
+
+    async def iter_pages(
+        self,
+        *,
+        start_cursor: str | None = None,
+    ) -> AsyncIterator[ConnectorPage]:
+        page = await self.fetch(start_cursor)
+        yield page
+        cursor = page.next_cursor
+
+        while cursor is not None:
+            offset = int(cursor)
+            remaining_pages = self.prefetch_pages
+            if page.total_hint is not None:
+                remaining_jobs = max(page.total_hint - offset, 0)
+                remaining_pages = min(
+                    remaining_pages,
+                    (remaining_jobs + self.page_size - 1) // self.page_size,
+                )
+            if remaining_pages == 0:
+                return
+
+            offsets = [
+                str(offset + index * self.page_size) for index in range(remaining_pages)
+            ]
+            pages = await asyncio.gather(*(self.fetch(value) for value in offsets))
+            for page in pages:
+                yield page
+                cursor = page.next_cursor
+                if cursor is None:
+                    return
 
     def normalize(self, raw: dict[str, object]) -> ConnectorJob:
         source_url = required_str(raw.get("guid"), field="guid")

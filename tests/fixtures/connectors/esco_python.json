@@ -1,0 +1,23 @@
+{
+  "total": 2,
+  "offset": 0,
+  "limit": 10,
+  "_embedded": {
+    "results": [
+      {
+        "className": "Skill",
+        "uri": "http://data.europa.eu/esco/skill/ccd0a1d9-afda-43d9-b901-96344886e14d",
+        "title": "Python (computer programming)",
+        "referenceLanguage": "en",
+        "status": "released"
+      },
+      {
+        "className": "Skill",
+        "uri": "http://data.europa.eu/esco/skill/5ef0c719-5bcb-49f8-b8eb-824388225333",
+        "title": "use scripting programming",
+        "referenceLanguage": "en",
+        "status": "released"
+      }
+    ]
+  }
+}

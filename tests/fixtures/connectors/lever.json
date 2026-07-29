@@ -1,0 +1,28 @@
+[
+  {
+    "id": "8ab1f947-6686-4c3a-9073-example",
+    "text": "Staff Platform Engineer",
+    "categories": {
+      "commitment": "Full-time",
+      "department": "Engineering",
+      "level": "Staff",
+      "location": "Remote - Europe",
+      "team": "Platform",
+      "allLocations": ["Remote - Europe"]
+    },
+    "createdAt": 1785312000000,
+    "description": "<p>Operate Kubernetes and Python services.</p>",
+    "descriptionPlain": "Operate Kubernetes and Python services.",
+    "hostedUrl": "https://jobs.lever.co/example/8ab1f947-6686-4c3a-9073-example",
+    "applyUrl": "https://jobs.lever.co/example/8ab1f947-6686-4c3a-9073-example/apply",
+    "lists": [{"text": "Requirements", "content": "<li>Python</li>"}],
+    "salaryRange": {
+      "currency": "EUR",
+      "interval": "year",
+      "min": 90000,
+      "max": 120000
+    },
+    "salaryDescriptionPlain": "€90,000-€120,000",
+    "workplaceType": "remote"
+  }
+]

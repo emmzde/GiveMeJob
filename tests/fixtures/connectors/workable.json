@@ -1,0 +1,29 @@
+{
+  "name": "Example Systems",
+  "description": "Example Systems careers",
+  "jobs": [
+    {
+      "id": 501,
+      "title": "Middle Data Engineer",
+      "shortcode": "A1B2C3",
+      "code": "ENG-501",
+      "department": "Engineering",
+      "city": "Baku",
+      "state": null,
+      "country": "Azerbaijan",
+      "locations": [{"city": "Baku", "state": null, "country": "Azerbaijan"}],
+      "url": "https://apply.workable.com/example/j/A1B2C3/",
+      "shortlink": "https://wrkbl.ink/A1B2C3",
+      "application_url": "https://apply.workable.com/example/j/A1B2C3/apply/",
+      "description": "<p>Build data pipelines with Python and SQL.</p>",
+      "education": "Bachelor's degree",
+      "employment_type": "Full-time",
+      "experience": "Mid-Senior level",
+      "function": "Information Technology",
+      "industry": "Software",
+      "published_on": "2026-07-28",
+      "created_at": "2026-07-27T10:00:00Z",
+      "telecommuting": false
+    }
+  ]
+}

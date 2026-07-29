@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from services.ingest.dedupe.simhash import company_blocking_key, simhash64
+from services.ingest.dedupe.simhash import job_blocking_key, simhash64
 from services.ingest.models import ConnectorJob, Seniority
 from services.ingest.normalize.location import normalize_location
 from services.ingest.normalize.models import NormalizedJob
@@ -25,8 +25,13 @@ class JobNormalizer:
         salary = self._salary_normalizer.normalize(job)
         location = normalize_location(job.location)
         skills = self._skill_matcher.match(job.title, description_md)
-        blocking_key = company_blocking_key(job.company_name)
-        simhash = simhash64(f"{blocking_key} {title_normalized}")
+        blocking_key = job_blocking_key(
+            company_name=job.company_name,
+            title_normalized=title_normalized,
+            country=location.country,
+            city=location.city,
+        )
+        simhash = simhash64(description_md)
         quality_score = self._quality_score(
             description_md=description_md,
             has_salary=salary.minimum is not None or salary.maximum is not None,

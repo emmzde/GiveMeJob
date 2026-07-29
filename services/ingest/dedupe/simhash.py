@@ -8,6 +8,7 @@ from collections import Counter
 _TOKEN_RE = re.compile(r"[\w+#.-]{2,}", re.UNICODE)
 _MASK_64 = (1 << 64) - 1
 _SIGN_BIT_64 = 1 << 63
+DEDUPE_HAMMING_THRESHOLD = 0
 _COMPANY_SUFFIX_RE = re.compile(
     r"\b(incorporated|inc|llc|ltd|limited|corp|corporation|gmbh|plc|company|co)\b"
 )
@@ -42,3 +43,19 @@ def company_blocking_key(company_name: str) -> str:
     normalized = _COMPANY_SUFFIX_RE.sub(" ", normalized)
     normalized = re.sub(r"[^\w]+", " ", normalized, flags=re.UNICODE)
     return " ".join(normalized.split())
+
+
+def job_blocking_key(
+    *,
+    company_name: str,
+    title_normalized: str,
+    country: str | None,
+    city: str | None,
+) -> str:
+    components = (
+        company_blocking_key(company_name),
+        title_normalized.casefold(),
+        (country or "").casefold(),
+        unicodedata.normalize("NFKC", city or "").casefold(),
+    )
+    return "\x1f".join(" ".join(component.split()) for component in components)

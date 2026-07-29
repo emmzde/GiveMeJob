@@ -9,11 +9,10 @@ from psycopg import Connection, connect
 from psycopg.types.json import Jsonb
 
 from services.ingest.connectors._utils import slugify
-from services.ingest.dedupe.simhash import hamming_distance
+from services.ingest.dedupe.simhash import DEDUPE_HAMMING_THRESHOLD, hamming_distance
 from services.ingest.normalize.models import NormalizedJob
 from services.ingest.normalize.skills import SkillDefinition, SkillMatch
 
-_DEDUPE_DISTANCE = 3
 _STAGING_TABLE_DDL = (
     """
     CREATE TEMP TABLE IF NOT EXISTS _ingest_companies_stage (
@@ -333,13 +332,13 @@ class IngestionRepository:
         for job in jobs:
             resolved: int | tuple[str, int] | None = None
             for group_id, candidate_hash in self._groups.setdefault(job.blocking_key, []):
-                if hamming_distance(job.simhash, candidate_hash) <= _DEDUPE_DISTANCE:
+                if hamming_distance(job.simhash, candidate_hash) <= DEDUPE_HAMMING_THRESHOLD:
                     resolved = group_id
                     break
             if resolved is None:
                 pending = pending_by_block.setdefault(job.blocking_key, [])
                 for pending_key, candidate_hash in pending:
-                    if hamming_distance(job.simhash, candidate_hash) <= _DEDUPE_DISTANCE:
+                    if hamming_distance(job.simhash, candidate_hash) <= DEDUPE_HAMMING_THRESHOLD:
                         resolved = pending_key
                         break
                 if resolved is None:
@@ -433,6 +432,16 @@ class IngestionRepository:
                 )
             ),
         )
+        old_group_rows = self._connection.execute(
+            """
+            SELECT DISTINCT job.group_id
+            FROM jobs AS job
+            JOIN _ingest_jobs_stage AS staged
+              ON staged.source = job.source
+             AND staged.source_job_id = job.source_job_id
+            """
+        ).fetchall()
+        old_group_ids = [cast(int, row[0]) for row in old_group_rows]
         rows = self._connection.execute(
             """
             INSERT INTO jobs (
@@ -487,20 +496,38 @@ class IngestionRepository:
         ).fetchall()
         identity_to_id = {(cast(str, row[2]), cast(str, row[3])): cast(int, row[0]) for row in rows}
         job_ids = [identity_to_id[(job.source.source, job.source.source_job_id)] for job in jobs]
+        affected_group_ids = list(set([*old_group_ids, *group_ids]))
         self._connection.execute(
             """
             UPDATE job_groups AS job_group
             SET canonical_job = candidates.job_id
             FROM (
-              SELECT group_id, min(id) AS job_id
+              SELECT DISTINCT ON (group_id) group_id, id AS job_id
               FROM jobs
-              WHERE id = ANY(%s)
-              GROUP BY group_id
+              WHERE group_id = ANY(%s)
+              ORDER BY
+                group_id,
+                is_active DESC,
+                quality_score DESC NULLS LAST,
+                posted_at DESC NULLS LAST,
+                id
             ) AS candidates
             WHERE job_group.id = candidates.group_id
-              AND job_group.canonical_job IS NULL
             """,
-            (job_ids,),
+            (affected_group_ids,),
+        )
+        self._connection.execute(
+            """
+            UPDATE job_groups AS job_group
+            SET canonical_job = NULL
+            WHERE job_group.id = ANY(%s)
+              AND NOT EXISTS (
+                SELECT 1
+                FROM jobs
+                WHERE jobs.group_id = job_group.id
+              )
+            """,
+            (affected_group_ids,),
         )
         return job_ids
 

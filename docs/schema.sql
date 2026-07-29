@@ -55,7 +55,7 @@ CREATE TABLE jobs (
   attribution      TEXT NOT NULL,
   is_active        BOOLEAN NOT NULL DEFAULT true,
   last_seen_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-  ingested_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  first_seen_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
   quality_score    REAL,        -- полнота полей, наличие зарплаты, прямой ATS-источник
   raw              JSONB,

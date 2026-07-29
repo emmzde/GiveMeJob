@@ -58,5 +58,6 @@ def test_normalizes_job_without_network_or_llm() -> None:
         "Python (computer programming)",
         "PostgreSQL",
     }
+    assert result.blocking_key == "example\x1fsenior python engineer\x1fde\x1fberlin"
     assert -(1 << 63) <= result.simhash < 1 << 63
     assert result.quality_score == 0.85

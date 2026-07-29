@@ -67,7 +67,7 @@ def test_repository_bulk_upserts_jobs_and_skills_atomically() -> None:
         with connect(dsn, autocommit=True) as connection:
             first_seen = connection.execute(
                 """
-                SELECT min(ingested_at), max(ingested_at)
+                SELECT min(first_seen_at), max(first_seen_at)
                 FROM jobs
                 WHERE source = %s
                 """,
@@ -99,7 +99,7 @@ def test_repository_bulk_upserts_jobs_and_skills_atomically() -> None:
         with connect(dsn, autocommit=True) as connection:
             second_seen = connection.execute(
                 """
-                SELECT min(ingested_at), max(ingested_at)
+                SELECT min(first_seen_at), max(first_seen_at)
                 FROM jobs
                 WHERE source = %s
                 """,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -12,6 +13,73 @@ from services.ingest.models import ConnectorJob
 from services.ingest.normalize.models import NormalizedJob
 from services.ingest.normalize.skills import SkillMatch
 from services.ingest.repository import IngestionRepository
+
+
+@pytest.mark.integration
+def test_repository_deactivates_all_scopes_for_global_sweep() -> None:
+    settings = get_settings()
+    dsn = settings.database_url.replace("postgresql+psycopg://", "postgresql://", 1)
+    try:
+        with connect(dsn, autocommit=True) as connection:
+            connection.execute("SELECT 1")
+    except OperationalError:
+        pytest.skip("PostgreSQL is not available")
+
+    command.upgrade(Config("alembic.ini"), "head")
+    token = uuid4().hex
+    source_name = f"test-deactivate-{token}"
+    company_slugs = [f"test-company-a-{token}", f"test-company-b-{token}"]
+    blocking_keys = [f"test:deactivate:a:{token}", f"test:deactivate:b:{token}"]
+    jobs = [
+        NormalizedJob(
+            source=ConnectorJob(
+                source=source_name,
+                source_job_id=str(index),
+                source_url=f"https://example.com/jobs/{token}/{index}",
+                attribution="Integration test",
+                title=f"Engineer {index}",
+                company_name=f"Deactivate Company {index}",
+                company_slug=company_slugs[index],
+            ),
+            title_normalized=f"engineer {index}",
+            description_md="Test description",
+            seniority="unknown",
+            salary_period="unknown",
+            skills=[],
+            simhash=index,
+            blocking_key=blocking_keys[index],
+            quality_score=0.5,
+        )
+        for index in range(2)
+    ]
+
+    try:
+        with IngestionRepository(settings.database_url) as repository:
+            repository.save_jobs(jobs)
+            deactivated = repository.deactivate_missing(
+                source=source_name,
+                source_scope=None,
+                seen_since=datetime.now(UTC) + timedelta(seconds=1),
+            )
+
+        assert deactivated == 2
+        with connect(dsn, autocommit=True) as connection:
+            active = connection.execute(
+                "SELECT count(*) FROM jobs WHERE source = %s AND is_active",
+                (source_name,),
+            ).fetchone()
+        assert active == (0,)
+    finally:
+        with connect(dsn, autocommit=True) as connection:
+            connection.execute("DELETE FROM jobs WHERE source = %s", (source_name,))
+            connection.execute(
+                "DELETE FROM job_groups WHERE blocking_key = ANY(%s)",
+                (blocking_keys,),
+            )
+            connection.execute(
+                "DELETE FROM companies WHERE slug = ANY(%s)",
+                (company_slugs,),
+            )
 
 
 @pytest.mark.integration

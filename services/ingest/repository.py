@@ -334,7 +334,7 @@ class IngestionRepository:
                 UPDATE jobs
                 SET is_active = false, updated_at = now()
                 WHERE source = %s
-                  AND (%s IS NULL OR source_scope = %s)
+                  AND (%s::text IS NULL OR source_scope = %s::text)
                   AND last_seen_at < %s
                   AND is_active
                 """,

@@ -25,7 +25,7 @@ class HimalayasConnector(Connector):
     requests_per_second = 2.0
     endpoint = "https://himalayas.app/jobs/api"
     page_size = 20
-    prefetch_pages = 20
+    prefetch_pages = 40
 
     def build_request(self, cursor: str | None) -> RequestSpec:
         return RequestSpec(
@@ -50,28 +50,39 @@ class HimalayasConnector(Connector):
         page = await self.fetch(start_cursor)
         yield page
         cursor = page.next_cursor
+        if cursor is None:
+            return
 
-        while cursor is not None:
-            offset = int(cursor)
-            remaining_pages = self.prefetch_pages
-            if page.total_hint is not None:
-                remaining_jobs = max(page.total_hint - offset, 0)
-                remaining_pages = min(
-                    remaining_pages,
-                    (remaining_jobs + self.page_size - 1) // self.page_size,
-                )
-            if remaining_pages == 0:
-                return
+        total_hint = page.total_hint
+        next_offset = int(cursor)
+        pending: dict[int, asyncio.Task[ConnectorPage]] = {}
 
-            offsets = [
-                str(offset + index * self.page_size) for index in range(remaining_pages)
-            ]
-            pages = await asyncio.gather(*(self.fetch(value) for value in offsets))
-            for page in pages:
+        try:
+            while cursor is not None:
+                while len(pending) < self.prefetch_pages and (
+                    total_hint is None or next_offset < total_hint
+                ):
+                    pending[next_offset] = asyncio.create_task(
+                        self.fetch(str(next_offset))
+                    )
+                    next_offset += self.page_size
+                    if total_hint is None:
+                        break
+
+                offset = int(cursor)
+                task = pending.pop(offset, None)
+                if task is None:
+                    task = asyncio.create_task(self.fetch(cursor))
+                page = await task
                 yield page
                 cursor = page.next_cursor
-                if cursor is None:
-                    return
+                if page.total_hint is not None:
+                    total_hint = page.total_hint
+        finally:
+            for task in pending.values():
+                task.cancel()
+            if pending:
+                await asyncio.gather(*pending.values(), return_exceptions=True)
 
     def normalize(self, raw: dict[str, object]) -> ConnectorJob:
         source_url = required_str(raw.get("guid"), field="guid")

@@ -21,7 +21,7 @@ def test_himalayas_contract(load_connector_fixture: Callable[[str], object]) -> 
     page = connector.parse_page(load_connector_fixture("himalayas"))
 
     assert connector.requests_per_second == 2.0
-    assert connector.prefetch_pages == 20
+    assert connector.prefetch_pages == 40
     assert request.params == {"offset": 0, "limit": 20}
     assert page.total_hint == 1
     assert page.next_cursor is None

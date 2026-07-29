@@ -25,7 +25,7 @@ class HimalayasConnector(Connector):
     requests_per_second = 2.0
     endpoint = "https://himalayas.app/jobs/api"
     page_size = 20
-    prefetch_pages = 8
+    prefetch_pages = 20
 
     def build_request(self, cursor: str | None) -> RequestSpec:
         return RequestSpec(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from datetime import datetime
 from typing import cast
 
@@ -77,6 +78,14 @@ _STAGING_TABLE_DDL = (
     ) ON COMMIT PRESERVE ROWS
     """,
 )
+
+
+@dataclass(frozen=True)
+class IngestionCheckpoint:
+    cursor: str | None
+    processed: int
+    total_hint: int | None
+    started_at: datetime
 
 
 class IngestionRepository:
@@ -177,6 +186,108 @@ class IngestionRepository:
             for row in rows
         ]
 
+    def begin_sweep(
+        self,
+        *,
+        connector: str,
+        source_scope: str,
+    ) -> IngestionCheckpoint:
+        row = self._connection.execute(
+            """
+            SELECT cursor, processed, total_hint, started_at, completed_at
+            FROM ingestion_checkpoints
+            WHERE connector = %s
+              AND source_scope = %s
+            """,
+            (connector, source_scope),
+        ).fetchone()
+        if row is not None and row[4] is None:
+            return IngestionCheckpoint(
+                cursor=cast(str | None, row[0]),
+                processed=cast(int, row[1]),
+                total_hint=cast(int | None, row[2]),
+                started_at=cast(datetime, row[3]),
+            )
+
+        reset = self._connection.execute(
+            """
+            INSERT INTO ingestion_checkpoints (
+              connector, source_scope, cursor, processed, total_hint,
+              started_at, updated_at, completed_at
+            )
+            VALUES (%s, %s, NULL, 0, NULL, now(), now(), NULL)
+            ON CONFLICT (connector, source_scope)
+            DO UPDATE SET
+              cursor = NULL,
+              processed = 0,
+              total_hint = NULL,
+              started_at = now(),
+              updated_at = now(),
+              completed_at = NULL
+            RETURNING cursor, processed, total_hint, started_at
+            """,
+            (connector, source_scope),
+        ).fetchone()
+        if reset is None:
+            raise RuntimeError("sweep checkpoint reset returned no row")
+        return IngestionCheckpoint(
+            cursor=cast(str | None, reset[0]),
+            processed=cast(int, reset[1]),
+            total_hint=cast(int | None, reset[2]),
+            started_at=cast(datetime, reset[3]),
+        )
+
+    def save_sweep_progress(
+        self,
+        *,
+        connector: str,
+        source_scope: str,
+        cursor: str | None,
+        processed: int,
+        total_hint: int | None,
+    ) -> None:
+        self._connection.execute(
+            """
+            INSERT INTO ingestion_checkpoints (
+              connector, source_scope, cursor, processed, total_hint,
+              started_at, updated_at, completed_at
+            )
+            VALUES (%s, %s, %s, %s, %s, now(), now(), NULL)
+            ON CONFLICT (connector, source_scope)
+            DO UPDATE SET
+              cursor = EXCLUDED.cursor,
+              processed = EXCLUDED.processed,
+              total_hint = EXCLUDED.total_hint,
+              updated_at = now(),
+              completed_at = NULL
+            """,
+            (connector, source_scope, cursor, processed, total_hint),
+        )
+
+    def complete_sweep(
+        self,
+        *,
+        connector: str,
+        source_scope: str,
+        processed: int,
+        total_hint: int | None,
+    ) -> None:
+        cursor = self._connection.execute(
+            """
+            UPDATE ingestion_checkpoints
+            SET cursor = NULL,
+                processed = %s,
+                total_hint = %s,
+                updated_at = now(),
+                completed_at = now()
+            WHERE connector = %s
+              AND source_scope = %s
+            """,
+            (processed, total_hint, connector, source_scope),
+        )
+        if cursor.rowcount != 1:
+            raise RuntimeError("sweep checkpoint completion updated no row")
+
     def save_jobs(self, jobs: Iterable[NormalizedJob]) -> int:
         unique_jobs: dict[tuple[str, str], NormalizedJob] = {}
         for job in jobs:
@@ -214,7 +325,7 @@ class IngestionRepository:
         self,
         *,
         source: str,
-        source_scope: str,
+        source_scope: str | None,
         seen_since: datetime,
     ) -> int:
         with self._connection.transaction():
@@ -223,11 +334,11 @@ class IngestionRepository:
                 UPDATE jobs
                 SET is_active = false, updated_at = now()
                 WHERE source = %s
-                  AND source_scope = %s
+                  AND (%s IS NULL OR source_scope = %s)
                   AND last_seen_at < %s
                   AND is_active
                 """,
-                (source, source_scope, seen_since),
+                (source, source_scope, source_scope, seen_since),
             )
         return cursor.rowcount
 

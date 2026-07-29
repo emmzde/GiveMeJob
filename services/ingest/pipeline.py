@@ -50,38 +50,76 @@ class IngestionPipeline:
         limit: int | None = None,
         embed: bool = True,
     ) -> IngestionResult:
-        started_at = datetime.now(UTC)
+        full_sweep = limit is None
+        checkpoint = (
+            self._repository.begin_sweep(
+                connector=connector.name,
+                source_scope=connector.checkpoint_scope,
+            )
+            if full_sweep
+            else None
+        )
+        started_at = checkpoint.started_at if checkpoint else datetime.now(UTC)
+        start_cursor = checkpoint.cursor if checkpoint else None
         batch: list[NormalizedJob] = []
-        scopes: set[str] = set()
-        fetched = 0
-        saved = 0
+        fetched = checkpoint.processed if checkpoint else 0
+        saved = checkpoint.processed if checkpoint else 0
+        total_hint = checkpoint.total_hint if checkpoint else limit
+        completed = False
 
-        with ProgressReporter(f"connector:{connector.name}", total=limit) as progress:
-            async for source_job in connector.iter_jobs(limit=limit):
-                normalized = self._normalizer.normalize(source_job)
-                batch.append(normalized)
-                scopes.add(source_job.company_slug or source_job.source)
-                fetched += 1
-                total_hint = connector.total_hint
-                if total_hint is not None and limit is not None:
-                    total_hint = min(total_hint, limit)
-                progress.update(fetched, total=total_hint)
-                if len(batch) >= self._batch_size:
+        with ProgressReporter(
+            f"connector:{connector.name}",
+            total=total_hint,
+        ) as progress:
+            progress.update(fetched, total=total_hint)
+            async for page in connector.iter_pages(start_cursor=start_cursor):
+                page_total = page.total_hint
+                if page_total is not None and limit is not None:
+                    page_total = min(page_total, limit)
+                total_hint = page_total if page_total is not None else total_hint
+                page_jobs = page.jobs
+                limit_reached = False
+                if limit is not None:
+                    remaining = max(limit - fetched, 0)
+                    page_jobs = page_jobs[:remaining]
+                    limit_reached = (
+                        len(page_jobs) < len(page.jobs) or fetched + len(page_jobs) >= limit
+                    )
+
+                for source_job in page_jobs:
+                    batch.append(self._normalizer.normalize(source_job))
+                    fetched += 1
+                    progress.update(fetched, total=total_hint)
+
+                completed = page.next_cursor is None
+                should_flush = len(batch) >= self._batch_size or completed or limit_reached
+                if should_flush and batch:
                     saved += self._save_batch(batch, embed=embed)
                     batch = []
-            if batch:
-                saved += self._save_batch(batch, embed=embed)
+                    if full_sweep and not completed:
+                        self._repository.save_sweep_progress(
+                            connector=connector.name,
+                            source_scope=connector.checkpoint_scope,
+                            cursor=page.next_cursor,
+                            processed=fetched,
+                            total_hint=total_hint,
+                        )
+                if completed or limit_reached:
+                    break
 
             deactivated = 0
-            if limit is None:
-                if not scopes and hasattr(connector, "company_slug"):
-                    scopes.add(str(connector.company_slug))
-                for scope in scopes:
-                    deactivated += self._repository.deactivate_missing(
-                        source=connector.name,
-                        source_scope=scope,
-                        seen_since=started_at,
-                    )
+            if full_sweep and completed:
+                deactivated = self._repository.deactivate_missing(
+                    source=connector.name,
+                    source_scope=connector.deactivation_scope,
+                    seen_since=started_at,
+                )
+                self._repository.complete_sweep(
+                    connector=connector.name,
+                    source_scope=connector.checkpoint_scope,
+                    processed=fetched,
+                    total_hint=total_hint,
+                )
         return IngestionResult(
             connector=connector.name,
             fetched=fetched,

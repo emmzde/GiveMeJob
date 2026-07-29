@@ -131,3 +131,64 @@ def test_repository_bulk_upserts_jobs_and_skills_atomically() -> None:
                 "DELETE FROM skills WHERE esco_uri = %s",
                 (esco_uri,),
             )
+
+
+@pytest.mark.integration
+def test_repository_resumes_only_incomplete_sweeps() -> None:
+    settings = get_settings()
+    dsn = settings.database_url.replace("postgresql+psycopg://", "postgresql://", 1)
+    try:
+        with connect(dsn, autocommit=True) as connection:
+            connection.execute("SELECT 1")
+    except OperationalError:
+        pytest.skip("PostgreSQL is not available")
+
+    command.upgrade(Config("alembic.ini"), "head")
+    source_scope = f"test-checkpoint-{uuid4().hex}"
+    try:
+        with IngestionRepository(settings.database_url) as repository:
+            initial = repository.begin_sweep(
+                connector="test",
+                source_scope=source_scope,
+            )
+            repository.save_sweep_progress(
+                connector="test",
+                source_scope=source_scope,
+                cursor="500",
+                processed=500,
+                total_hint=1000,
+            )
+
+        with IngestionRepository(settings.database_url) as repository:
+            resumed = repository.begin_sweep(
+                connector="test",
+                source_scope=source_scope,
+            )
+            repository.complete_sweep(
+                connector="test",
+                source_scope=source_scope,
+                processed=1000,
+                total_hint=1000,
+            )
+            restarted = repository.begin_sweep(
+                connector="test",
+                source_scope=source_scope,
+            )
+
+        assert initial.processed == 0
+        assert resumed.cursor == "500"
+        assert resumed.processed == 500
+        assert resumed.started_at == initial.started_at
+        assert restarted.cursor is None
+        assert restarted.processed == 0
+        assert restarted.started_at >= initial.started_at
+    finally:
+        with connect(dsn, autocommit=True) as connection:
+            connection.execute(
+                """
+                DELETE FROM ingestion_checkpoints
+                WHERE connector = 'test'
+                  AND source_scope = %s
+                """,
+                (source_scope,),
+            )

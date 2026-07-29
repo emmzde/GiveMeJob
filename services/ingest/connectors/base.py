@@ -21,6 +21,16 @@ class Connector(ABC):
     def total_hint(self) -> int | None:
         return self._total_hint
 
+    @property
+    def checkpoint_scope(self) -> str:
+        company_slug = getattr(self, "company_slug", None)
+        return str(company_slug) if company_slug is not None else "global"
+
+    @property
+    def deactivation_scope(self) -> str | None:
+        company_slug = getattr(self, "company_slug", None)
+        return str(company_slug) if company_slug is not None else None
+
     async def fetch(self, cursor: str | None = None) -> ConnectorPage:
         if self._http is None:
             raise RuntimeError(f"{self.name} connector has no HTTP client")
@@ -34,27 +44,39 @@ class Connector(ABC):
             self._total_hint = page.total_hint
         return page
 
-    async def iter_jobs(self, *, limit: int | None = None) -> AsyncIterator[ConnectorJob]:
-        if limit is not None and limit <= 0:
-            return
-
-        emitted = 0
-        cursor: str | None = None
-        seen_cursors: set[str] = set()
+    async def iter_pages(
+        self,
+        *,
+        start_cursor: str | None = None,
+    ) -> AsyncIterator[ConnectorPage]:
+        cursor = start_cursor
+        seen_cursors = {start_cursor} if start_cursor is not None else set()
         while True:
             page = await self.fetch(cursor)
-            for job in page.jobs:
-                yield job
-                emitted += 1
-                if limit is not None and emitted >= limit:
-                    return
-
+            yield page
             cursor = page.next_cursor
             if cursor is None:
                 return
             if cursor in seen_cursors:
                 raise RuntimeError(f"{self.name} returned a repeated cursor: {cursor}")
             seen_cursors.add(cursor)
+
+    async def iter_jobs(
+        self,
+        *,
+        limit: int | None = None,
+        start_cursor: str | None = None,
+    ) -> AsyncIterator[ConnectorJob]:
+        if limit is not None and limit <= 0:
+            return
+
+        emitted = 0
+        async for page in self.iter_pages(start_cursor=start_cursor):
+            for job in page.jobs:
+                yield job
+                emitted += 1
+                if limit is not None and emitted >= limit:
+                    return
 
     @abstractmethod
     def build_request(self, cursor: str | None) -> RequestSpec:

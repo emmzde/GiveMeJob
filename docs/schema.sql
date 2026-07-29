@@ -90,6 +90,18 @@ CREATE TABLE job_skills (
   PRIMARY KEY (job_id, skill_id)
 );
 
+CREATE TABLE ingestion_checkpoints (
+  connector      TEXT NOT NULL,
+  source_scope   TEXT NOT NULL,
+  cursor         TEXT,
+  processed      BIGINT NOT NULL DEFAULT 0,
+  total_hint     BIGINT,
+  started_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at   TIMESTAMPTZ,
+  PRIMARY KEY (connector, source_scope)
+);
+
 -- ============================================================
 -- Пользователь
 -- ============================================================

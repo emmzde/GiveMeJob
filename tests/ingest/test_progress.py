@@ -51,6 +51,5 @@ def test_progress_reporter_excludes_resumed_work_from_rps() -> None:
         reporter.update(4_700)
 
     assert output.getvalue() == (
-        "progress label=himalayas status=done processed=4700 "
-        "total=10000 rps=20.00 eta=00:04:25\n"
+        "progress label=himalayas status=done processed=4700 total=10000 rps=20.00 eta=00:04:25\n"
     )

@@ -63,9 +63,7 @@ class HimalayasConnector(Connector):
                 while len(pending) < self.prefetch_pages and (
                     total_hint is None or next_offset < total_hint
                 ):
-                    pending[next_offset] = asyncio.create_task(
-                        self.fetch(str(next_offset))
-                    )
+                    pending[next_offset] = asyncio.create_task(self.fetch(str(next_offset)))
                     next_offset += self.page_size
                     if total_hint is None:
                         break

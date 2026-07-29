@@ -76,7 +76,7 @@ class PoliteHttpClient:
             headers={"User-Agent": user_agent, "Accept": "application/json"},
             follow_redirects=True,
             timeout=httpx.Timeout(connect=10.0, read=30.0, write=15.0, pool=5.0),
-            limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+            limits=httpx.Limits(max_connections=40, max_keepalive_connections=20),
         )
 
     async def __aenter__(self) -> PoliteHttpClient:

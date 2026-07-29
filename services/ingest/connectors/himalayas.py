@@ -19,7 +19,7 @@ from services.ingest.models import ConnectorJob, ConnectorPage, RemoteType, Requ
 
 class HimalayasConnector(Connector):
     name = "himalayas"
-    requests_per_second = 0.5
+    requests_per_second = 1.0
     endpoint = "https://himalayas.app/jobs/api"
     page_size = 20
 

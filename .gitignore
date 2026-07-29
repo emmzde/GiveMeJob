@@ -1,0 +1,54 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+.secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.uv-cache/
+.cache/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.nox/
+.tox/
+.coverage
+htmlcov/
+
+# JavaScript
+node_modules/
+dist/
+coverage/
+.vite/
+.pnpm-store/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Rust / Tauri
+target/
+apps/desktop/src-tauri/gen/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local data and logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+*.pid
+*.tmp
+*.bak

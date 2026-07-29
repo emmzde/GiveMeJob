@@ -1,0 +1,19 @@
+{
+  "market": {
+    "strategy": "remote-first",
+    "geographies": ["global-remote", "cis"],
+    "vertical": "it-digital"
+  },
+  "localization": {
+    "uiDefaultLocale": "ru",
+    "uiArchitecture": "i18n",
+    "indexLanguages": "multilingual"
+  },
+  "skills": {
+    "canonicalLanguage": "en",
+    "taxonomy": "ESCO"
+  },
+  "repository": {
+    "visibility": "private"
+  }
+}

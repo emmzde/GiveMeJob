@@ -1,0 +1,5 @@
+/*
+ * The design source of truth stays in docs/design-tokens.css.
+ * Vite resolves this import from the workspace during development and build.
+ */
+@import "../../../../docs/design-tokens.css";

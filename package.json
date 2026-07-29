@@ -1,0 +1,13 @@
+{
+  "name": "givemejob",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "desktop:dev": "pnpm --dir apps/desktop dev",
+    "desktop:build": "pnpm --dir apps/desktop build",
+    "desktop:lint": "pnpm --dir apps/desktop lint",
+    "desktop:test": "pnpm --dir apps/desktop test",
+    "desktop:typecheck": "pnpm --dir apps/desktop typecheck"
+  }
+}

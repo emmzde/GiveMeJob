@@ -1,0 +1,22 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+html {
+  color-scheme: light dark;
+  font-family: var(--font);
+  background: var(--bg);
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--bg);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}

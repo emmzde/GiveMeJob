@@ -1,5 +1,6 @@
-/* GiveMeJob! — дизайн-токены (Notion-подобная эстетика)
- * Правило: в компонентах не должно быть инлайн-хекс-цветов. Только эти переменные.
+/* GiveMeJob! — дизайн-токены Windows pet MVP.
+ * Правило: в компонентах и SVG Emmy не должно быть инлайн-хекс-цветов.
+ * Используются только эти семантические переменные.
  */
 
 :root {
@@ -8,11 +9,13 @@
   --bg-secondary:    #f7f7f5;   /* сайдбар — чуть теплее основного */
   --bg-hover:        rgba(55, 53, 47, 0.06);
   --bg-active:       rgba(55, 53, 47, 0.10);
+  --bg-raised:       #ffffff;
   --text:            #37352f;   /* тёплый почти-чёрный, не #000 */
   --text-secondary:  rgba(55, 53, 47, 0.65);
   --text-tertiary:   rgba(55, 53, 47, 0.40);
   --border:          rgba(55, 53, 47, 0.09);
   --accent:          #2383e2;
+  --focus:           #2383e2;
 
   --shadow-sm: 0 1px 2px rgba(15, 15, 15, 0.05);
   --shadow-md: rgba(15, 15, 15, 0.05) 0 0 0 1px,
@@ -31,6 +34,16 @@
   --match-medium:  #cb912f;
   --match-weak:    #d9730d;
   --match-none:    #e03e3e;
+
+  /* Emmy: спокойная тёплая палитра внутри почти монохромного продукта */
+  --emmy-fur:         #eee7dc;
+  --emmy-fur-shadow:  #d4c6b5;
+  --emmy-ear:         #b58e78;
+  --emmy-eye:         #37352f;
+  --emmy-nose:        #37352f;
+  --emmy-collar:      #2383e2;
+  --emmy-cheek:       #dca28d;
+  --emmy-thought:     rgba(55, 53, 47, 0.24);
 }
 
 [data-theme="dark"] {
@@ -38,11 +51,22 @@
   --bg-secondary:   #202020;
   --bg-hover:       rgba(255, 255, 255, 0.055);
   --bg-active:      rgba(255, 255, 255, 0.10);
+  --bg-raised:      #252525;
   --text:           rgba(255, 255, 255, 0.90);
   --text-secondary: rgba(255, 255, 255, 0.60);
   --text-tertiary:  rgba(255, 255, 255, 0.40);
   --border:         rgba(255, 255, 255, 0.10);
   --accent:         #529cca;
+  --focus:          #529cca;
+
+  --emmy-fur:        #d8cfc3;
+  --emmy-fur-shadow: #a99988;
+  --emmy-ear:        #a77f6b;
+  --emmy-eye:        #191919;
+  --emmy-nose:       #191919;
+  --emmy-collar:     #529cca;
+  --emmy-cheek:      #c78f7d;
+  --emmy-thought:    rgba(255, 255, 255, 0.28);
 }
 
 /* Микро-правила, которые дают 80% ощущения:
@@ -60,6 +84,17 @@
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

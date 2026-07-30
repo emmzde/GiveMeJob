@@ -1,8 +1,34 @@
 {
+  "product": {
+    "mode": "pet-project",
+    "releaseType": "public-portfolio-mvp",
+    "mascot": "Emmy",
+    "mascotForm": "animated-svg-dog"
+  },
   "market": {
     "strategy": "remote-first",
     "geographies": ["global-remote", "cis"],
     "vertical": "it-digital"
+  },
+  "platform": {
+    "targets": ["windows-x86_64"],
+    "minimum": "windows-10",
+    "artifacts": ["nsis-installer", "portable-zip"],
+    "authenticodeV1": false
+  },
+  "runtime": {
+    "architecture": "offline-first",
+    "catalog": "sqlite-fts5",
+    "requiresDocker": false,
+    "requiresPython": false,
+    "requiresBackend": false
+  },
+  "dataset": {
+    "mode": "frozen-snapshot",
+    "canonicalJobs": 78719,
+    "allowIngestion": false,
+    "useEmbeddings": false,
+    "includeFullNormalizedDescriptions": true
   },
   "localization": {
     "uiDefaultLocale": "ru",
@@ -13,7 +39,16 @@
     "canonicalLanguage": "en",
     "taxonomy": "ESCO"
   },
+  "ai": {
+    "router": "rust-local",
+    "providers": ["groq", "gemini", "openrouter"],
+    "structuredOutputOnly": true,
+    "builtInDemoKeys": true,
+    "demoKeysAreExtractable": true,
+    "byok": true,
+    "byokStorage": "windows-credential-manager"
+  },
   "repository": {
-    "visibility": "private"
+    "visibility": "public"
   }
 }

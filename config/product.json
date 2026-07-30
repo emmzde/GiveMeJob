@@ -49,6 +49,7 @@
     "byokStorage": "windows-credential-manager"
   },
   "repository": {
-    "visibility": "public"
+    "visibility": "private",
+    "targetVisibility": "public"
   }
 }

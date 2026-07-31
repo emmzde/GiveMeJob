@@ -5,10 +5,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use rusqlite::{params, Connection, OpenFlags};
+use rusqlite::{Connection, OpenFlags};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tauri::{path::BaseDirectory, Manager, State};
+
+mod search;
+
+use search::{search_catalog, JobSummary, SearchQuery};
 
 const CATALOG_MANIFEST: &str = include_str!("../../../../config/catalog-manifest.json");
 
@@ -38,31 +42,6 @@ struct CatalogStatus {
 struct CatalogState {
     path: Option<PathBuf>,
     status: CatalogStatus,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct SearchJobsRequest {
-    query: String,
-    limit: u32,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct JobSummary {
-    id: i64,
-    title: String,
-    company: String,
-    location_text: String,
-    remote_mode: Option<String>,
-    seniority: Option<String>,
-    salary_min: Option<f64>,
-    salary_max: Option<f64>,
-    salary_currency: Option<String>,
-    salary_period: Option<String>,
-    posted_at: Option<String>,
-    source: String,
-    attribution: String,
 }
 
 fn read_manifest() -> Result<CatalogManifest, String> {
@@ -263,20 +242,6 @@ fn initialize_catalog(app: &tauri::App) -> CatalogState {
     }
 }
 
-fn safe_fts_query(query: &str) -> Option<String> {
-    let tokens: Vec<String> = query
-        .split(|character: char| !(character.is_alphanumeric() || character == '_'))
-        .filter(|token| !token.is_empty())
-        .take(12)
-        .map(|token| format!("\"{}\"*", token.replace('"', "\"\"")))
-        .collect();
-    if tokens.is_empty() {
-        None
-    } else {
-        Some(tokens.join(" AND "))
-    }
-}
-
 #[tauri::command]
 fn catalog_status(state: State<'_, CatalogState>) -> CatalogStatus {
     state.status.clone()
@@ -284,7 +249,7 @@ fn catalog_status(state: State<'_, CatalogState>) -> CatalogStatus {
 
 #[tauri::command]
 fn search_jobs(
-    request: SearchJobsRequest,
+    request: SearchQuery,
     state: State<'_, CatalogState>,
 ) -> Result<Vec<JobSummary>, String> {
     let path = state
@@ -292,64 +257,7 @@ fn search_jobs(
         .as_deref()
         .ok_or_else(|| "local catalog is unavailable".to_owned())?;
     let connection = readonly_connection(path)?;
-    let limit = request.limit.clamp(1, 50);
-    let select = r#"
-        SELECT
-          job.id, job.title, job.company, job.location_text, job.remote_mode,
-          job.seniority, job.salary_min, job.salary_max, job.salary_currency,
-          job.salary_period, job.posted_at, job.source, job.attribution
-        "#;
-    let (sql, fts_query) = match safe_fts_query(&request.query) {
-        Some(fts_query) => (
-            format!(
-                "{select}
-                FROM jobs_fts
-                JOIN jobs AS job ON job.id = jobs_fts.rowid
-                WHERE jobs_fts MATCH ?1
-                ORDER BY bm25(jobs_fts, 8.0, 6.0, 3.0, 2.0, 1.0, 1.0),
-                         job.posted_at DESC, job.id
-                LIMIT ?2"
-            ),
-            Some(fts_query),
-        ),
-        None => (
-            format!(
-                "{select}
-                FROM jobs AS job
-                ORDER BY job.posted_at DESC, job.id
-                LIMIT ?2"
-            ),
-            None,
-        ),
-    };
-    let mut statement = connection
-        .prepare(&sql)
-        .map_err(|error| format!("local search cannot be prepared: {error}"))?;
-    let map_row = |row: &rusqlite::Row<'_>| {
-        Ok(JobSummary {
-            id: row.get(0)?,
-            title: row.get(1)?,
-            company: row.get(2)?,
-            location_text: row.get(3)?,
-            remote_mode: row.get(4)?,
-            seniority: row.get(5)?,
-            salary_min: row.get(6)?,
-            salary_max: row.get(7)?,
-            salary_currency: row.get(8)?,
-            salary_period: row.get(9)?,
-            posted_at: row.get(10)?,
-            source: row.get(11)?,
-            attribution: row.get(12)?,
-        })
-    };
-    let jobs = match fts_query {
-        Some(fts_query) => statement.query_map(params![fts_query, limit], map_row),
-        None => statement.query_map(params![rusqlite::types::Null, limit], map_row),
-    }
-    .map_err(|error| format!("local search failed: {error}"))?
-    .collect::<Result<Vec<_>, _>>()
-    .map_err(|error| format!("local search result is invalid: {error}"))?;
-    Ok(jobs)
+    search_catalog(&connection, &request)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -367,22 +275,13 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::{read_manifest, safe_fts_query};
+    use super::read_manifest;
 
     #[test]
     fn embedded_manifest_matches_the_frozen_catalog() {
         let manifest = read_manifest().expect("manifest should be valid");
         assert_eq!(manifest.catalog_version, "1");
         assert_eq!(manifest.canonical_jobs, 78_719);
-    }
-
-    #[test]
-    fn fts_query_accepts_words_without_exposing_fts_syntax() {
-        assert_eq!(
-            safe_fts_query("Python OR (Rust)"),
-            Some("\"Python\"* AND \"OR\"* AND \"Rust\"*".to_owned())
-        );
-        assert_eq!(safe_fts_query("  ---  "), None);
     }
 
     #[test]

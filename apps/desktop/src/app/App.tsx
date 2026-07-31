@@ -15,7 +15,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
-import { getCatalogStatus, searchLocalJobs } from "@/lib/catalog";
+import { createSearchQuery, getCatalogStatus, searchLocalJobs } from "@/lib/catalog";
 import type { CatalogStatus, JobSummary } from "@/lib/catalog";
 import { t } from "@/lib/i18n";
 
@@ -56,7 +56,7 @@ export function App() {
 
   useEffect(() => {
     let active = true;
-    void Promise.all([getCatalogStatus(), searchLocalJobs("")])
+    void Promise.all([getCatalogStatus(), searchLocalJobs(createSearchQuery())])
       .then(([catalogStatus, initialJobs]) => {
         if (!active) return;
         setStatus(catalogStatus);
@@ -80,7 +80,7 @@ export function App() {
     event.preventDefault();
     setIsLoading(true);
     try {
-      const nextJobs = await searchLocalJobs(query);
+      const nextJobs = await searchLocalJobs(createSearchQuery({ text: query }));
       setJobs(nextJobs);
       setSelectedId(nextJobs[0]?.id ?? null);
     } finally {

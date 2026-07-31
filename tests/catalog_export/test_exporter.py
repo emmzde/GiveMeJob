@@ -137,7 +137,8 @@ def test_manifest_serializes_all_release_checksums() -> None:
         catalog_version="1",
         schema_version=1,
         source_frozen_at="2026-07-29T20:30:03Z",
-        created_at="2026-07-29T20:30:03Z",
+        exported_at="2026-07-31T10:00:00Z",
+        published_at=None,
         canonical_jobs=1,
         jobs_with_skills=1,
         jobs_with_salary=1,
@@ -149,7 +150,12 @@ def test_manifest_serializes_all_release_checksums() -> None:
         archive_sha256="archive",
     )
 
-    assert manifest.to_dict()["archive_sha256"] == "archive"
+    payload = manifest.to_dict()
+    assert payload["archive_sha256"] == "archive"
+    assert payload["source_frozen_at"] == "2026-07-29T20:30:03Z"
+    assert payload["exported_at"] == "2026-07-31T10:00:00Z"
+    assert payload["published_at"] is None
+    assert "created_at" not in payload
 
 
 def test_release_manifest_describes_the_verified_frozen_snapshot() -> None:
@@ -161,5 +167,9 @@ def test_release_manifest_describes_the_verified_frozen_snapshot() -> None:
     assert manifest["canonical_jobs"] == 78_719
     assert manifest["jobs_with_skills"] == 68_881
     assert manifest["jobs_with_salary"] == 22_467
+    assert manifest["source_frozen_at"] == "2026-07-29T20:30:03.846872Z"
+    assert manifest["exported_at"] == "2026-07-29T20:30:03.846872Z"
+    assert manifest["published_at"] is None
+    assert "created_at" not in manifest
     assert len(manifest["sqlite_sha256"]) == 64
     assert len(manifest["archive_sha256"]) == 64

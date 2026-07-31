@@ -9,7 +9,7 @@ import tempfile
 import unicodedata
 from collections import defaultdict
 from collections.abc import Iterable, Iterator, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -130,6 +130,7 @@ class ExportOptions:
     expected_jobs: int = EXPECTED_CANONICAL_JOBS
     fts_probe: str = "developer"
     source_commit_sha: str | None = None
+    exported_at: str | None = None
 
 
 @dataclass(frozen=True)
@@ -145,7 +146,8 @@ class CatalogManifest:
     catalog_version: str
     schema_version: int
     source_frozen_at: str
-    created_at: str
+    exported_at: str
+    published_at: str | None
     canonical_jobs: int
     jobs_with_skills: int
     jobs_with_salary: int
@@ -156,12 +158,13 @@ class CatalogManifest:
     archive_file: str
     archive_sha256: str
 
-    def to_dict(self) -> dict[str, str | int]:
+    def to_dict(self) -> dict[str, str | int | None]:
         return {
             "catalog_version": self.catalog_version,
             "schema_version": self.schema_version,
             "source_frozen_at": self.source_frozen_at,
-            "created_at": self.created_at,
+            "exported_at": self.exported_at,
+            "published_at": self.published_at,
             "canonical_jobs": self.canonical_jobs,
             "jobs_with_skills": self.jobs_with_skills,
             "jobs_with_salary": self.jobs_with_salary,
@@ -448,7 +451,7 @@ def build_catalog(
             "catalog_version": options.catalog_version,
             "schema_version": str(options.schema_version),
             "source_frozen_at": metadata.source_frozen_at,
-            "created_at": metadata.source_frozen_at,
+            "exported_at": options.exported_at or metadata.source_frozen_at,
             "canonical_jobs": str(metadata.canonical_jobs),
             "jobs_with_skills": str(metadata.jobs_with_skills),
             "jobs_with_salary": str(metadata.jobs_with_salary),
@@ -577,7 +580,7 @@ def _git_commit_sha() -> str:
     return result.stdout.strip()
 
 
-def _write_json_atomic(path: Path, payload: Mapping[str, str | int]) -> None:
+def _write_json_atomic(path: Path, payload: Mapping[str, str | int | None]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     serialized = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     temporary = path.with_suffix(path.suffix + ".tmp")
@@ -594,6 +597,14 @@ def export_catalog(
 ) -> CatalogManifest:
     if options is None:
         options = ExportOptions()
+    if options.exported_at is None:
+        exported_at = _iso_datetime(datetime.now(UTC))
+        if exported_at is None:
+            raise RuntimeError("catalog export timestamp is unavailable")
+        options = replace(options, exported_at=exported_at)
+    exported_at = options.exported_at
+    if exported_at is None:
+        raise RuntimeError("catalog export timestamp is unavailable")
     dsn = database_url.replace("postgresql+psycopg://", "postgresql://", 1)
     output_dir.mkdir(parents=True, exist_ok=True)
     sqlite_name = f"catalog-v{options.catalog_version}.sqlite"
@@ -625,7 +636,8 @@ def export_catalog(
             catalog_version=options.catalog_version,
             schema_version=options.schema_version,
             source_frozen_at=metadata.source_frozen_at,
-            created_at=metadata.source_frozen_at,
+            exported_at=exported_at,
+            published_at=None,
             canonical_jobs=metadata.canonical_jobs,
             jobs_with_skills=metadata.jobs_with_skills,
             jobs_with_salary=metadata.jobs_with_salary,

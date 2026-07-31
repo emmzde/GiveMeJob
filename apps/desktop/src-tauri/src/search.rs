@@ -144,7 +144,7 @@ impl SearchQuery {
 #[derive(Debug, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct JobSummary {
-    pub(crate) id: i64,
+    pub(crate) id: String,
     pub(crate) title: String,
     pub(crate) company: String,
     pub(crate) location_text: String,
@@ -263,8 +263,9 @@ fn push_skill_filter(skills: &[String], predicates: &mut Vec<String>, parameters
 }
 
 fn map_job_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<JobSummary> {
+    let id: i64 = row.get(0)?;
     Ok(JobSummary {
-        id: row.get(0)?,
+        id: id.to_string(),
         title: row.get(1)?,
         company: row.get(2)?,
         location_text: row.get(3)?,
@@ -345,7 +346,9 @@ pub(crate) fn search_catalog(
             "ORDER BY bm25(jobs_fts, 8.0, 6.0, 3.0, 2.0, 1.0, 1.0), job.posted_at DESC, job.id"
         }
         SearchSort::Relevance | SearchSort::Newest => "ORDER BY job.posted_at DESC, job.id",
-        SearchSort::Salary => "ORDER BY job.salary_usd_year DESC, job.id",
+        SearchSort::Salary => {
+            "ORDER BY job.salary_usd_year IS NULL, job.salary_usd_year DESC, job.id"
+        }
     };
     parameters.push(Value::Integer(i64::from(request.limit)));
 
@@ -622,7 +625,7 @@ mod tests {
 
         let jobs = search_catalog(&connection, &query).expect("filtered search should succeed");
         assert_eq!(jobs.len(), 1);
-        assert_eq!(jobs[0].id, 1);
+        assert_eq!(jobs[0].id, "1");
     }
 
     #[test]
@@ -638,35 +641,35 @@ mod tests {
 
         let mut skills = search_query();
         skills.skills = vec!["Rust".to_owned()];
-        assert_eq!(job_ids(&skills), vec![2]);
+        assert_eq!(job_ids(&skills), vec!["2"]);
 
         let mut locations = search_query();
         locations.locations = vec!["Berlin".to_owned()];
-        assert_eq!(job_ids(&locations), vec![2]);
+        assert_eq!(job_ids(&locations), vec!["2"]);
 
         let mut remote_modes = search_query();
         remote_modes.remote_modes = vec![RemoteMode::Hybrid];
-        assert_eq!(job_ids(&remote_modes), vec![2]);
+        assert_eq!(job_ids(&remote_modes), vec!["2"]);
 
         let mut seniorities = search_query();
         seniorities.seniorities = vec![Seniority::Middle];
-        assert_eq!(job_ids(&seniorities), vec![2]);
+        assert_eq!(job_ids(&seniorities), vec!["2"]);
 
         let mut employment_types = search_query();
         employment_types.employment_types = vec![EmploymentType::Contract];
-        assert_eq!(job_ids(&employment_types), vec![2]);
+        assert_eq!(job_ids(&employment_types), vec!["2"]);
 
         let mut salary_known = search_query();
         salary_known.salary_known_only = true;
-        assert_eq!(job_ids(&salary_known), vec![4, 2, 1]);
+        assert_eq!(job_ids(&salary_known), vec!["4", "2", "1"]);
 
         let mut salary_minimum = search_query();
         salary_minimum.salary_min_usd_year = Some(130_000.0);
-        assert_eq!(job_ids(&salary_minimum), vec![1]);
+        assert_eq!(job_ids(&salary_minimum), vec!["1"]);
 
         let mut sources = search_query();
         sources.sources = vec!["lever".to_owned()];
-        assert_eq!(job_ids(&sources), vec![2]);
+        assert_eq!(job_ids(&sources), vec!["2"]);
     }
 
     #[test]
@@ -678,8 +681,8 @@ mod tests {
         query.sort = SearchSort::Newest;
 
         let jobs = search_catalog(&connection, &query).expect("multi-value search should succeed");
-        let ids: Vec<i64> = jobs.into_iter().map(|job| job.id).collect();
-        assert_eq!(ids, vec![4, 2, 1]);
+        let ids: Vec<String> = jobs.into_iter().map(|job| job.id).collect();
+        assert_eq!(ids, vec!["4", "2", "1"]);
     }
 
     #[test]
@@ -690,26 +693,26 @@ mod tests {
         relevance.text = "Rust".to_owned();
         assert_eq!(
             search_catalog(&connection, &relevance).expect("relevance search should succeed")[0].id,
-            2
+            "2"
         );
 
         let mut newest = search_query();
         newest.sort = SearchSort::Newest;
-        let newest_ids: Vec<i64> = search_catalog(&connection, &newest)
+        let newest_ids: Vec<String> = search_catalog(&connection, &newest)
             .expect("newest search should succeed")
             .into_iter()
             .map(|job| job.id)
             .collect();
-        assert_eq!(newest_ids, vec![4, 3, 2, 1]);
+        assert_eq!(newest_ids, vec!["4", "3", "2", "1"]);
 
         let mut salary = search_query();
         salary.sort = SearchSort::Salary;
-        let salary_ids: Vec<i64> = search_catalog(&connection, &salary)
+        let salary_ids: Vec<String> = search_catalog(&connection, &salary)
             .expect("salary search should succeed")
             .into_iter()
             .map(|job| job.id)
             .collect();
-        assert_eq!(salary_ids, vec![1, 2, 4, 3]);
+        assert_eq!(salary_ids, vec!["1", "2", "4", "3"]);
     }
 
     #[test]

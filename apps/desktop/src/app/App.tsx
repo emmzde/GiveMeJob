@@ -16,13 +16,13 @@ import type { FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { createSearchQuery, getCatalogStatus, searchLocalJobs } from "@/lib/catalog";
-import type { CatalogStatus, JobSummary } from "@/lib/catalog";
+import type { CatalogStatus, JobId, JobSummary } from "@/lib/catalog";
 import { t } from "@/lib/i18n";
 
 const initialStatus: CatalogStatus = {
   state: "missing",
   catalogVersion: null,
-  snapshotDate: null,
+  sourceFrozenAt: null,
   totalJobs: 0,
   message: null,
 };
@@ -50,8 +50,8 @@ export function App() {
   const [status, setStatus] = useState<CatalogStatus>(initialStatus);
   const [jobs, setJobs] = useState<JobSummary[]>([]);
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [savedIds, setSavedIds] = useState<ReadonlySet<number>>(new Set());
+  const [selectedId, setSelectedId] = useState<JobId | null>(null);
+  const [savedIds, setSavedIds] = useState<ReadonlySet<JobId>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -88,7 +88,7 @@ export function App() {
     }
   }
 
-  function toggleSaved(jobId: number) {
+  function toggleSaved(jobId: JobId) {
     setSavedIds((current) => {
       const next = new Set(current);
       if (next.has(jobId)) next.delete(jobId);
@@ -169,7 +169,7 @@ export function App() {
             </form>
             <p className="mt-2 text-xs text-[var(--text-secondary)]">
               {status.totalJobs.toLocaleString("ru-RU")} {t("jobsFound")}
-              {status.snapshotDate ? ` · ${status.snapshotDate.slice(0, 10)}` : ""}
+              {status.sourceFrozenAt ? ` · ${status.sourceFrozenAt.slice(0, 10)}` : ""}
             </p>
           </div>
 

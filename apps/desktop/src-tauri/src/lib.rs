@@ -33,7 +33,7 @@ struct CatalogManifest {
 struct CatalogStatus {
     state: &'static str,
     catalog_version: Option<String>,
-    snapshot_date: Option<String>,
+    source_frozen_at: Option<String>,
     total_jobs: u64,
     message: Option<String>,
 }
@@ -158,7 +158,7 @@ fn ready_state(path: PathBuf, manifest: &CatalogManifest) -> CatalogState {
         status: CatalogStatus {
             state: "ready",
             catalog_version: Some(manifest.catalog_version.clone()),
-            snapshot_date: Some(manifest.source_frozen_at.clone()),
+            source_frozen_at: Some(manifest.source_frozen_at.clone()),
             total_jobs: manifest.canonical_jobs,
             message: None,
         },
@@ -171,7 +171,7 @@ fn unavailable_state(state: &'static str, message: String) -> CatalogState {
         status: CatalogStatus {
             state,
             catalog_version: None,
-            snapshot_date: None,
+            source_frozen_at: None,
             total_jobs: 0,
             message: Some(message),
         },

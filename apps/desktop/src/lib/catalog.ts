@@ -24,6 +24,7 @@ export const employmentTypeSchema = z.enum([
   "other",
 ]);
 export const searchSortSchema = z.enum(["relevance", "newest", "salary"]);
+export const jobIdSchema = z.string().regex(/^[1-9]\d*$/).brand<"JobId">();
 
 const filterValueSchema = z.string().trim().min(1).max(100);
 
@@ -46,13 +47,13 @@ export const searchQuerySchema = z
 const catalogStatusSchema = z.object({
   state: z.enum(["ready", "missing", "error"]),
   catalogVersion: z.string().nullable(),
-  snapshotDate: z.string().nullable(),
+  sourceFrozenAt: z.string().nullable(),
   totalJobs: z.number().int().nonnegative(),
   message: z.string().nullable(),
 });
 
 const jobSummarySchema = z.object({
-  id: z.number().int(),
+  id: jobIdSchema,
   title: z.string().min(1),
   company: z.string().min(1),
   locationText: z.string(),
@@ -69,6 +70,7 @@ const jobSummarySchema = z.object({
 
 export type CatalogStatus = z.infer<typeof catalogStatusSchema>;
 export type EmploymentType = z.infer<typeof employmentTypeSchema>;
+export type JobId = z.infer<typeof jobIdSchema>;
 export type JobSummary = z.infer<typeof jobSummarySchema>;
 export type RemoteMode = z.infer<typeof remoteModeSchema>;
 export type SearchQuery = z.infer<typeof searchQuerySchema>;
@@ -97,7 +99,7 @@ export async function getCatalogStatus(): Promise<CatalogStatus> {
     return {
       state: "missing",
       catalogVersion: null,
-      snapshotDate: null,
+      sourceFrozenAt: null,
       totalJobs: 0,
       message: "Каталог доступен в Windows-приложении.",
     };

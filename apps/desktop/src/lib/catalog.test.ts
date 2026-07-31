@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createSearchQuery,
   getCatalogStatus,
+  jobIdSchema,
   searchLocalJobs,
   searchQuerySchema,
 } from "@/lib/catalog";
@@ -42,6 +43,12 @@ describe("catalog IPC boundary", () => {
       sources: ["greenhouse"],
       sort: "salary",
     });
+  });
+
+  it("accepts only positive decimal string job IDs on the wire", () => {
+    expect(jobIdSchema.parse("78719")).toBe("78719");
+    expect(() => jobIdSchema.parse(78719)).toThrow();
+    expect(() => jobIdSchema.parse("078719")).toThrow();
   });
 
   it("rejects unsupported sorts, unknown fields, and invalid limits", async () => {

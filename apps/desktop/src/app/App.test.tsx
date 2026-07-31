@@ -13,9 +13,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "@/app/App";
 import { createAppQueryClient } from "@/app/queryClient";
 import { resetAppUiStore } from "@/app/store/appUiStore";
-import { jobIdSchema } from "@/lib/catalog";
+import { createSearchQuery, jobIdSchema } from "@/lib/catalog";
 import type {
   CatalogStatus,
+  FilterOptions,
   JobDetail,
   JobSearchPage,
   JobSummary,
@@ -24,7 +25,10 @@ import type {
 import { defaultLocale, t } from "@/lib/i18n";
 
 const catalogMocks = vi.hoisted(() => ({
+  autocompleteLocations: vi.fn(),
+  autocompleteSkills: vi.fn(),
   getCatalogStatus: vi.fn(),
+  getFilterOptions: vi.fn(),
   getLocalJob: vi.fn(),
   openOriginalJob: vi.fn(),
   recoverLocalCatalog: vi.fn(),
@@ -36,7 +40,10 @@ vi.mock("@/lib/catalog", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/catalog")>();
   return {
     ...actual,
+    autocompleteLocations: catalogMocks.autocompleteLocations,
+    autocompleteSkills: catalogMocks.autocompleteSkills,
     getCatalogStatus: catalogMocks.getCatalogStatus,
+    getFilterOptions: catalogMocks.getFilterOptions,
     getLocalJob: catalogMocks.getLocalJob,
     openOriginalJob: catalogMocks.openOriginalJob,
     recoverLocalCatalog: catalogMocks.recoverLocalCatalog,
@@ -53,6 +60,35 @@ const readyStatus: CatalogStatus = {
   sourceFrozenAt: "2026-07-31T00:00:00Z",
   totalJobs: 78_719,
   message: null,
+};
+
+const filterOptions: FilterOptions = {
+  sources: [
+    { source: "greenhouse", count: 7_918 },
+    { source: "ashby", count: 1_204 },
+  ],
+  remoteModes: ["remote", "hybrid", "onsite"],
+  seniorities: [
+    "intern",
+    "junior",
+    "middle",
+    "senior",
+    "lead",
+    "staff",
+    "principal",
+    "manager",
+    "director",
+    "executive",
+  ],
+  employmentTypes: [
+    "full_time",
+    "contract",
+    "part_time",
+    "internship",
+    "temporary",
+    "volunteer",
+    "other",
+  ],
 };
 
 const sampleJob: JobSummary = {
@@ -99,16 +135,30 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
+async function expectLatestSearchPayload(overrides: Partial<SearchQuery>): Promise<void> {
+  await waitFor(() => {
+    expect(catalogMocks.searchLocalJobs.mock.calls.at(-1)?.[0]).toEqual(
+      createSearchQuery(overrides),
+    );
+  });
+}
+
 describe("App", () => {
   beforeEach(() => {
     resetAppUiStore();
+    catalogMocks.autocompleteLocations.mockReset();
+    catalogMocks.autocompleteSkills.mockReset();
     catalogMocks.getCatalogStatus.mockReset();
+    catalogMocks.getFilterOptions.mockReset();
     catalogMocks.getLocalJob.mockReset();
     catalogMocks.openOriginalJob.mockReset();
     catalogMocks.recoverLocalCatalog.mockReset();
     catalogMocks.searchLocalJobs.mockReset();
     catalogMocks.watchCatalogStatus.mockReset();
+    catalogMocks.autocompleteLocations.mockResolvedValue([]);
+    catalogMocks.autocompleteSkills.mockResolvedValue([]);
     catalogMocks.getCatalogStatus.mockResolvedValue(readyStatus);
+    catalogMocks.getFilterOptions.mockResolvedValue(filterOptions);
     catalogMocks.getLocalJob.mockResolvedValue(sampleDetail);
     catalogMocks.openOriginalJob.mockResolvedValue(null);
     catalogMocks.recoverLocalCatalog.mockResolvedValue(readyStatus);
@@ -268,7 +318,7 @@ describe("App", () => {
     render(<App />);
     await screen.findByRole("heading", { level: 2, name: sampleJob.title });
 
-    fireEvent.click(screen.getByRole("button", { name: t("remoteOnly") }));
+    fireEvent.click(screen.getByRole("checkbox", { name: t("remoteModeRemote") }));
     await waitFor(() => expect(catalogMocks.searchLocalJobs).toHaveBeenCalledTimes(2));
 
     expect(screen.getAllByText(sampleJob.title)).toHaveLength(2);
@@ -314,11 +364,11 @@ describe("App", () => {
     const input = screen.getByRole("textbox", { name: t("searchPlaceholder") });
 
     fireEvent.change(input, { target: { value: "slow" } });
-    fireEvent.click(screen.getByRole("button", { name: t("remoteOnly") }));
+    fireEvent.click(screen.getByRole("checkbox", { name: t("remoteModeRemote") }));
     await waitFor(() => expect(catalogMocks.searchLocalJobs).toHaveBeenCalledTimes(2));
 
     fireEvent.change(input, { target: { value: "fast" } });
-    fireEvent.click(screen.getByRole("button", { name: t("remoteOnly") }));
+    fireEvent.click(screen.getByRole("checkbox", { name: t("remoteModeRemote") }));
     expect(
       await screen.findByRole("heading", { level: 2, name: fastJob.title }),
     ).toBeInTheDocument();
@@ -330,6 +380,200 @@ describe("App", () => {
 
     expect(screen.getAllByText(fastJob.title)).toHaveLength(2);
     expect(screen.queryByText(slowJob.title)).not.toBeInTheDocument();
+  });
+
+  it("loads source choices from IPC and renders every filter as an accessible group", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+
+    expect(catalogMocks.getFilterOptions).toHaveBeenCalledTimes(1);
+    for (const name of [
+      t("sort"),
+      t("workMode"),
+      t("skillsFilter"),
+      t("locationsFilter"),
+      t("seniority"),
+      t("employment"),
+      t("salary"),
+      t("sources"),
+    ]) {
+      expect(screen.getByRole("group", { name })).toBeInTheDocument();
+    }
+    expect(
+      await screen.findByRole("checkbox", { name: /^Greenhouse/ }),
+    ).toBeInTheDocument();
+  });
+
+  const checkboxPayloadCases: Array<{
+    expected: Partial<SearchQuery>;
+    label: string;
+    name: string;
+  }> = [
+    {
+      expected: { remoteModes: ["remote"] },
+      label: "remote multi-select",
+      name: t("remoteModeRemote"),
+    },
+    {
+      expected: { seniorities: ["senior"] },
+      label: "seniority multi-select",
+      name: t("senioritySenior"),
+    },
+    {
+      expected: { employmentTypes: ["full_time"] },
+      label: "employment multi-select",
+      name: t("employmentFullTime"),
+    },
+    {
+      expected: { salaryKnownOnly: true },
+      label: "known-salary toggle",
+      name: t("salaryKnownOnly"),
+    },
+  ];
+
+  it.each(checkboxPayloadCases)(
+    "sends the exact search payload for $label",
+    async ({ expected, name }) => {
+      render(<App />);
+      await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+
+      fireEvent.click(screen.getByRole("checkbox", { name }));
+
+      await expectLatestSearchPayload(expected);
+    },
+  );
+
+  it("sends the exact search payload for the sort control", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+
+    fireEvent.change(screen.getByRole("combobox", { name: t("sort") }), {
+      target: { value: "salary" },
+    });
+
+    await expectLatestSearchPayload({ sort: "salary" });
+  });
+
+  it("commits a valid minimum salary as the exact numeric payload", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    const input = screen.getByRole("textbox", { name: t("salaryMinimum") });
+
+    fireEvent.change(input, { target: { value: "125000" } });
+    fireEvent.blur(input);
+
+    await expectLatestSearchPayload({ salaryMinUsdYear: 125_000 });
+  });
+
+  it.each(["-1", "NaN", "10000001"])(
+    "does not commit invalid minimum salary %s",
+    async (value) => {
+      render(<App />);
+      await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+      const input = screen.getByRole("textbox", { name: t("salaryMinimum") });
+
+      fireEvent.change(input, { target: { value } });
+      fireEvent.blur(input);
+
+      expect(await screen.findByText(t("salaryInvalid"))).toHaveAttribute("role", "alert");
+      expect(catalogMocks.searchLocalJobs).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("sends the exact source value supplied by filter-options IPC", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+
+    fireEvent.click(await screen.findByRole("checkbox", { name: /^Greenhouse/ }));
+
+    await expectLatestSearchPayload({ sources: ["greenhouse"] });
+  });
+
+  it("sends the canonical skill selected from IPC autocomplete", async () => {
+    catalogMocks.autocompleteSkills.mockResolvedValue([
+      {
+        label: "Python",
+        canonicalName: "Python (computer programming)",
+        count: 9_302,
+      },
+    ]);
+    render(<App />);
+    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    const input = screen.getByRole("combobox", { name: t("skillsFilter") });
+
+    fireEvent.change(input, { target: { value: "Python" } });
+    await waitFor(() => {
+      expect(catalogMocks.autocompleteSkills).toHaveBeenCalledWith("Python", 20);
+    });
+    await screen.findByRole("option", { name: /Python/ });
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await expectLatestSearchPayload({ skills: ["Python (computer programming)"] });
+  });
+
+  it("sends the canonical location selected from IPC autocomplete", async () => {
+    catalogMocks.autocompleteLocations.mockResolvedValue([
+      { label: "Berlin", canonicalValue: "Berlin", kind: "city", count: 16 },
+    ]);
+    render(<App />);
+    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    const input = screen.getByRole("combobox", { name: t("locationsFilter") });
+
+    fireEvent.change(input, { target: { value: "Ber" } });
+    await waitFor(() => {
+      expect(catalogMocks.autocompleteLocations).toHaveBeenCalledWith("Ber", 20);
+    });
+    await screen.findByRole("option", { name: /Berlin/ });
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await expectLatestSearchPayload({ locations: ["Berlin"] });
+  });
+
+  it("removes one active chip and keeps the remaining exact payload", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    fireEvent.click(screen.getByRole("checkbox", { name: t("remoteModeRemote") }));
+    fireEvent.click(screen.getByRole("checkbox", { name: t("senioritySenior") }));
+    await expectLatestSearchPayload({
+      remoteModes: ["remote"],
+      seniorities: ["senior"],
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `${t("removeFilter")}: ${t("remoteModeRemote")}`,
+      }),
+    );
+
+    await expectLatestSearchPayload({ seniorities: ["senior"] });
+  });
+
+  it("combines filters and sort, then resets them while preserving search text", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    fireEvent.change(screen.getByRole("textbox", { name: t("searchPlaceholder") }), {
+      target: { value: "rust platform" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: t("remoteModeHybrid") }));
+    fireEvent.click(screen.getByRole("checkbox", { name: t("employmentContract") }));
+    fireEvent.change(screen.getByRole("combobox", { name: t("sort") }), {
+      target: { value: "newest" },
+    });
+
+    await expectLatestSearchPayload({
+      text: "rust platform",
+      remoteModes: ["hybrid"],
+      employmentTypes: ["contract"],
+      sort: "newest",
+    });
+    fireEvent.click(screen.getByRole("button", { name: t("clearAllFilters") }));
+
+    await expectLatestSearchPayload({ text: "rust platform" });
+    expect(screen.getByRole("textbox", { name: t("searchPlaceholder") })).toHaveValue(
+      "rust platform",
+    );
   });
 
   it("loads detail separately and opens the original by job ID", async () => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   createSearchDraft,
+  resetSearchFilters,
   searchDraftToQuery,
 } from "@/features/feed/searchDraft";
 
@@ -29,5 +30,22 @@ describe("search draft mapper", () => {
     });
     expect(first).not.toHaveProperty("cursor");
     expect(draft).toEqual(snapshot);
+  });
+
+  it("resets filters and sort while preserving the unsubmitted search text", () => {
+    const draft = createSearchDraft({
+      text: "rust platform",
+      skills: ["Rust"],
+      locations: ["Berlin"],
+      remoteModes: ["remote"],
+      seniorities: ["senior"],
+      employmentTypes: ["full_time"],
+      salaryMinUsdYear: 120_000,
+      salaryKnownOnly: true,
+      sources: ["greenhouse"],
+      sort: "salary",
+    });
+
+    expect(resetSearchFilters(draft)).toEqual(createSearchDraft({ text: "rust platform" }));
   });
 });

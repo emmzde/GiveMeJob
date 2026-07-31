@@ -33,6 +33,18 @@ const emptySearchDraft: SearchDraft = {
   sort: "relevance",
 };
 
+const filterResetDraft: Omit<SearchDraft, "text"> = {
+  skills: [],
+  locations: [],
+  remoteModes: [],
+  seniorities: [],
+  employmentTypes: [],
+  salaryMinUsdYear: undefined,
+  salaryKnownOnly: false,
+  sources: [],
+  sort: "relevance",
+};
+
 function compareStrings(left: string, right: string): number {
   if (left < right) return -1;
   if (left > right) return 1;
@@ -47,6 +59,11 @@ function normalizeValues<T extends string>(values: readonly T[]): T[] {
 
 export function createSearchDraft(overrides: Partial<SearchDraft> = {}): SearchDraft {
   return { ...emptySearchDraft, ...overrides };
+}
+
+/** Clears every filter and restores the default sort while preserving search text. */
+export function resetSearchFilters(draft: SearchDraft): SearchDraft {
+  return { text: draft.text, ...filterResetDraft };
 }
 
 export function searchDraftToQuery(draft: SearchDraft): SearchQuery {

@@ -48,6 +48,41 @@ describe("catalog IPC boundary", () => {
     expect(calls).toEqual([{ command: "search_jobs", args: { request } }]);
   });
 
+  it("uses exact filter-options and autocomplete IPC envelopes", async () => {
+    const calls: Array<{ command: string; args: Record<string, unknown> | undefined }> = [];
+    const adapter: TauriAdapter = {
+      isAvailable: () => true,
+      invoke: (command, args) => {
+        calls.push({ command, args });
+        if (command === "get_filter_options") {
+          return Promise.resolve(contractFixtures.valid.filterOptions);
+        }
+        if (command === "autocomplete_skills") {
+          return Promise.resolve(contractFixtures.valid.skillSuggestions);
+        }
+        return Promise.resolve(contractFixtures.valid.locationSuggestions);
+      },
+      listen: () => Promise.resolve(() => undefined),
+    };
+    const api = createCatalogApi(adapter);
+
+    await api.getFilterOptions();
+    await api.autocompleteSkills("Python", 20);
+    await api.autocompleteLocations("Berlin", 20);
+
+    expect(calls).toEqual([
+      { command: "get_filter_options", args: undefined },
+      {
+        command: "autocomplete_skills",
+        args: { request: { query: "Python", limit: 20 } },
+      },
+      {
+        command: "autocomplete_locations",
+        args: { request: { query: "Berlin", limit: 20 } },
+      },
+    ]);
+  });
+
   it("uses validated browser fallbacks outside Tauri", async () => {
     await expect(getCatalogStatus()).resolves.toMatchObject({
       state: "missing",

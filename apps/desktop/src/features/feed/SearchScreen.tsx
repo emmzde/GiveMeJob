@@ -11,6 +11,7 @@ import {
   isCatalogWorking,
 } from "@/features/catalog/catalogStatus";
 import type { CatalogViewState } from "@/features/catalog/catalogStatus";
+import { ActiveFilterChips } from "@/features/feed/components/ActiveFilterChips";
 import { Feed } from "@/features/feed/components/Feed";
 import { Filters } from "@/features/feed/components/Filters";
 import {
@@ -101,8 +102,8 @@ export function SearchScreen({
   }
 
   return (
-    <div className="grid min-h-[calc(100vh-3.5rem)] grid-cols-[190px_minmax(360px,1fr)_minmax(300px,0.85fr)]">
-      <Filters draft={draft} onChange={changeFilters} />
+    <div className="grid min-h-[calc(100vh-3.5rem)] grid-cols-[270px_minmax(360px,1fr)_minmax(300px,0.85fr)]">
+      <Filters disabled={!catalogReady} draft={draft} onChange={changeFilters} />
 
       <section className="min-w-0 border-r border-[var(--border)]">
         <div className="border-b border-[var(--border)] p-4">
@@ -123,6 +124,8 @@ export function SearchScreen({
               {t("search")}
             </Button>
           </form>
+
+          <ActiveFilterChips draft={draft} onChange={changeFilters} />
 
           {catalog.status?.state === "ready" ? (
             <p className="mt-2 text-xs text-[var(--text-secondary)]">

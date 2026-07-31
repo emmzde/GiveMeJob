@@ -1,16 +1,20 @@
 {
   "archive_file": "catalog-v1.sqlite.zst",
-  "archive_sha256": "7536e669f60ea90aee85b1642359dff7e6efe5d3c0bb17bad8cc4ca5e0bd610c",
+  "archive_sha256": "f05e661bbe4bfecfe46e4cc947ddc7c0ae0b0a43c43876ad00e3996b68475671",
+  "archive_size_bytes": 340085972,
   "canonical_jobs": 78719,
   "catalog_version": "1",
-  "exported_at": "2026-07-29T20:30:03.846872Z",
+  "description_format": "plain_text",
+  "exported_at": "2026-07-31T11:09:37.316686Z",
   "jobs_with_salary": 22467,
   "jobs_with_skills": 68881,
-  "logical_checksum": "1ef6792c62ef099b21974805fbade6c6eec1eeeb2db249a97a355ef1ffc8776b",
+  "logical_checksum": "895d38f383597e7ba8e2de60c7cab5c99a8ae32de6df7f51035a225a4ed5bb6b",
+  "manifest_version": 1,
   "published_at": null,
   "schema_version": 1,
-  "source_commit_sha": "03b0ca0ecc62c79118c2714be9e428c550eea452",
+  "source_commit_sha": "b30162a21d1e473b61d037d10165d283798aa586",
   "source_frozen_at": "2026-07-29T20:30:03.846872Z",
   "sqlite_file": "catalog-v1.sqlite",
-  "sqlite_sha256": "dcdfa747a2c51e49c539238467d74dc0d6b9e17efa2f281f9c6508bf27c23375"
+  "sqlite_sha256": "e03b6b3e76be625c432268043cc241eb133e41566c3057dfdb610dbab92ab71e",
+  "sqlite_size_bytes": 1043488768
 }

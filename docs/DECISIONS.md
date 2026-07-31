@@ -247,9 +247,41 @@ Catalog manifest использует три разных понятия:
 что именно эта дата описывает свежесть вакансий. Даты export и publication
 остаются provenance и release metadata.
 
-У исторического `catalog-v1` значения `source_frozen_at` и `exported_at`
-совпадают. Это свойство конкретного manifest, а не смешение семантики полей;
-`published_at` остаётся `null`.
+У первоначального исторического export `catalog-v1` значения
+`source_frozen_at` и `exported_at` совпадали. Corrective export сохранил
+`source_frozen_at = 2026-07-29T20:30:03.846872Z`, записал настоящий
+`exported_at = 2026-07-31T11:09:37.316686Z`; `published_at` остаётся `null`.
+
+## ADR-017. Corrective catalog gate и manifest v1
+
+31 июля 2026 года exporter hardening был полностью закоммичен как
+`b30162a21d1e473b61d037d10165d283798aa586` до повторного export. Новый сбор
+данных не выполнялся: сохранённый PostgreSQL volume монтировался только
+read-only, PostgreSQL запускался на временной копии, а exporter использовал
+server-enforced `REPEATABLE READ, READ ONLY`.
+
+Приняты следующие решения:
+
+- manifest schema имеет `manifest_version = 1`, использует только
+  `snake_case`, строгий набор полей, отдельные sizes и SQLite/archive SHA-256;
+- artifact filenames являются basename и не допускают absolute path, path
+  components или `..`;
+- release URL/locator отсутствует в generated manifest и принадлежит будущему
+  M5 release descriptor;
+- `description_text` имеет формат `plain_text`: Unicode NFKC, Markdown links/
+  headings/lists без chrome, HTML entities декодируются, `script`/`style`
+  удаляются;
+- `verify --manifest` пересчитывает logical checksum из SQLite и проверяет все
+  artifact, SQLite, counts, attribution/URL, metadata, product и Git gates;
+- будущим release asset сопутствует GNU-style файл
+  `catalog-v1.sqlite.zst.sha256`.
+
+Повторный export сохранил 78 719 jobs, 68 881 jobs со skills, 22 467 jobs с
+salary и прежнюю frozen boundary. Logical checksum изменился с
+`1ef6792c62ef099b21974805fbade6c6eec1eeeb2db249a97a355ef1ffc8776b` на
+`895d38f383597e7ba8e2de60c7cab5c99a8ae32de6df7f51035a225a4ed5bb6b` только
+из-за normalization 78 317 descriptions: контрфактический пересчёт с исходным
+`description_md` точно восстановил старый checksum, а иных расхождений не было.
 
 ## Машиночитаемый источник
 

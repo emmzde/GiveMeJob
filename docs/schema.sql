@@ -140,8 +140,10 @@ CREATE VIRTUAL TABLE jobs_fts USING fts5(
 
 -- catalog_meta обязательные ключи:
 --
+-- manifest_version
 -- catalog_version
 -- schema_version
+-- description_format
 -- source_frozen_at
 -- exported_at
 -- canonical_jobs

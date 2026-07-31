@@ -59,28 +59,46 @@ Alembic или Python sidecar.
 3. Skills агрегируются в canonical English names и alias search text.
 4. Записи вставляются в SQLite в стабильном порядке по ID.
 5. Создаётся FTS5 external-content index.
-6. Выполняются integrity check, `ANALYZE` и `VACUUM`.
-7. Формируются manifest и SHA-256.
-8. База сжимается в `catalog-v1.sqlite.zst`.
+6. Выполняются integrity, foreign-key, job/FTS count и metadata gates,
+   `ANALYZE` и `VACUUM`.
+7. База сжимается в `catalog-v1.sqlite.zst`.
+8. Формируются строгий manifest, отдельные SQLite/archive SHA-256 и
+   `catalog-v1.sqlite.zst.sha256`.
 
 Snapshot не коммитится из-за размера. В Git хранится только manifest:
 
 ```json
 {
+  "manifest_version": 1,
   "catalog_version": "1",
-  "canonical_jobs": 78719,
   "schema_version": 1,
-  "source_frozen_at": "<source snapshot boundary>",
-  "exported_at": "<artifact creation time>",
+  "description_format": "plain_text",
+  "source_frozen_at": "2026-07-29T20:30:03.846872Z",
+  "exported_at": "2026-07-31T11:09:37.316686Z",
   "published_at": null,
-  "sqlite_sha256": "<SQLite checksum>",
-  "archive_sha256": "<Zstandard checksum>"
+  "canonical_jobs": 78719,
+  "jobs_with_skills": 68881,
+  "jobs_with_salary": 22467,
+  "source_commit_sha": "b30162a21d1e473b61d037d10165d283798aa586",
+  "logical_checksum": "895d38f383597e7ba8e2de60c7cab5c99a8ae32de6df7f51035a225a4ed5bb6b",
+  "sqlite_file": "catalog-v1.sqlite",
+  "sqlite_size_bytes": 1043488768,
+  "sqlite_sha256": "e03b6b3e76be625c432268043cc241eb133e41566c3057dfdb610dbab92ab71e",
+  "archive_file": "catalog-v1.sqlite.zst",
+  "archive_size_bytes": 340085972,
+  "archive_sha256": "f05e661bbe4bfecfe46e4cc947ddc7c0ae0b0a43c43876ad00e3996b68475671"
 }
 ```
 
 `source_frozen_at` описывает свежесть данных, `exported_at` — сборку artifact,
 а `published_at` заполняется только при публикации и до неё равен `null`. UI
 показывает `source_frozen_at`; остальные две даты являются provenance.
+
+Manifest schema использует только `snake_case`, не допускает дополнительных
+полей и не содержит release URL/locator. Locator относится к M5 release
+descriptor. Artifact filenames являются только basename: absolute paths,
+директории и `..` запрещены. `description_text` — детерминированный Unicode
+plain text после удаления Markdown/HTML chrome, `script` и `style`.
 
 Release workflow скачивает только точный asset и прерывается при несовпадении
 checksum.

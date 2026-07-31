@@ -68,6 +68,8 @@ Release разрешён только после выполнения всех �
 
 ## Baseline
 
-Baseline для commit `74a8588` — exact-SHA CI, 24 теста, web bundle sizes и
-проверенные catalog checksums — сохранён в
-[`evidence/M2_BASELINE_74A8588.md`](evidence/M2_BASELINE_74A8588.md).
+Текущая единственная M2 catalog baseline создана exporter из commit
+`b30162a21d1e473b61d037d10165d283798aa586` и сохранена в
+[`evidence/M2_CATALOG_BASELINE_B30162A.md`](evidence/M2_CATALOG_BASELINE_B30162A.md).
+Предыдущий файл `M2_BASELINE_74A8588.md` остаётся неизменяемым историческим
+evidence, но его catalog checksums больше не являются current baseline.

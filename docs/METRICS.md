@@ -153,15 +153,18 @@ catalog-v1.sqlite.zst.sha256
 
 Manifest содержит:
 
-- `catalogVersion`;
-- `schemaVersion`;
-- `createdAt`;
-- source baseline date;
-- canonical job count;
-- skills/salary counts;
-- uncompressed/compressed size;
-- artifact SHA-256;
-- export commit SHA.
+- `manifest_version`, `catalog_version`, `schema_version`;
+- `description_format = plain_text`;
+- `source_frozen_at`, настоящий `exported_at`, `published_at`;
+- `canonical_jobs`, `jobs_with_skills`, `jobs_with_salary`;
+- `sqlite_file`, `sqlite_size_bytes`, `sqlite_sha256`;
+- `archive_file`, `archive_size_bytes`, `archive_sha256`;
+- `logical_checksum` и `source_commit_sha`.
+
+Все ключи manifest используют `snake_case`; schema не разрешает лишние поля.
+Filenames не могут быть absolute paths, содержать директории или `..`.
+SHA-256 записываются как 64 lowercase hex symbols. Release URL/locator в
+generated manifest запрещён и относится к M5 release descriptor.
 
 Reproducibility означает:
 
@@ -170,6 +173,26 @@ Reproducibility означает:
 - timestamp упаковки не входит в logical checksum;
 - `VACUUM` выполняется после заполнения;
 - случайные ID и нестабильный порядок запрещены.
+- две fixture SQLite build и два Zstandard archive должны быть byte-identical
+  в одном toolchain из `.python-version`/`uv.lock`;
+- logical checksum пересчитывается из SQLite tables и сверяется с
+  `catalog_meta`, а не принимается из metadata на доверии.
+
+Текущая M2 catalog baseline:
+
+```text
+manifest_version    = 1
+description_format  = plain_text
+source_frozen_at    = 2026-07-29T20:30:03.846872Z
+exported_at         = 2026-07-31T11:09:37.316686Z
+published_at        = null
+source_commit_sha   = b30162a21d1e473b61d037d10165d283798aa586
+logical_checksum    = 895d38f383597e7ba8e2de60c7cab5c99a8ae32de6df7f51035a225a4ed5bb6b
+sqlite_size_bytes   = 1043488768
+sqlite_sha256       = e03b6b3e76be625c432268043cc241eb133e41566c3057dfdb610dbab92ab71e
+archive_size_bytes  = 340085972
+archive_sha256      = f05e661bbe4bfecfe46e4cc947ddc7c0ae0b0a43c43876ad00e3996b68475671
+```
 
 ## 4. SQLite catalog acceptance
 
@@ -219,6 +242,13 @@ missing_source_url    = 0
 duplicate_source_url  = 0
 foreign_key_check     = no rows
 ```
+
+Нормативная проверка выполняется одной командой `verify --manifest`; она
+проверяет schema manifest, product contract, оба размера и SHA-256,
+decompressed SHA-256, SQLite integrity/foreign keys, job/FTS counts,
+attribution/original URL, skills/salary counts, обязательные metadata keys,
+пересчитанный logical checksum, checksum asset и наличие exporter в указанном
+source commit.
 
 Если несколько канонических вакансий намеренно имеют один `source_url`,
 исключение должно быть явно зафиксировано в manifest; молчаливое ослабление

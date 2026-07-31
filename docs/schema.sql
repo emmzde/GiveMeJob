@@ -143,12 +143,15 @@ CREATE VIRTUAL TABLE jobs_fts USING fts5(
 -- catalog_version
 -- schema_version
 -- source_frozen_at
--- created_at
+-- exported_at
 -- canonical_jobs
 -- jobs_with_skills
 -- jobs_with_salary
 -- source_commit_sha
 -- logical_checksum
+--
+-- published_at относится к release manifest, а не к SQLite: на момент сборки
+-- catalog базы artifact ещё не опубликован.
 
 -- ============================================================================
 -- user.sqlite

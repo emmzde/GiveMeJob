@@ -7,6 +7,11 @@ production-агрегатора от 29–30 июля 2026 года. Измен�
 новой записи в этом файле, синхронизации `AGENTS.md`, `docs/PLAN.md`,
 `docs/MVP_SCOPE.md` и `config/product.json`.
 
+Место документа в единой иерархии:
+`rules → ADR → scope → target plan → metrics → current status → evidence`.
+ADR подчиняются `AGENTS.md`, но имеют приоритет над scope, планом, статусом и
+evidence.
+
 ## ADR-001. Pet-project вместо production-продукта
 
 GiveMeJob! развивается как публичный portfolio pet-project. Цель — законченный
@@ -44,6 +49,9 @@ read-only Python exporter. Исходный PostgreSQL volume хранится �
 - Emmy;
 - открытию оригинальной вакансии;
 - проверке обновления приложения.
+
+Проверка обновления необязательна, выполняется асинхронно после начала запуска
+и не блокирует доступ к локальному каталогу при отсутствии сети.
 
 ## ADR-004. Frozen dataset
 
@@ -168,9 +176,10 @@ Authenticode-сертификата в v1 нет. Возможное преду�
 
 ## ADR-013. Удаление legacy после snapshot
 
-31 июля 2026 года экспортёр создал и проверил `catalog-v1.sqlite` из 78 719
-активных канонических вакансий. `integrity_check` вернул `ok`, foreign key
-audit — 0 ошибок, attribution и original URL присутствуют у всех записей.
+31 июля 2026 года принят и повторно проверен созданный exporter-ом
+`catalog-v1.sqlite` из 78 719 активных канонических вакансий.
+`integrity_check` вернул `ok`, foreign key audit — 0 ошибок, attribution и
+original URL присутствуют у всех записей.
 
 После прохождения gate удалены:
 
@@ -191,11 +200,58 @@ portable ZIP подтверждают build pipeline, но не считаютс
 
 `v0.1.0` не публикуется до завершения M2–M5, публикации versioned catalog
 asset, clean-Windows проверки, secret scan и перевода репозитория в public.
-Текущие изменения отправляются в pull request как development state.
+Development changes попадают в `main` только через pull request.
+
+До stable используются только приватные RC artifacts, доступные участникам
+репозитория через CI. Публичный preview/prerelease текущим решением не разрешён;
+его публикация потребует отдельного ADR. Первым публичным бинарным релизом по
+текущему решению остаётся stable `v0.1.0`.
 
 Подробный checklist находится в [`RELEASE_STATUS.md`](RELEASE_STATUS.md).
 
+## ADR-015. M2 search и wire semantics
+
+В SQLite `jobs.id` остаётся `INTEGER`. За границей SQLite job ID представлен
+как branded положительная decimal string без знака и ведущих нулей. Этот
+`JobId` используется в IPC, cursor и будущих Emmy tools, чтобы контракт не
+зависел от JavaScript number precision.
+
+Фильтры объединяются через OR внутри одной категории и через AND между
+категориями. Зарплатный минимум означает
+`salary_usd_year >= salaryMinUsdYear`; `salaryKnownOnly` означает
+`salary_usd_year IS NOT NULL`.
+
+Поддерживаются backend-сортировки:
+
+- `relevance` при непустом тексте;
+- `newest`, в том числе как поведение пустого `relevance`;
+- `salary`, где известные значения идут перед `NULL`.
+
+Последний tie-break любой сортировки — job ID. `match` относится к M3 и не
+считается готовой backend-сортировкой M2. Cursor остаётся незавершённой частью
+M2.
+
+Hard performance gate для warm search — p95 строго меньше 300 мс. Значение
+строго меньше 150 мс является целевым уровнем, но не отдельным блокирующим
+gate.
+
+## ADR-016. Временные метки catalog artifact
+
+Catalog manifest использует три разных понятия:
+
+- `source_frozen_at` — граница данных исходного frozen snapshot;
+- `exported_at` — момент создания SQLite/Zstandard artifact;
+- `published_at` — момент публикации artifact, `null` до публикации.
+
+В пользовательском интерфейсе показывается только `source_frozen_at`, потому
+что именно эта дата описывает свежесть вакансий. Даты export и publication
+остаются provenance и release metadata.
+
+У исторического `catalog-v1` значения `source_frozen_at` и `exported_at`
+совпадают. Это свойство конкретного manifest, а не смешение семантики полей;
+`published_at` остаётся `null`.
+
 ## Машиночитаемый источник
 
-Решения продублированы в [`config/product.json`](../config/product.json).
-Документ остаётся человекочитаемым источником причин и ограничений.
+Current и target состояния разнесены в [`config/product.json`](../config/product.json).
+Этот документ остаётся человекочитаемым источником причин и ограничений.

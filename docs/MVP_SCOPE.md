@@ -12,8 +12,10 @@ Python, PostgreSQL, регистрации и обязательной наст�
 
 ## Зафиксированный набор данных
 
-Источник SQLite catalog — локальный срез PostgreSQL, принятый
-30 июля 2026 года и экспортированный 31 июля 2026 года:
+Источник SQLite catalog — локальный срез PostgreSQL с границей данных
+`2026-07-29T20:30:03.846872Z`. Artifact экспортирован с зафиксированным
+`exported_at` и принят после проверки M1 31 июля 2026 года; `published_at`
+остаётся `null` до первого stable release:
 
 | Метрика | Значение |
 |---|---:|
@@ -47,10 +49,14 @@ Himalayas full sweep, на котором получена основная ча
 - RU/EN-алиасы и ESCO;
 - фильтры по skills, location, remote mode, seniority, employment, salary и
   source;
-- сортировки по relevance, match, date и salary;
+- M2-сортировки по relevance, newest и salary;
+- M3-сортировка по match после появления локального профиля;
 - карточка вакансии с attribution и оригинальной ссылкой;
-- видимая дата snapshot;
+- видимая дата frozen snapshot (`source_frozen_at`);
 - локальная работа без сети.
+
+Необязательная проверка обновления приложения разрешена, но запускается
+асинхронно и не блокирует offline startup или локальный поиск.
 
 ### Профиль и match
 
@@ -83,6 +89,9 @@ Match-score не является вероятностью трудоустро�
 - public GitHub repository и Releases;
 - подписанные Tauri updater artifacts;
 - без Authenticode в v1.
+
+До stable распространяются только приватные RC artifacts из CI. Публичный
+preview/prerelease не входит в текущий scope и требует отдельного ADR.
 
 ## Не входит
 

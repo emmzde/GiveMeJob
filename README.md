@@ -24,12 +24,14 @@ GiveMeJob! — open-source portfolio pet-project: локальное Windows-п�
 - `PRAGMA integrity_check`, foreign key audit, attribution/URL gate;
 - versioned manifest, SHA-256 и Zstandard archive;
 - локальный Rust IPC для статуса каталога и FTS5-поиска;
+- backend-фильтры и сортировки relevance/newest/salary;
 - React shell с лентой, карточкой, фильтрами-заготовками и offline state;
 - Windows-only Tauri configuration с NSIS и portable ZIP workflow.
 
 Пользовательский runtime не требует Docker, Python, PostgreSQL или сервера.
-Интернет в целевой версии нужен только для Emmy, обновлений и открытия
-оригинальной вакансии.
+Интернет в целевой версии нужен только для Emmy, открытия оригинальной
+вакансии и необязательной асинхронной проверки обновлений. Эта проверка не
+блокирует offline startup.
 
 ## Snapshot
 
@@ -62,6 +64,8 @@ Legacy FastAPI, Alembic, ingestion, коннекторы, Redis, pgvector и Doc
 
 ```powershell
 pnpm install
+pnpm quality
+
 pnpm -C apps/desktop dev
 pnpm -C apps/desktop typecheck
 pnpm -C apps/desktop lint
@@ -74,6 +78,10 @@ uv run ruff format --check .
 uv run mypy
 uv run pytest -q
 ```
+
+`pnpm quality` последовательно запускает существующие frontend, Rust и Python
+gates. Exact-SHA baseline M2 сохранён в
+[`docs/evidence/M2_BASELINE_74A8588.md`](docs/evidence/M2_BASELINE_74A8588.md).
 
 Однократный export из сохранённого frozen volume:
 

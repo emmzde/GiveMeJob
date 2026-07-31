@@ -17,9 +17,11 @@
 - frontend, Rust и exporter quality checks.
 
 Эти artifacts доказывают, что release pipeline технически возможен, но M2 ещё
-не закрыт: фильтры являются UI-заготовками, нет полной сортировки,
-виртуализации, benchmark gate и законченной job detail navigation. M3, M4 и
-release-hardening M5 также не завершены.
+не закрыт. Backend-фильтры и три backend-сортировки (`relevance`, `newest`,
+`salary`) готовы. Cursor, подключение фильтров/сортировок в UI, виртуализация,
+benchmark gate и законченная job detail navigation ещё не готовы. `match`-sort
+относится к M3 и также не реализован. M3, M4 и release-hardening M5 не
+завершены.
 
 Публикация сейчас создала бы ложное ожидание готового MVP и зафиксировала бы
 неполный UX как первую публичную версию.
@@ -29,9 +31,10 @@ release-hardening M5 также не завершены.
 - исходный код verified snapshot exporter;
 - manifest и checksums без самого каталога;
 - offline desktop shell и локальный Rust SQLite IPC;
+- backend-фильтры и сортировки relevance/newest/salary;
 - удаление legacy backend/ingestion;
 - актуальная документация, roadmap и Windows CI;
-- pull request в `main`.
+- remote feature branch; merge в `main` выполняется только через pull request.
 
 NSIS, portable ZIP, `.env`, PostgreSQL volume и `.artifacts/` в Git не
 коммитятся.
@@ -40,8 +43,9 @@ NSIS, portable ZIP, `.env`, PostgreSQL volume и `.artifacts/` в Git не
 
 Release разрешён только после выполнения всех пунктов:
 
-1. M2: полноценные filters/sorts, virtualized feed, detail/original-link flow
-   и warm search p95 <150 мс при обязательном p95 <300 мс.
+1. M2: UI wiring filters/sorts, cursor, virtualized feed,
+   detail/original-link flow и hard gate warm search p95 строго <300 мс;
+   строго <150 мс остаётся целевым уровнем.
 2. M3: `user.sqlite`, профиль, shortlist и детерминированный match-score.
 3. M4: Emmy, Rust `LLMRouter`, ровно пять tools, BYOK и graceful offline.
 4. M5: clean-Windows install test, NSIS, portable ZIP и signed updater.
@@ -57,6 +61,13 @@ Release разрешён только после выполнения всех �
 
 - следующий release tag: `v0.1.0`;
 - до прохождения gate версия в коде остаётся `0.1.0` как development version;
+- до stable используются только приватные RC artifacts из CI;
 - промежуточные инженерные сборки не публикуются как GitHub Releases;
-- если понадобится внешнее тестирование до M5, оно оформляется отдельным
-  draft prerelease только по новому решению.
+- публичного preview/prerelease по текущему ADR нет; его публикация требует
+  отдельного ADR.
+
+## Baseline
+
+Baseline для commit `74a8588` — exact-SHA CI, 24 теста, web bundle sizes и
+проверенные catalog checksums — сохранён в
+[`evidence/M2_BASELINE_74A8588.md`](evidence/M2_BASELINE_74A8588.md).

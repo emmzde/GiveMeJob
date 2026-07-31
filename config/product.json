@@ -1,4 +1,26 @@
 {
+  "current": {
+    "stage": "M2",
+    "repositoryVisibility": "private",
+    "releaseStatus": "hold",
+    "publishedVersions": [],
+    "distribution": "private-rc-artifacts-only",
+    "search": {
+      "backendFilters": true,
+      "backendSorts": ["relevance", "newest", "salary"],
+      "cursor": false,
+      "uiFilters": false,
+      "matchSort": false
+    }
+  },
+  "target": {
+    "stage": "M5",
+    "repositoryVisibility": "public",
+    "firstStableVersion": "0.1.0",
+    "artifacts": ["nsis-installer", "portable-zip"],
+    "publicPreview": false,
+    "publicPrereleaseRequiresAdr": true
+  },
   "product": {
     "mode": "pet-project",
     "releaseType": "public-portfolio-mvp",
@@ -13,7 +35,6 @@
   "platform": {
     "targets": ["windows-x86_64"],
     "minimum": "windows-10",
-    "artifacts": ["nsis-installer", "portable-zip"],
     "authenticodeV1": false
   },
   "runtime": {
@@ -22,7 +43,9 @@
     "requiresDocker": false,
     "requiresPython": false,
     "requiresBackend": false,
-    "legacyBackendPresent": false
+    "legacyBackendPresent": false,
+    "optionalNetworkFunctions": ["emmy", "open-original-job", "update-check"],
+    "updateCheckBlocksStartup": false
   },
   "dataset": {
     "mode": "frozen-snapshot",
@@ -32,7 +55,13 @@
     "manifest": "config/catalog-manifest.json",
     "allowIngestion": false,
     "useEmbeddings": false,
-    "includeFullNormalizedDescriptions": true
+    "includeFullNormalizedDescriptions": true,
+    "timestampFields": ["source_frozen_at", "exported_at", "published_at"],
+    "uiSnapshotDateField": "source_frozen_at"
+  },
+  "wire": {
+    "sqliteJobId": "integer",
+    "jobId": "branded-positive-decimal-string"
   },
   "localization": {
     "uiDefaultLocale": "ru",
@@ -52,15 +81,10 @@
     "byok": true,
     "byokStorage": "windows-credential-manager"
   },
-  "repository": {
-    "visibility": "private",
-    "targetVisibility": "public"
-  },
   "release": {
-    "status": "hold",
-    "publishedVersions": [],
-    "nextVersion": "0.1.0",
+    "decision": "docs/RELEASE_STATUS.md",
     "requiredStage": "M5",
-    "decision": "docs/RELEASE_STATUS.md"
+    "preStableDistribution": "private-rc-artifact",
+    "publicChannel": "stable-only"
   }
 }

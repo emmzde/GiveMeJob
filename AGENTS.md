@@ -1,9 +1,20 @@
 # AGENTS.md — GiveMeJob!
 
 > Этот файл — главный набор обязательных правил проекта. Полная продуктовая и
-> техническая спецификация находится в
-> `docs/PLAN.md`. Если документы противоречат друг другу, приоритет у
-> `AGENTS.md`, затем у `docs/DECISIONS.md`, затем у `docs/PLAN.md`.
+> техническая спецификация находится в `docs/PLAN.md`.
+
+Единая иерархия документов, от нормативного уровня к доказательному:
+
+1. `AGENTS.md` — rules и жёсткие инварианты;
+2. `docs/DECISIONS.md` — ADR и причины принятых решений;
+3. `docs/MVP_SCOPE.md` — границы продукта и релиза;
+4. `docs/PLAN.md` — target architecture и порядок работ;
+5. `docs/METRICS.md` — измеримые gates и методики;
+6. `docs/RELEASE_STATUS.md` — фактический current status;
+7. `docs/evidence/` — неизменяемые свидетельства конкретных проверок.
+
+При противоречии документ выше по списку имеет приоритет. Current status и
+evidence не расширяют scope и не заменяют ADR.
 
 ---
 
@@ -17,7 +28,9 @@
 - основной формат — NSIS `Setup.exe`;
 - дополнительный формат — portable ZIP;
 - поиск и match-score работают локально без Docker, Python и сервера;
-- интернет нужен только для Emmy и перехода на оригинальную вакансию;
+- интернет нужен только для Emmy, перехода на оригинальную вакансию и
+  необязательной проверки обновлений;
+- проверка обновлений выполняется асинхронно и не блокирует offline startup;
 - данные — зафиксированный снимок из 78 719 активных канонических вакансий;
 - AI-маскот Emmy — анимированная SVG-собачка с tool-calling чатом.
 
@@ -76,6 +89,8 @@ GiveMeJob! — локальное Windows-приложение, которое:
 5. **Match-score считается локально, детерминированно и без LLM.**
 6. **Поиск работает без сети.** Недоступность AI не должна ломать каталог,
    фильтры, карточку, профиль или избранное.
+   Необязательная проверка обновлений запускается асинхронно и не задерживает
+   offline startup.
 7. **Embeddings в MVP не используются.** Единственная историческая запись с
    `VECTOR(1024)` не переносится в runtime-каталог.
 8. **Все вызовы моделей проходят только через Rust `LLMRouter`.** React-код
@@ -140,6 +155,9 @@ GiveMeJob! — локальное Windows-приложение, которое:
 - snapshot не хранится в Git: он публикуется отдельным GitHub Release asset;
 - release build скачивает artifact по зафиксированной версии и проверяет
   SHA-256.
+- `source_frozen_at` обозначает границу данных, `exported_at` — создание
+  artifact, `published_at` — публикацию; до публикации последнее поле равно
+  `null`, а UI показывает только `source_frozen_at`.
 - backend schema, миграции, ingestion и Docker Compose в репозитории
   отсутствуют.
 
@@ -246,6 +264,8 @@ Legacy backend/ingestion уже удалён. Не восстанавливат�
 
 ```powershell
 pnpm install
+pnpm quality
+
 pnpm -C apps/desktop dev
 pnpm -C apps/desktop typecheck
 pnpm -C apps/desktop lint
@@ -273,7 +293,7 @@ uv run pytest -q
 |---|---|---|
 | **D0 — документация** | Новый pet-project scope и единый контракт | Все документы согласованы; старые production-инструкции помечены историческими |
 | **M1 — snapshot** | PostgreSQL → SQLite FTS5 artifact | 78 719 вакансий, attribution/URL у каждой, checksum воспроизводим |
-| **M2 — offline search** | Лента, карточка, фильтры, сортировки | Без сети; warm p95 <150 мс, обязательный p95 <300 мс |
+| **M2 — offline search** | Лента, карточка, фильтры, сортировки | Без сети; цель warm p95 <150 мс, hard gate <300 мс |
 | **M3 — profile/match** | Анкета, shortlist, локальный score | Одинаковый input даёт одинаковый score; ни одного LLM-вызова |
 | **M4 — Emmy** | SVG-маскот, router, пять tools, BYOK | Failover проверен; полный отказ AI не ломает приложение |
 | **M5 — Windows release** | Setup.exe, portable ZIP, updater | Установка на чистую Windows без dev-зависимостей |
@@ -297,6 +317,19 @@ FTS5 BM25 веса:
 
 Дополнительно: RU/EN-алиасы, ESCO-канон, prefix matching, фразовый поиск,
 исправление опечаток по словарю ролей/skills и точный title/skill bonus.
+
+M2 search contract:
+
+- `jobs.id` остаётся `INTEGER` внутри SQLite;
+- IPC, cursor и будущие Emmy tools используют `JobId`: branded положительную
+  decimal string без знака и ведущих нулей;
+- значения внутри одной категории фильтров объединяются через OR, разные
+  категории — через AND;
+- `relevance` работает по тексту, а при пустом тексте совпадает с `newest`;
+- `salary` ставит известный `salary_usd_year` перед `NULL`;
+- последним tie-break любой сортировки использует job ID;
+- `salaryMinUsdYear` означает `salary_usd_year >= salaryMinUsdYear`;
+- `salaryKnownOnly` означает `salary_usd_year IS NOT NULL`.
 
 Match-score:
 
@@ -362,6 +395,8 @@ Agent loop:
 
 - До прохождения M5 gate GitHub Release не публикуется; текущее решение
   зафиксировано в `docs/RELEASE_STATUS.md`.
+- До stable разрешены только приватные RC artifacts из CI. Публичного preview
+  или prerelease по текущему ADR нет; для него требуется отдельный ADR.
 - Репозиторий должен стать публичным перед первым portfolio release.
 - PR CI никогда не получает demo-ключи.
 - Release workflow запускается только по защищённому tag/manual environment.

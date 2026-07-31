@@ -4,6 +4,8 @@
 
 D0 и M1 завершены. В `config/catalog-manifest.json` зафиксирован проверенный
 snapshot из 78 719 вакансий. Текущий этап — M2: offline search и desktop shell.
+Backend-фильтры и сортировки relevance/newest/salary готовы; cursor, UI wiring
+и match-sort ещё не готовы.
 GitHub Release отложен до M5; актуальный gate описан в
 `docs/RELEASE_STATUS.md`.
 
@@ -15,7 +17,12 @@ Legacy API/ingestion удалён. Его нельзя восстанавлив�
 ```powershell
 pnpm install
 uv sync --locked --all-groups
+pnpm quality
 ```
+
+Root-команда `pnpm quality` последовательно вызывает все существующие
+frontend gates, затем Rust gates, затем Python gates. Для точечной разработки
+те же команды можно запускать по группам ниже.
 
 Node.js нужен только frontend-разработке. Python нужен только
 `tools/catalog_export`; установленное приложение не зависит ни от одного из

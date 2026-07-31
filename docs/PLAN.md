@@ -2,13 +2,17 @@
 
 Версия направления: 31 июля 2026 года.
 
-Этот документ полностью заменяет прежний roadmap production-агрегатора.
-Источники истины:
+Этот документ полностью заменяет прежний roadmap production-агрегатора и
+описывает target architecture, а не автоматически достигнутый current state.
+Единая иерархия документов:
 
-1. `AGENTS.md` — обязательные правила;
-2. `docs/DECISIONS.md` — принятые решения;
-3. `docs/MVP_SCOPE.md` — границы релиза;
-4. этот файл — реализация и порядок работ.
+1. `AGENTS.md` — rules;
+2. `docs/DECISIONS.md` — ADR;
+3. `docs/MVP_SCOPE.md` — scope;
+4. этот файл — target plan;
+5. `docs/METRICS.md` — metrics;
+6. `docs/RELEASE_STATUS.md` — current status;
+7. `docs/evidence/` — evidence конкретных проверок.
 
 ## 1. Продукт
 
@@ -63,13 +67,20 @@ Snapshot не коммитится из-за размера. В Git хранит
 
 ```json
 {
-  "catalogVersion": "1",
-  "canonicalJobs": 78719,
-  "schemaVersion": 1,
-  "sha256": "<artifact checksum>",
-  "asset": "<immutable release asset URL>"
+  "catalog_version": "1",
+  "canonical_jobs": 78719,
+  "schema_version": 1,
+  "source_frozen_at": "<source snapshot boundary>",
+  "exported_at": "<artifact creation time>",
+  "published_at": null,
+  "sqlite_sha256": "<SQLite checksum>",
+  "archive_sha256": "<Zstandard checksum>"
 }
 ```
+
+`source_frozen_at` описывает свежесть данных, `exported_at` — сборку artifact,
+а `published_at` заполняется только при публикации и до неё равен `null`. UI
+показывает `source_frozen_at`; остальные две даты являются provenance.
 
 Release workflow скачивает только точный asset и прерывается при несовпадении
 checksum.
@@ -92,9 +103,21 @@ Tauri bundle содержит compressed catalog. На первом запуск
 При обновлении новый catalog ставится side-by-side. Старый удаляется только
 после успешной проверки нового. Пользовательская база не заменяется.
 
+Необязательная проверка обновления приложения запускается асинхронно после
+старта. Timeout, отсутствие сети или ошибка updater endpoint не блокируют
+распаковку, открытие каталога и первый локальный поиск.
+
 ### 2.3 Локальные интерфейсы
 
+#### 2.3.1 Current M2 IPC
+
+Ниже зафиксирован реализованный M2-контракт после reconciliation. SQLite
+хранит `jobs.id` как `INTEGER`, но наружу ID сериализуется строкой:
+
 ```ts
+const jobIdSchema = z.string().regex(/^[1-9]\d*$/).brand<"JobId">();
+type JobId = z.infer<typeof jobIdSchema>;
+
 interface SearchQuery {
   text: string;
   skills: string[];
@@ -105,52 +128,92 @@ interface SearchQuery {
   salaryMinUsdYear?: number;
   salaryKnownOnly: boolean;
   sources: string[];
-  savedOnly: boolean;
-  sort: "relevance" | "match" | "newest" | "salary";
-  cursor?: string;
-  limit: 50;
+  sort: "relevance" | "newest" | "salary";
+  limit: number; // integer 1..50
 }
 
 interface JobSummary {
-  id: string;
+  id: JobId;
   title: string;
   company: string;
-  location: string;
-  remoteMode?: RemoteMode;
-  salary?: SalaryRange;
-  skills: string[];
+  locationText: string;
+  remoteMode: RemoteMode | null;
+  seniority: Seniority | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  salaryCurrency: string | null;
+  salaryPeriod: string | null;
+  postedAt: string | null;
   source: string;
-  postedAt?: string;
-  match?: number;
-  saved: boolean;
+  attribution: string;
+}
+
+interface CatalogStatus {
+  state: "ready" | "missing" | "error";
+  catalogVersion: string | null;
+  sourceFrozenAt: string | null;
+  totalJobs: number;
+  message: string | null;
+}
+```
+
+Реализованные операции:
+
+```ts
+invoke("catalog_status"): Promise<CatalogStatus>
+invoke("search_jobs", { request: query }): Promise<JobSummary[]>
+```
+
+#### 2.3.2 Pending M2 extension
+
+Cursor/keyset и detail IPC ещё не реализованы. Cursor будет opaque branded
+string; декодированная структура обязана содержать `jobId: JobId`, а не
+JavaScript number:
+
+```ts
+const searchCursorSchema = z.string().min(1).brand<"SearchCursor">();
+type SearchCursor = z.infer<typeof searchCursorSchema>;
+
+interface SearchPage<T> {
+  items: T[];
+  nextCursor?: SearchCursor;
 }
 
 interface JobDetail extends JobSummary {
   description: string;
-  attribution: string;
   sourceUrl: string;
-  applyUrl?: string;
+  applyUrl: string | null;
   snapshotVersion: string;
 }
 
-interface SearchPage<T> {
-  items: T[];
-  nextCursor?: string;
-  totalEstimate: number;
-}
+getJob(id: JobId): Promise<JobDetail>
 ```
 
-Публичные операции:
+#### 2.3.3 Future M3 contract
+
+После завершения M2 текущий поиск расширяется, а не подменяется несуществующим
+контрактом. M3 добавляет локальные user data и match:
 
 ```ts
-searchJobs(query: SearchQuery): Promise<SearchPage<JobSummary>>
-getJob(id: string): Promise<JobDetail>
+type M3SearchQuery = Omit<SearchQuery, "sort"> & {
+  savedOnly: boolean;
+  sort: "relevance" | "match" | "newest" | "salary";
+  cursor?: SearchCursor;
+};
+
+interface M3JobSummary extends JobSummary {
+  match: number | null;
+  saved: boolean;
+}
+
 saveProfile(input: ProfileInput): Promise<UserProfile>
-getMatchBreakdown(id: string): Promise<MatchBreakdown>
-setShortlist(id: string, saved: boolean): Promise<ShortlistState>
+getMatchBreakdown(id: JobId): Promise<MatchBreakdown>
+setShortlist(id: JobId, saved: boolean): Promise<ShortlistState>
 ```
 
-Все payload валидируются. Произвольный SQL через IPC запрещён.
+Emmy в M4 использует тот же `JobId` в `get_job`, `compare_jobs`,
+`get_match_breakdown` и `set_shortlist`. Все payload валидируются;
+произвольный SQL через IPC запрещён.
 
 ## 3. Offline search
 
@@ -183,22 +246,37 @@ Tokenizer: `unicode61 remove_diacritics 2`, prefix indexes `2 3 4`.
 4. Безопасная сборка FTS expression.
 5. BM25.
 6. Exact title и exact skill bonus.
-7. `posted_at` только как tie-breaker.
+7. Детерминированный sort и финальный tie-break по job ID.
 8. При нулевой/слабой выдаче — spelling suggestion по небольшому словарю
    ролей и skills, без fuzzy scan всех вакансий.
 
 ### 3.3 Фильтры и пагинация
 
-Фильтры выполняются параметризованным SQL. Пагинация cursor/keyset по
-`(sort_value, id)`, limit 50. Offset pagination не используется.
+Фильтры выполняются параметризованным SQL. Значения внутри одной категории
+объединяются через OR, активные категории — через AND.
+
+Зарплатная семантика фиксирована:
+
+- `salaryMinUsdYear` → `salary_usd_year >= salaryMinUsdYear`;
+- `salaryKnownOnly` → `salary_usd_year IS NOT NULL`.
+
+Сортировки:
+
+- `relevance` используется при непустом тексте;
+- пустой `relevance` ведёт себя как `newest`;
+- `salary` ставит известный `salary_usd_year` перед `NULL`;
+- job ID является последним tie-break для любого sort.
+
+Планируемая пагинация — cursor/keyset по `(sort_value, job_id)`, limit не
+больше 50. Offset pagination не используется. Cursor пока не реализован.
 
 Лента виртуализирована. Менять sort/filter можно без блокирующей модалки;
 предыдущие результаты остаются до готовности новых.
 
 ### 3.4 Производительность
 
-- warm search p95: цель <150 мс;
-- обязательный максимум p95: <300 мс;
+- warm search p95: целевой уровень строго <150 мс;
+- hard gate warm search p95: строго <300 мс;
 - cold first query: <500 мс после завершённой распаковки;
 - scroll: 60 fps;
 - steady-state RAM: <250 МБ.
@@ -444,12 +522,15 @@ PR workflows не имеют release secrets.
 
 ### 7.2 Artifacts
 
-Tag flow:
+Pre-stable flow:
 
-1. `v0.1.0-preview.1`;
+1. приватный RC artifact из CI без GitHub Release;
 2. smoke test на чистой Windows 10 и Windows 11;
-3. исправления;
-4. `v0.1.0`.
+3. исправления и новый приватный RC;
+4. первый публичный release — stable `v0.1.0`.
+
+Публичного preview/prerelease текущий ADR не разрешает. Для него нужен
+отдельный ADR до создания тега или GitHub Release.
 
 Каждый release:
 
@@ -499,13 +580,17 @@ Authenticode отсутствует в v1; SmartScreen warning документ�
 - [x] First-run unpack.
 - [x] Catalog versioning.
 - [x] Search repository.
-- [ ] Filters/sorts/cursor.
+- [x] Backend filters.
+- [x] Backend sorts: relevance, newest, salary.
+- [ ] Cursor/keyset pagination.
 - [x] Three-column UI shell.
+- [ ] Filter/sort UI wiring.
 - [ ] Virtualized feed.
 - [ ] Job detail и original link.
 - [ ] Themes, keyboard, error states.
 
-Критерий: поиск без сети; p95 <300 мс.
+Критерий: поиск без сети; hard gate warm p95 строго <300 мс. Значение строго
+<150 мс остаётся целевым уровнем.
 
 ### M3. Profile, match и shortlist
 
@@ -541,7 +626,7 @@ Authenticode отсутствует в v1; SmartScreen warning документ�
 - [ ] Tauri updater signing.
 - [ ] Installer и portable.
 - [ ] Clean-machine smoke.
-- [ ] Preview release.
+- [ ] Private RC artifact.
 - [ ] Stable v0.1.0.
 
 Критерий: пользователь без dev-зависимостей устанавливает приложение, ищет,

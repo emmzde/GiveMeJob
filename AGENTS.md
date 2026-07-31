@@ -30,9 +30,11 @@
 - не делать embedding backfill;
 - не строить scheduler, централизованный API или production-инфраструктуру.
 
-PostgreSQL, Redis, FastAPI, Alembic, коннекторы и Docker Compose сохраняются
-только как исторический data-tooling и источник для однократного экспорта
-замороженного каталога. Они не входят в пользовательский runtime.
+Legacy FastAPI, Alembic, ingestion, коннекторы, Redis, pgvector и Docker
+Compose удалены после успешной сборки `catalog-v1.sqlite`. В репозитории
+остаётся только минимальный read-only exporter. Исходный PostgreSQL named
+volume сохраняется локально отдельно от Git и удаляется только после
+дополнительного подтверждения пользователя.
 
 ---
 
@@ -131,12 +133,15 @@ GiveMeJob! — локальное Windows-приложение, которое:
 
 ### Data tooling
 
-- Python 3.13, PostgreSQL 17, pgvector, Alembic и существующий ingestion-код
-  остаются только для воспроизводимого экспорта;
+- Python 3.13, `psycopg[binary]` и `zstandard`;
+- `tools/catalog_export` подключается к отдельно сохранённому PostgreSQL 17
+  volume только в `REPEATABLE READ, READ ONLY`;
 - экспорт выбирает канонические активные вакансии и создаёт SQLite artifact;
 - snapshot не хранится в Git: он публикуется отдельным GitHub Release asset;
 - release build скачивает artifact по зафиксированной версии и проверяет
   SHA-256.
+- backend schema, миграции, ingestion и Docker Compose в репозитории
+  отсутствуют.
 
 ### AI
 
@@ -172,14 +177,14 @@ GiveMeJob!/
 │       │   ├── lib/
 │       │   └── styles/
 │       └── src-tauri/
-├── services/
-│   ├── api/                     # исторический код; не runtime MVP
-│   └── ingest/                  # замороженный data-tooling
-├── packages/
-│   └── shared-types/
 ├── config/
 │   ├── product.json
-│   └── catalog-manifest.json    # появится на этапе snapshot
+│   ├── catalog-manifest.json
+│   └── search/
+├── tools/
+│   └── catalog_export/
+├── tests/
+│   └── catalog_export/
 └── docs/
     ├── PLAN.md
     ├── DECISIONS.md
@@ -189,8 +194,8 @@ GiveMeJob!/
     └── design-tokens.css
 ```
 
-Не перемещать исторический код только ради соответствия дереву. Изменение
-структуры выполняется лишь тогда, когда оно нужно активному этапу.
+Legacy backend/ingestion уже удалён. Не восстанавливать `services/`,
+`packages/shared-types`, `docker-compose.yml` или Alembic.
 
 ---
 
@@ -220,11 +225,10 @@ GiveMeJob!/
 ### Python/data tooling
 
 - Ingestion не запускать.
-- Strict mypy для `services/`.
-- Один коннектор = один файл + один fixture contract test; правило сохраняется
-  для исторического кода.
+- Strict mypy для `tools/catalog_export`.
 - Snapshot export должен быть детерминированным и покрытым integration-тестом.
 - Внешние HTTP-вызовы в data tooling не добавлять.
+- Зависимости ограничены `psycopg[binary]`, `zstandard` и dev-инструментами.
 
 ### Общее
 
@@ -254,12 +258,12 @@ uv run mypy .
 uv run pytest -q
 ```
 
-Docker/PostgreSQL разрешено поднимать только для read-only проверки
-замороженного набора или реализации однократного snapshot export. Это не
-разрешает продолжать ingestion.
+Сохранённый PostgreSQL volume разрешено подключать только для read-only
+проверки или воспроизводимого snapshot export. Docker Compose в репозитории
+нет; это не разрешает восстанавливать ingestion.
 
-Целевые команды экспорта и release должны документироваться только после их
-реальной реализации; не выдавать планируемую команду за существующую.
+Реализованные команды export и verify документированы в `DEVELOPMENT.md`.
+Не выдавать будущие release-команды за существующие.
 
 ---
 
@@ -276,6 +280,8 @@ Docker/PostgreSQL разрешено поднимать только для read
 
 Идти строго по порядку. Не начинать следующий этап без фактического
 подтверждения критерия предыдущего.
+
+D0 и M1 завершены 31 июля 2026 года. Текущий этап — M2.
 
 ---
 
@@ -354,6 +360,8 @@ Agent loop:
 
 ## 11. Release и demo-ключи
 
+- До прохождения M5 gate GitHub Release не публикуется; текущее решение
+  зафиксировано в `docs/RELEASE_STATUS.md`.
 - Репозиторий должен стать публичным перед первым portfolio release.
 - PR CI никогда не получает demo-ключи.
 - Release workflow запускается только по защищённому tag/manual environment.

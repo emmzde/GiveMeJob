@@ -32,7 +32,7 @@ board.
 
 ```mermaid
 flowchart LR
-    PG["Frozen PostgreSQL<br/>developer-only"] --> EXPORT["Deterministic export"]
+    PG["Preserved PostgreSQL volume<br/>outside repository"] --> EXPORT["Read-only deterministic export"]
     EXPORT --> ARTIFACT["catalog-v1.sqlite.zst<br/>GitHub data asset"]
     ARTIFACT --> APP["Tauri Windows app"]
     APP --> CATALOG[("catalog-v1.sqlite<br/>FTS5, read-only")]
@@ -468,6 +468,9 @@ Authenticode отсутствует в v1; SmartScreen warning документ�
 
 ## 8. Этапы реализации
 
+Состояние публикации и gate первого `v0.1.0` зафиксированы в
+[`RELEASE_STATUS.md`](RELEASE_STATUS.md).
+
 ### D0. Документационный pivot
 
 - [x] Windows-only pet-project scope.
@@ -475,29 +478,29 @@ Authenticode отсутствует в v1; SmartScreen warning документ�
 - [x] Frozen dataset.
 - [x] Match и Emmy contracts.
 - [x] Release/demo-key policy.
-- [x] Старые ingestion-инструкции объявлены историческими.
+- [x] Legacy API/ingestion удалён после snapshot gate.
 
 Критерий: все документы описывают одно направление.
 
 ### M1. Snapshot
 
-- [ ] Read-only SQL подтверждение исходного среза.
-- [ ] Детерминированный export.
-- [ ] SQLite schema/FTS build.
-- [ ] Integrity, attribution, URL, row count.
-- [ ] Compression, manifest, SHA-256.
-- [ ] Data release asset.
-- [ ] Integration test.
+- [x] Read-only SQL подтверждение исходного среза.
+- [x] Детерминированный export.
+- [x] SQLite schema/FTS build.
+- [x] Integrity, attribution, URL, row count.
+- [x] Compression, manifest, SHA-256.
+- [x] Versioned release artifact подготовлен локально.
+- [x] Export contract и реальный integration run.
 
 Критерий: artifact содержит 78 719 jobs и воспроизводим из frozen PostgreSQL.
 
 ### M2. Offline search и shell
 
-- [ ] First-run unpack.
-- [ ] Catalog versioning.
-- [ ] Search repository.
+- [x] First-run unpack.
+- [x] Catalog versioning.
+- [x] Search repository.
 - [ ] Filters/sorts/cursor.
-- [ ] Three-column UI.
+- [x] Three-column UI shell.
 - [ ] Virtualized feed.
 - [ ] Job detail и original link.
 - [ ] Themes, keyboard, error states.

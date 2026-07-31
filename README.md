@@ -1,104 +1,101 @@
 # GiveMeJob!
 
-GiveMeJob! — публичный pet-project: автономное Windows-приложение для
-красивого и умного поиска работы по замороженному каталогу вакансий.
+[![Quality](https://github.com/emmzde/GiveMeJob/actions/workflows/quality.yml/badge.svg)](https://github.com/emmzde/GiveMeJob/actions/workflows/quality.yml)
 
-Главные особенности будущего MVP:
-
-- 78 719 канонических вакансий в локальном SQLite FTS5;
-- поиск, фильтры и карточки без сервера и Docker;
-- короткий локальный профиль и объяснимый match-score;
-- избранное и история только на компьютере пользователя;
-- Emmy — анимированная SVG-собачка и AI-ассистент с инструментами поиска;
-- NSIS `Setup.exe`, portable ZIP и обновления через GitHub Releases.
+GiveMeJob! — open-source portfolio pet-project: локальное Windows-приложение
+для поиска по зафиксированному каталогу вакансий. Репозиторий пока private и
+станет публичным после release gate и проверки на секреты.
 
 ## Текущий статус
 
-31 июля 2026 года продукт переведён из идеи production-агрегатора в
-Windows-only pet MVP.
+- D0 (документационный pivot) — завершён;
+- M1 (verified snapshot) — завершён;
+- M2 (offline search и desktop shell) — в работе;
+- опубликованных GitHub Releases пока нет.
 
-- Исторический ingestion завершён и заморожен.
-- Зафиксировано 78 719 активных канонических вакансий.
-- Новые источники, sweep, freshness/salary work и embeddings отменены.
-- Следующий технический этап — воспроизводимый экспорт PostgreSQL → SQLite
-  FTS5.
-- Пользовательский offline runtime пока не реализован.
+Локальные NSIS и portable artifacts успешно собираются, но это инженерная
+проверка, а не готовая пользовательская версия. Решение и критерии первого
+релиза: [`docs/RELEASE_STATUS.md`](docs/RELEASE_STATUS.md).
 
-Актуальный roadmap: [`docs/PLAN.md`](docs/PLAN.md). Обязательные правила:
-[`AGENTS.md`](AGENTS.md).
+## Что уже работает
 
-## Как будет работать приложение
+- воспроизводимый PostgreSQL → SQLite FTS5 export;
+- проверенный snapshot из 78 719 активных канонических вакансий;
+- `PRAGMA integrity_check`, foreign key audit, attribution/URL gate;
+- versioned manifest, SHA-256 и Zstandard archive;
+- локальный Rust IPC для статуса каталога и FTS5-поиска;
+- React shell с лентой, карточкой, фильтрами-заготовками и offline state;
+- Windows-only Tauri configuration с NSIS и portable ZIP workflow.
 
-После установки приложение распакует versioned catalog в Local AppData.
-Поиск и match-score будут работать полностью офлайн. Интернет потребуется
-только для Emmy и открытия оригинальной страницы вакансии.
+Пользовательский runtime не требует Docker, Python, PostgreSQL или сервера.
+Интернет в целевой версии нужен только для Emmy, обновлений и открытия
+оригинальной вакансии.
 
-Пользовательские данные будут храниться отдельно от каталога, поэтому
-обновление приложения не удалит профиль или избранное.
+## Snapshot
 
-## Разработка desktop
+| Метрика | Значение |
+|---|---:|
+| Канонические активные вакансии | 78 719 |
+| Вакансии со skills | 68 881 |
+| Вакансии с `salary_usd_year` | 22 467 |
+| Пропущенные attribution/URL | 0 |
 
-Требования:
+Release manifest: [`config/catalog-manifest.json`](config/catalog-manifest.json).
+Сам `catalog-v1.sqlite.zst` не хранится в Git и должен публиковаться отдельным
+release asset только вместе с первой готовой версией.
 
-- Node.js 24+ и pnpm 11;
-- Rust stable;
-- системные зависимости Tauri v2/WebView2.
+## Структура
+
+```text
+apps/desktop/          Tauri v2 + React 19 Windows app
+config/search/         локальные ESCO/skill aliases
+docs/                  продуктовый и технический контракт
+tools/catalog_export/  единственный Python data-tool
+tests/catalog_export/  unit/contract tests экспортёра
+```
+
+Legacy FastAPI, Alembic, ingestion, коннекторы, Redis, pgvector и Docker Compose
+удалены после успешной сборки snapshot. Исходный PostgreSQL named volume
+сохраняется локально отдельно от репозитория и не нужен обычной разработке.
+
+## Разработка
 
 ```powershell
 pnpm install
 pnpm -C apps/desktop dev
-```
-
-Проверки:
-
-```powershell
 pnpm -C apps/desktop typecheck
 pnpm -C apps/desktop lint
 pnpm -C apps/desktop test
 pnpm -C apps/desktop web:build
-```
 
-## Исторический data-tooling
-
-Python, PostgreSQL, Redis, Alembic и Docker Compose сохраняются только для
-аудита исходного набора и реализации snapshot export. Они не будут нужны
-пользователю установленного приложения.
-
-```powershell
+uv sync --locked --all-groups
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy .
+uv run mypy
 uv run pytest -q
 ```
 
-Запуск ingestion запрещён активным scope.
+Однократный export из сохранённого frozen volume:
 
-## Emmy и API-ключи
+```powershell
+uv run python -m tools.catalog_export export
+uv run python -m tools.catalog_export verify `
+  .artifacts/catalog/catalog-v1.sqlite `
+  --archive .artifacts/catalog/catalog-v1.sqlite.zst
+```
 
-Первая версия использует бесплатные Groq, Gemini и OpenRouter через единый
-Rust `LLMRouter`.
+Команда export открывает PostgreSQL в `REPEATABLE READ, READ ONLY`; она не
+запускает ingestion и не меняет исходную базу.
 
-Portfolio release может содержать отдельные free-tier demo-ключи, внедрённые
-из GitHub Actions Secrets в Rust-сборку. Они считаются извлекаемыми и не
-должны иметь billing или доступ к другим сервисам. Реальные значения никогда
-не хранятся в Git или frontend bundle.
+## Scope
 
-Продвинутый пользователь сможет включить BYOK; его ключ хранится в Windows
-Credential Manager.
+В MVP нет live ingestion, backend runtime, embeddings, вероятности оффера,
+парсинга резюме, tracker/auto-apply, аккаунтов или сборок macOS/Linux.
+Подробности: [`AGENTS.md`](AGENTS.md), [`docs/PLAN.md`](docs/PLAN.md) и
+[`docs/DECISIONS.md`](docs/DECISIONS.md).
 
-## Документация
+## Секреты
 
-- [`docs/PLAN.md`](docs/PLAN.md) — полная спецификация и этапы;
-- [`docs/DECISIONS.md`](docs/DECISIONS.md) — принятые решения;
-- [`docs/MVP_SCOPE.md`](docs/MVP_SCOPE.md) — границы релиза;
-- [`docs/METRICS.md`](docs/METRICS.md) — проверки snapshot и продукта;
-- [`docs/schema.sql`](docs/schema.sql) — целевая SQLite-схема;
-- [`docs/design-tokens.css`](docs/design-tokens.css) — дизайн-токены;
-- [`DEVELOPMENT.md`](DEVELOPMENT.md) — порядок разработки и проверок.
-
-## Распространение
-
-Цель — публичный исходный код и публичные GitHub Releases. Первая версия
-ориентирована только на Windows 10/11 x64. Authenticode-подписи в v1 нет,
-поэтому Windows SmartScreen может показать предупреждение; обновления при этом
-будут подписываться отдельным ключом Tauri.
+`.env` не коммитится. BYOK в приложении должен храниться только в Windows
+Credential Manager. Release demo-ключи считаются извлекаемыми и поступают
+только из защищённого GitHub Actions environment в Rust release build.

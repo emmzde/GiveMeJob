@@ -5,8 +5,8 @@
 --   1. catalog-v1.sqlite — versioned, read-only после сборки;
 --   2. user.sqlite       — локальные пользовательские данные.
 --
--- PostgreSQL schema и Alembic сохраняются в историческом data-tooling, но не
--- являются runtime-схемой приложения.
+-- Исходный PostgreSQL volume хранится отдельно от репозитория только как
+-- архив frozen dataset. Legacy schema/Alembic в кодовой базе удалены.
 
 PRAGMA foreign_keys = ON;
 
@@ -55,7 +55,8 @@ CREATE TABLE jobs (
   CHECK (remote_mode IS NULL OR remote_mode IN ('remote', 'hybrid', 'onsite')),
   CHECK (
     seniority IS NULL OR seniority IN (
-      'intern', 'junior', 'middle', 'senior', 'lead', 'staff', 'principal'
+      'intern', 'junior', 'middle', 'senior', 'lead', 'staff', 'principal',
+      'manager', 'director', 'executive'
     )
   )
 ) STRICT;
@@ -178,7 +179,8 @@ CREATE TABLE profile (
   CHECK (json_valid(remote_modes_json)),
   CHECK (
     seniority IS NULL OR seniority IN (
-      'intern', 'junior', 'middle', 'senior', 'lead', 'staff', 'principal'
+      'intern', 'junior', 'middle', 'senior', 'lead', 'staff', 'principal',
+      'manager', 'director', 'executive'
     )
   )
 ) STRICT;

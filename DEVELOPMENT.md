@@ -1,110 +1,100 @@
 # GiveMeJob! — разработка
 
-Актуальное направление проекта — автономный Windows pet MVP. Перед началом
-работы следует ознакомиться с:
+## Активный этап
 
-1. `AGENTS.md`;
-2. `docs/PLAN.md`;
-3. `docs/DECISIONS.md`;
-4. `docs/MVP_SCOPE.md`;
-5. `docs/METRICS.md`;
-6. `config/product.json`.
+D0 и M1 завершены. В `config/catalog-manifest.json` зафиксирован проверенный
+snapshot из 78 719 вакансий. Текущий этап — M2: offline search и desktop shell.
+GitHub Release отложен до M5; актуальный gate описан в
+`docs/RELEASE_STATUS.md`.
 
-Приоритет имеют правила из `AGENTS.md`.
+Legacy API/ingestion удалён. Его нельзя восстанавливать или заменять новым
+сборщиком без отдельного ADR и явного решения пользователя.
 
-## Текущее состояние
-
-- Целевая платформа — Windows 10/11 x64.
-- Runtime не требует FastAPI, PostgreSQL, Redis, Docker или Python.
-- Каталог заморожен на 78 719 активных канонических вакансиях.
-- Ingestion, новые источники и embeddings остановлены.
-- Поиск строится на локальном SQLite FTS5.
-- Match-score локальный, детерминированный и не является вероятностью оффера.
-- Emmy — анимированная SVG-собачка и ассистент внутри приложения.
-- Основной release artifact — NSIS `Setup.exe`.
-- Дополнительный artifact — portable ZIP.
-
-## Порядок работы
-
-Этапы выполняются последовательно:
-
-1. M1 — snapshot;
-2. M2 — offline search;
-3. M3 — profile, match и shortlist;
-4. M4 — Emmy;
-5. M5 — public Windows release.
-
-Следующий этап начинается только после фактической проверки критерия
-предыдущего. Текущая задача не должна незаметно расширяться соседними
-функциями.
-
-## Ближайший технический этап
-
-M1 создаёт воспроизводимый PostgreSQL → SQLite FTS5 snapshot:
-
-1. Подтвердить frozen dataset read-only SQL-запросами.
-2. Реализовать детерминированный export.
-3. Не обращаться к внешним job APIs.
-4. Проверить 78 719 canonical jobs.
-5. Проверить attribution и `source_url` каждой записи.
-6. Сформировать versioned artifact, manifest и SHA-256.
-7. Добавить integration test.
-
-UI и Emmy не входят в M1.
-
-## Локальные проверки
-
-Desktop:
+## Установка
 
 ```powershell
 pnpm install
+uv sync --locked --all-groups
+```
+
+Node.js нужен только frontend-разработке. Python нужен только
+`tools/catalog_export`; установленное приложение не зависит ни от одного из
+них.
+
+## Desktop
+
+```powershell
+pnpm -C apps/desktop dev
 pnpm -C apps/desktop typecheck
 pnpm -C apps/desktop lint
 pnpm -C apps/desktop test
 pnpm -C apps/desktop web:build
 ```
 
-Data tooling:
+В debug-сборке Rust ищет каталог в
+`.artifacts/catalog/catalog-v1.sqlite`. Путь можно явно задать переменной
+`GIVEMEJOB_CATALOG_PATH`. Release-сборка получает `.zst` как bundle resource,
+проверяет оба SHA-256 и атомарно распаковывает catalog в
+`%LOCALAPPDATA%\GiveMeJob!\data`.
+
+Rust-проверки:
+
+```powershell
+cargo fmt --check --manifest-path apps/desktop/src-tauri/Cargo.toml
+cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml
+cargo clippy --manifest-path apps/desktop/src-tauri/Cargo.toml `
+  --all-targets -- -D warnings
+```
+
+## Catalog exporter
+
+Зависимости экспортёра намеренно ограничены `psycopg[binary]` и `zstandard`.
+FastAPI, SQLAlchemy, Redis, Celery, Alembic, pgvector, scraper libraries и
+Sentry отсутствуют.
 
 ```powershell
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy .
+uv run mypy
 uv run pytest -q
 ```
 
-Docker/PostgreSQL используется только для read-only аудита frozen dataset и
-snapshot export. Запуск ingestion не допускается.
+Для повторного export нужен только сохранённый PostgreSQL volume и
+`DATABASE_URL` в локальном `.env`:
 
-## Безопасность release
+```powershell
+uv run python -m tools.catalog_export export
+```
 
-- Реальные credentials не коммитятся.
-- Pull request workflows не получают release secrets.
-- Demo credentials находятся в защищённом GitHub Actions environment.
-- Release build внедряет их только в Rust-часть приложения.
-- Ключи создаются отдельно для проекта, работают без billing и считаются
-  извлекаемыми из бинарника.
-- BYOK хранится в Windows Credential Manager.
-- Updater private key хранится только в GitHub Secrets.
+Экспортёр:
 
-Перед публикацией обязательны:
+1. открывает repeatable-read read-only транзакцию;
+2. выбирает только active canonical jobs;
+3. требует ровно 78 719 записей и полные attribution/URL;
+4. строит SQLite STRICT tables и FTS5;
+5. выполняет integrity/foreign-key/FTS gates;
+6. создаёт `catalog-v1.sqlite.zst` и два SHA-256;
+7. атомарно обновляет release manifest.
 
-- `git diff --check`;
-- тесты изменённых подсистем;
-- secret scan tracked files и истории;
-- проверка release artifacts;
-- сверка документации с фактическим поведением.
+Artifact находится в `.artifacts/` и не коммитится. PostgreSQL volume нельзя
+удалять без отдельного подтверждения пользователя.
 
-## Устаревшие направления
+## Порядок этапов
 
-Не возобновляются без нового решения:
+1. M2 — полноценные фильтры, сортировки, виртуализация и search benchmark.
+2. M3 — профиль, shortlist и детерминированный match-score.
+3. M4 — Emmy, Rust `LLMRouter`, пять разрешённых tools и BYOK.
+4. M5 — NSIS, portable ZIP, updater и public release.
 
-- ATS sweep;
-- Adzuna/Jooble live calls;
-- новые источники;
-- freshness/salary backfill;
-- embeddings и vector search;
-- обязательный cloud backend;
-- сборки macOS/Linux;
-- probability score;
-- tracker и auto apply.
+Следующий этап начинается только после фактического прохождения критерия
+текущего.
+
+## Запреты
+
+- не добавлять live ingestion или job-source HTTP calls;
+- не возвращать backend runtime, Docker Compose или scheduler;
+- не добавлять embeddings/vector search;
+- не отправлять полный профиль или каталог LLM-провайдерам;
+- не собирать продукт для macOS/Linux/mobile;
+- не хранить секреты в Git, frontend, SQLite или логах.

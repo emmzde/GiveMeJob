@@ -340,5 +340,6 @@ salary   0.10
 Показатели ingestion до freeze сохраняются только как provenance. Они не
 являются активным gate и не дают разрешения на новые сборы.
 
-Исторический детальный checkpoint находится в
-`docs/SESSION_CHECKPOINT_2026-07-29.md`.
+Зафиксированные provenance-значения находятся в этом документе,
+`MVP_SCOPE.md` и `config/catalog-manifest.json`; отдельный session checkpoint
+удалён вместе с legacy-кодом.

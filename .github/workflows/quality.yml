@@ -9,92 +9,58 @@ permissions:
   contents: read
 
 jobs:
-  backend:
-    name: Backend
+  catalog-export:
+    name: Catalog exporter
     runs-on: ubuntu-latest
-    services:
-      db:
-        image: pgvector/pgvector:0.8.2-pg17-bookworm
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: givemejob
-          POSTGRES_DB: givemejob
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d givemejob"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-      redis:
-        image: redis:8.8.1-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-    env:
-      DATABASE_URL: postgresql+psycopg://postgres:givemejob@localhost:5432/givemejob
-      REDIS_URL: redis://localhost:6379/0
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - uses: actions/setup-python@v6
         with:
           python-version-file: .python-version
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           version: "0.11.32"
           enable-cache: true
 
-      - name: Install dependencies
-        run: uv sync --locked --all-groups
-
-      - name: Lint
-        run: uv run ruff check .
-
-      - name: Check formatting
-        run: uv run ruff format --check .
-
-      - name: Typecheck
-        run: uv run mypy .
-
-      - name: Test
-        run: uv run pytest -q
-
-      - name: Apply migrations
-        run: uv run alembic upgrade head
+      - run: uv sync --locked --all-groups
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy
+      - run: uv run pytest -q
 
   desktop-web:
     name: Desktop web layer
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-
+      - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -C apps/desktop typecheck
+      - run: pnpm -C apps/desktop lint
+      - run: pnpm -C apps/desktop test
+      - run: pnpm -C apps/desktop web:build
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Typecheck
-        run: pnpm -C apps/desktop typecheck
-
-      - name: Lint
-        run: pnpm -C apps/desktop lint
-
-      - name: Test
-        run: pnpm -C apps/desktop test
-
-      - name: Build web layer
-        run: pnpm -C apps/desktop web:build
+  desktop-rust:
+    name: Desktop Rust
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/desktop/src-tauri
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+      - run: cargo fmt --check
+      - run: cargo check
+      - run: cargo test
+      - run: cargo clippy --all-targets -- -D warnings

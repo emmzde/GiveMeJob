@@ -22,21 +22,21 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:8000 http://localhost:* ws://localhost:*; img-src 'self' asset: http://asset.localhost data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:"
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:"
     }
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
-      "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": ["resources/*"],
     "category": "Productivity",
-    "shortDescription": "Честный поиск работы и оценка соответствия вакансии",
-    "longDescription": "Агрегатор вакансий с локальным поиском и объяснимой оценкой соответствия."
+    "shortDescription": "Локальный поиск работы и объяснимое совпадение",
+    "longDescription": "Офлайн-каталог вакансий для Windows с локальным поиском, профилем и AI-маскотом Emmy."
   }
 }

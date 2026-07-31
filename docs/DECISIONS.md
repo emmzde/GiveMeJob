@@ -35,8 +35,9 @@ macOS, Linux и mobile не тестируются и не входят в roadm
 Установленное приложение работает без FastAPI, PostgreSQL, Redis, Docker и
 Python.
 
-Каталог и поиск находятся в локальном SQLite FTS5. PostgreSQL и существующий
-Python-код остаются developer-only data-tooling для формирования snapshot.
+Каталог и поиск находятся в локальном SQLite FTS5. После проверенного export
+legacy backend/ingestion удалён; в репозитории остаётся только минимальный
+read-only Python exporter. Исходный PostgreSQL volume хранится отдельно.
 
 Интернет нужен только:
 
@@ -164,6 +165,35 @@ Authenticode-сертификата в v1 нет. Возможное преду�
 - мультиязычный индекс;
 - канонические skills на английском;
 - ESCO как основная таксономия.
+
+## ADR-013. Удаление legacy после snapshot
+
+31 июля 2026 года экспортёр создал и проверил `catalog-v1.sqlite` из 78 719
+активных канонических вакансий. `integrity_check` вернул `ok`, foreign key
+audit — 0 ошибок, attribution и original URL присутствуют у всех записей.
+
+После прохождения gate удалены:
+
+- FastAPI и server API contracts;
+- Alembic и PostgreSQL schema из репозитория;
+- ingestion, коннекторы, scheduler и embeddings;
+- Redis/Docker Compose;
+- shared health types и старые contract fixtures.
+
+Сохранены `tools/catalog_export`, manifest/checksums и локальный PostgreSQL
+named volume. Volume не удаляется без отдельного подтверждения пользователя.
+
+## ADR-014. Первый GitHub Release только после M5 gate
+
+На 31 июля 2026 года GitHub Releases отсутствуют. Локально собранные NSIS и
+portable ZIP подтверждают build pipeline, но не считаются пользовательской
+версией.
+
+`v0.1.0` не публикуется до завершения M2–M5, публикации versioned catalog
+asset, clean-Windows проверки, secret scan и перевода репозитория в public.
+Текущие изменения отправляются в pull request как development state.
+
+Подробный checklist находится в [`RELEASE_STATUS.md`](RELEASE_STATUS.md).
 
 ## Машиночитаемый источник
 

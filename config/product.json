@@ -21,11 +21,15 @@
     "catalog": "sqlite-fts5",
     "requiresDocker": false,
     "requiresPython": false,
-    "requiresBackend": false
+    "requiresBackend": false,
+    "legacyBackendPresent": false
   },
   "dataset": {
     "mode": "frozen-snapshot",
+    "catalogVersion": "1",
+    "schemaVersion": 1,
     "canonicalJobs": 78719,
+    "manifest": "config/catalog-manifest.json",
     "allowIngestion": false,
     "useEmbeddings": false,
     "includeFullNormalizedDescriptions": true
@@ -51,5 +55,12 @@
   "repository": {
     "visibility": "private",
     "targetVisibility": "public"
+  },
+  "release": {
+    "status": "hold",
+    "publishedVersions": [],
+    "nextVersion": "0.1.0",
+    "requiredStage": "M5",
+    "decision": "docs/RELEASE_STATUS.md"
   }
 }

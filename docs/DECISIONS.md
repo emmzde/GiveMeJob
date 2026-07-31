@@ -228,12 +228,32 @@ Development changes попадают в `main` только через pull requ
 - `salary`, где известные значения идут перед `NULL`.
 
 Последний tie-break любой сортировки — job ID. `match` относится к M3 и не
-считается готовой backend-сортировкой M2. Cursor остаётся незавершённой частью
-M2.
+считается готовой backend-сортировкой M2.
+
+M2 использует opaque versioned keyset cursor. Envelope связывается с версией
+catalog и fingerprint нормализованного query, filters и sort; несовпадение
+query, sort, catalog или envelope version возвращает `invalid_query`. Exact
+`total` остаётся optional и вычисляется только на первой странице: observed
+page + count p95 не превысил `117.59 ms`, что ниже hard gate `<300 ms`.
+Последующие страницы count не повторяют.
+
+Закрытый IPC error contract: `catalog_missing`, `catalog_corrupt`,
+`invalid_query`, `not_found`, `open_failed`, `internal`. Локальные path и сырые
+SQLite errors не являются частью wire response.
 
 Hard performance gate для warm search — p95 строго меньше 300 мс. Значение
 строго меньше 150 мс является целевым уровнем, но не отдельным блокирующим
 gate.
+
+Search input нормализуется в Rust через NFKC, lowercase lookup и свёртку
+whitespace. Filter arrays сортируются и dedupe до query/fingerprint. FTS
+expression строится только из quoted literals: AND между concepts и OR между
+aliases одного concept; пользовательский FTS syntax остаётся данными.
+
+Relevance использует cursor v2 и детерминированный tuple: exact normalized
+title, число exact canonical skill matches, BM25, job ID. Spelling suggestion
+разрешён только при `total <= 3`, считается bounded edit distance по curated
+словарю ролей/skills и не запускает исправленный поиск автоматически.
 
 ## ADR-016. Временные метки catalog artifact
 

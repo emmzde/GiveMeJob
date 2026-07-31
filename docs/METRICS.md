@@ -297,6 +297,17 @@ Corpus:
 - 10 filter-heavy запросов;
 - 10 zero-result/typo запросов.
 
+Correctness gate перед performance run:
+
+- NFKC-equivalent text и различный Unicode whitespace дают один query;
+- `AND`, `OR`, `NEAR` и скобки не становятся FTS-операторами;
+- concepts соединяются через AND, aliases одного concept — через OR;
+- exact normalized title выше description-only match;
+- exact canonical `job_skills` match выше случайного упоминания в description;
+- RU, EN, mixed, quoted phrase, alias и typo golden fixtures проходят;
+- typo suggestion вычисляется только по bounded role/skill dictionary, только
+  при `total <= 3`, и никогда не применяется автоматически.
+
 Для каждого запроса выполняются пять прогревочных и 30 измеряемых запусков.
 
 Gates и цели:
@@ -312,6 +323,17 @@ Gates и цели:
 Для warm search блокирующим критерием является только p95 строго <300 мс.
 Строго <150 мс — целевой уровень качества; его превышение само по себе не
 закрывает M2, если hard gate пройден и измерение воспроизводимо.
+
+Filter/location/salary corpus benchmark от 31 июля 2026 года:
+
+- три чистых release-прогона, по 5 warm-ups + 30 samples на scenario;
+- worst clean-run p95: `US = 273.02 ms`, `salary 0 = 153.54 ms`;
+- Berlin, New York, DE country input, zero-result, salary 100 000 и
+  salary 10 000 000 также строго ниже 300 ms;
+- candidate `jobs_location_text_idx` измерен на временной копии и отклонён как
+  не улучшающий обязательный FTS pipeline; schema и artifact не менялись.
+
+Полная запись: [`evidence/M2_FILTERS_SQL_PERFORMANCE_2026-07-31.md`](evidence/M2_FILTERS_SQL_PERFORMANCE_2026-07-31.md).
 
 First-run распаковка измеряется отдельно и не входит в repeated startup.
 

@@ -8,7 +8,7 @@
     "search": {
       "backendFilters": true,
       "backendSorts": ["relevance", "newest", "salary"],
-      "cursor": false,
+      "cursor": true,
       "uiFilters": false,
       "matchSort": false
     }

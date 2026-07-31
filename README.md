@@ -23,8 +23,8 @@ GiveMeJob! — open-source portfolio pet-project: локальное Windows-п�
 - проверенный snapshot из 78 719 активных канонических вакансий;
 - `PRAGMA integrity_check`, foreign key audit, attribution/URL gate;
 - versioned manifest, SHA-256 и Zstandard archive;
-- локальный Rust IPC для статуса каталога и FTS5-поиска;
-- backend-фильтры и сортировки relevance/newest/salary;
+- строгий локальный Rust IPC для статуса, FTS5-поиска, detail и facets;
+- backend-фильтры, сортировки relevance/newest/salary и cursor/keyset;
 - React shell с лентой, карточкой, фильтрами-заготовками и offline state;
 - Windows-only Tauri configuration с NSIS и portable ZIP workflow.
 

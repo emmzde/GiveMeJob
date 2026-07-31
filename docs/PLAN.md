@@ -148,6 +148,7 @@ interface SearchQuery {
   sources: string[];
   sort: "relevance" | "newest" | "salary";
   limit: number; // integer 1..50
+  cursor?: SearchCursor; // opaque string, max 2048 chars
 }
 
 interface JobSummary {
@@ -173,41 +174,99 @@ interface CatalogStatus {
   totalJobs: number;
   message: string | null;
 }
-```
 
-Реализованные операции:
-
-```ts
-invoke("catalog_status"): Promise<CatalogStatus>
-invoke("search_jobs", { request: query }): Promise<JobSummary[]>
-```
-
-#### 2.3.2 Pending M2 extension
-
-Cursor/keyset и detail IPC ещё не реализованы. Cursor будет opaque branded
-string; декодированная структура обязана содержать `jobId: JobId`, а не
-JavaScript number:
-
-```ts
-const searchCursorSchema = z.string().min(1).brand<"SearchCursor">();
+const searchCursorSchema = z.string().min(1).max(2048).brand<"SearchCursor">();
 type SearchCursor = z.infer<typeof searchCursorSchema>;
 
 interface SearchPage<T> {
   items: T[];
-  nextCursor?: SearchCursor;
+  nextCursor: SearchCursor | null;
+  total?: number;
+  suggestion?: string;
 }
 
 interface JobDetail extends JobSummary {
   description: string;
+  skills: string[];
+  employmentType: EmploymentType | null;
+  salaryUsdYear: number | null;
   sourceUrl: string;
   applyUrl: string | null;
   snapshotVersion: string;
 }
 
-getJob(id: JobId): Promise<JobDetail>
+interface SkillFacet { skill: string; count: number }
+interface LocationFacet { location: string; count: number }
+interface SourceFacet { source: string; count: number }
+
+interface SearchFacets {
+  skills: SkillFacet[];
+  locations: LocationFacet[];
+  sources: SourceFacet[];
+}
+
+interface FilterOptions {
+  sources: SourceFacet[];
+  remoteModes: ["remote", "hybrid", "onsite"];
+  seniorities: [
+    "intern", "junior", "middle", "senior", "lead", "staff",
+    "principal", "manager", "director", "executive"
+  ];
+  employmentTypes: [
+    "full_time", "contract", "part_time", "internship",
+    "temporary", "volunteer", "other"
+  ];
+}
+
+interface AutocompleteRequest { query: string; limit: number } // limit 1..20
+interface SkillSuggestion {
+  label: string;
+  canonicalName: string;
+  count: number;
+}
+interface LocationSuggestion {
+  label: string;
+  canonicalValue: string;
+  kind: "country" | "city" | "location_text";
+  count: number;
+}
+
+type IpcError =
+  | { code: "catalog_missing" }
+  | { code: "catalog_corrupt" }
+  | { code: "invalid_query" }
+  | { code: "not_found" }
+  | { code: "open_failed" }
+  | { code: "internal" };
 ```
 
-#### 2.3.3 Future M3 contract
+Все response object schemas используют zod `.strict()`. Общие Rust/TypeScript
+fixtures находятся в `tests/contracts/m2_ipc_contracts.json`.
+
+Реализованные операции:
+
+```ts
+invoke("catalog_status"): Promise<CatalogStatus>
+invoke("search_jobs", { request: query }): Promise<SearchPage<JobSummary>>
+invoke("get_job", { id }): Promise<JobDetail>
+invoke("get_search_facets"): Promise<SearchFacets>
+invoke("get_filter_options"): Promise<FilterOptions>
+invoke("autocomplete_skills", { request }): Promise<SkillSuggestion[]>
+invoke("autocomplete_locations", { request }): Promise<LocationSuggestion[]>
+```
+
+`get_filter_options` возвращает все source counts из frozen catalog и полный
+закрытый enum-контракт, а не только значения, встретившиеся в конкретном
+snapshot. Autocomplete выполняется только локально. Skill suggestion разделяет
+пользовательский `label` и отправляемый canonical value: для `Python` это
+`label = "Python"`, `canonicalName = "Python (computer programming)"`.
+Location suggestion возвращает точное значение для существующей OR-семантики,
+его основной kind и count уникальных jobs.
+
+Команды отклоняются только закрытым `IpcError`; локальные path и сырые SQLite
+errors в frontend не передаются.
+
+#### 2.3.2 Future M3 contract
 
 После завершения M2 текущий поиск расширяется, а не подменяется несуществующим
 контрактом. M3 добавляет локальные user data и match:
@@ -246,6 +305,7 @@ FTS5 поля и BM25 weights:
 | company | 3 |
 | location | 2 |
 | description | 1 |
+| search_aliases | 1 |
 
 Дополнительное поле `search_aliases` содержит:
 
@@ -258,15 +318,27 @@ Tokenizer: `unicode61 remove_diacritics 2`, prefix indexes `2 3 4`.
 
 ### 3.2 Query pipeline
 
-1. Trim и Unicode normalization.
-2. Выделение фраз в кавычках.
-3. Canonicalization skills/roles по alias map.
-4. Безопасная сборка FTS expression.
+1. Backend NFKC normalization, lowercase для search lookup и единая свёртка
+   Unicode whitespace.
+2. Выделение фраз безопасным parser; незакрытая кавычка остаётся данными.
+3. Canonicalization skills/roles по versioned alias maps. Filter arrays до
+   fingerprint и SQL сортируются и dedupe после Unicode normalization.
+4. Безопасная сборка FTS expression: `AND` между concepts, `OR` между aliases
+   одного concept. Пользовательские `AND`, `OR`, `NEAR` и скобки всегда
+   экранируются как данные, phrase grouping сохраняется.
 5. BM25.
-6. Exact title и exact skill bonus.
+6. Детерминированный relevance tuple: exact normalized title сначала, затем
+   количество exact canonical skills из `job_skills`, затем BM25.
 7. Детерминированный sort и финальный tie-break по job ID.
 8. При нулевой/слабой выдаче — spelling suggestion по небольшому словарю
-   ролей и skills, без fuzzy scan всех вакансий.
+   ролей и skills, без fuzzy scan всех вакансий. Формально слабая выдача — не
+   более трёх результатов; suggestion не применяется автоматически.
+
+`config/search/skill_aliases.json` и `role_aliases.json` имеют
+`schema_version = 1` и проверяются Rust loader. Alias, принадлежащий нескольким
+canonical entries, запрещён без явного `ambiguous_alias_targets`. Для
+пунктуационно значимых skills сохраняются исходные формы `C++`, `C#`, `.NET` и
+`Node.js`; Playwright не является alias Selenium.
 
 ### 3.3 Фильтры и пагинация
 
@@ -278,6 +350,19 @@ Tokenizer: `unicode61 remove_diacritics 2`, prefix indexes `2 3 4`.
 - `salaryMinUsdYear` → `salary_usd_year >= salaryMinUsdYear`;
 - `salaryKnownOnly` → `salary_usd_year IS NOT NULL`.
 
+Location сохраняет прежнюю точную семантику без case folding: значения внутри
+массива объединяются через OR сразу по `country`, `city` и `location_text`.
+Перед обязательным exact predicate candidate IDs выбираются через
+`jobs_location_idx` для country/city и column-scoped FTS5 для `location_text`.
+Значения без FTS-токенов используют bounded exact fallback, поэтому punctuation
+или emoji-only input не создаёт false negative. Salary threshold аналогично
+использует `jobs_salary_idx` как preselector и затем повторяет exact predicate.
+
+Для first-page location/salary query exact total и page вычисляются одним
+проходом по минимальной materialized projection. FTS relevance остаётся на
+отдельном exact-count пути, потому что SQLite `bm25()` нельзя переносить за
+пределы разрешённого FTS ranking context.
+
 Сортировки:
 
 - `relevance` используется при непустом тексте;
@@ -285,8 +370,16 @@ Tokenizer: `unicode61 remove_diacritics 2`, prefix indexes `2 3 4`.
 - `salary` ставит известный `salary_usd_year` перед `NULL`;
 - job ID является последним tie-break для любого sort.
 
-Планируемая пагинация — cursor/keyset по `(sort_value, job_id)`, limit не
-больше 50. Offset pagination не используется. Cursor пока не реализован.
+Пагинация реализована как cursor/keyset по ranking tuple соответствующей
+сортировки и `job_id`, limit не больше 50. Offset pagination не используется.
+Opaque cursor v2 содержит catalog version, fingerprint нормализованного
+query/filter/sort и позицию с `JobId` как decimal string. Cursor другого query,
+sort, catalog или envelope version отклоняется как `invalid_query`.
+
+Exact total вычисляется только для первой страницы. Контракт оставляет поле
+optional; следующие страницы не повторяют count, а UI при отсутствующем total
+показывает количество загруженных jobs. Решение подтверждено замером
+[`evidence/M2_EXACT_COUNT_2026-07-31.md`](evidence/M2_EXACT_COUNT_2026-07-31.md).
 
 Лента виртуализирована. Менять sort/filter можно без блокирующей модалки;
 предыдущие результаты остаются до готовности новых.
@@ -300,6 +393,9 @@ Tokenizer: `unicode61 remove_diacritics 2`, prefix indexes `2 3 4`.
 - steady-state RAM: <250 МБ.
 
 Методика измерения зафиксирована в `docs/METRICS.md`.
+Текущий filter/location/salary corpus benchmark зафиксирован в
+[`evidence/M2_FILTERS_SQL_PERFORMANCE_2026-07-31.md`](evidence/M2_FILTERS_SQL_PERFORMANCE_2026-07-31.md):
+worst clean release p95 `273.02 ms`, новые indexes не потребовались.
 
 ## 4. Профиль, shortlist и match
 
@@ -600,7 +696,8 @@ Authenticode отсутствует в v1; SmartScreen warning документ�
 - [x] Search repository.
 - [x] Backend filters.
 - [x] Backend sorts: relevance, newest, salary.
-- [ ] Cursor/keyset pagination.
+- [x] Cursor/keyset pagination.
+- [x] Search correctness: Unicode/phrases/aliases/ranking/typo golden fixtures.
 - [x] Three-column UI shell.
 - [ ] Filter/sort UI wiring.
 - [ ] Virtualized feed.

@@ -17,11 +17,15 @@
 - frontend, Rust и exporter quality checks.
 
 Эти artifacts доказывают, что release pipeline технически возможен, но M2 ещё
-не закрыт. Backend-фильтры и три backend-сортировки (`relevance`, `newest`,
-`salary`) готовы. Cursor, подключение фильтров/сортировок в UI, виртуализация,
-benchmark gate и законченная job detail navigation ещё не готовы. `match`-sort
-относится к M3 и также не реализован. M3, M4 и release-hardening M5 не
-завершены.
+не закрыт. Backend search correctness, фильтры, три backend-сортировки
+(`relevance`, `newest`, `salary`) и cursor/keyset готовы; detail, filter options,
+source counts и локальные skill/location autocomplete имеют строгий
+Rust/TypeScript IPC-контракт. Filter/location/salary corpus benchmark прошёл
+hard gate с worst clean release p95 `273.02 ms`; новые SQLite indexes не
+добавлялись. Подключение фильтров/сортировок в UI, виртуализация, полный
+end-to-end M2 benchmark и законченная job detail navigation ещё не готовы.
+`match`-sort относится к M3 и также не реализован. M3, M4 и
+release-hardening M5 не завершены.
 
 Публикация сейчас создала бы ложное ожидание готового MVP и зафиксировала бы
 неполный UX как первую публичную версию.

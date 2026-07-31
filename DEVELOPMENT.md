@@ -4,8 +4,8 @@
 
 D0 и M1 завершены. В `config/catalog-manifest.json` зафиксирован проверенный
 snapshot из 78 719 вакансий. Текущий этап — M2: offline search и desktop shell.
-Backend-фильтры и сортировки relevance/newest/salary готовы; cursor, UI wiring
-и match-sort ещё не готовы.
+Backend-фильтры, search correctness, сортировки relevance/newest/salary и
+cursor/keyset готовы; UI wiring и относящийся к M3 match-sort ещё не готовы.
 GitHub Release отложен до M5; актуальный gate описан в
 `docs/RELEASE_STATUS.md`.
 
@@ -53,6 +53,19 @@ cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml
 cargo clippy --manifest-path apps/desktop/src-tauri/Cargo.toml `
   --all-targets -- -D warnings
 ```
+
+Воспроизводимый full-corpus benchmark location/salary запускается отдельно,
+потому что выполняет 5 warm-ups и 30 samples на каждый scenario:
+
+```powershell
+cargo test --release --manifest-path apps/desktop/src-tauri/Cargo.toml `
+  frozen_artifact_location_and_salary_benchmark -- --ignored --nocapture
+```
+
+Для него обязателен `.artifacts/catalog/catalog-v1.sqlite` либо явный
+`GIVEMEJOB_CATALOG_PATH`. Зафиксированный результат и решение не добавлять
+новый index находятся в
+`docs/evidence/M2_FILTERS_SQL_PERFORMANCE_2026-07-31.md`.
 
 ## Catalog exporter
 

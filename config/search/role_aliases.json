@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "role_aliases",
+  "entries": [
+    {"canonical": "Software Engineer", "aliases": ["software engineer", "software developer", "developer", "разработчик", "разработчик по", "инженер-программист", "программист"]},
+    {"canonical": "Backend Developer", "aliases": ["backend developer", "backend engineer", "back-end developer", "бэкенд-разработчик", "бэкенд разработчик"]},
+    {"canonical": "Frontend Developer", "aliases": ["frontend developer", "frontend engineer", "front-end developer", "фронтенд-разработчик", "фронтенд разработчик"]},
+    {"canonical": "Full Stack Developer", "aliases": ["full stack developer", "fullstack developer", "full-stack developer", "фулстек-разработчик", "фулстек разработчик"]},
+    {"canonical": "Data Analyst", "aliases": ["data analyst", "аналитик данных"]},
+    {"canonical": "Data Scientist", "aliases": ["data scientist", "специалист по данным", "дата-сайентист"]},
+    {"canonical": "Data Engineer", "aliases": ["data engineer", "инженер данных"]},
+    {"canonical": "Machine Learning Engineer", "aliases": ["machine learning engineer", "ml engineer", "инженер машинного обучения"]},
+    {"canonical": "DevOps Engineer", "aliases": ["devops engineer", "девопс-инженер", "девопс инженер"]},
+    {"canonical": "QA Engineer", "aliases": ["qa engineer", "quality assurance engineer", "test engineer", "инженер по тестированию", "тестировщик"]},
+    {"canonical": "Product Manager", "aliases": ["product manager", "менеджер продукта", "продакт-менеджер"]},
+    {"canonical": "Project Manager", "aliases": ["project manager", "менеджер проекта", "проджект-менеджер"]},
+    {"canonical": "Business Analyst", "aliases": ["business analyst", "бизнес-аналитик", "бизнес аналитик"]},
+    {"canonical": "System Administrator", "aliases": ["system administrator", "sysadmin", "системный администратор", "сисадмин"]},
+    {"canonical": "Security Engineer", "aliases": ["security engineer", "cybersecurity engineer", "инженер по информационной безопасности"]},
+    {"canonical": "UX Designer", "aliases": ["ux designer", "user experience designer", "ux-дизайнер"]},
+    {"canonical": "UI Designer", "aliases": ["ui designer", "user interface designer", "ui-дизайнер"]},
+    {"canonical": "Mobile Developer", "aliases": ["mobile developer", "mobile engineer", "мобильный разработчик"]},
+    {"canonical": "Android Developer", "aliases": ["android developer", "android engineer", "андроид-разработчик"]},
+    {"canonical": "iOS Developer", "aliases": ["ios developer", "ios engineer", "ios-разработчик"]}
+  ]
+}

@@ -1,0 +1,600 @@
+{
+  "valid": {
+    "catalogStatus": {
+      "state": "ready",
+      "catalogVersion": "1",
+      "sourceFrozenAt": "2026-07-29T20:30:03.846872Z",
+      "totalJobs": 78719,
+      "message": null
+    },
+    "searchQuery": {
+      "text": "Python разработчик",
+      "skills": [
+        "Python (computer programming)"
+      ],
+      "locations": [
+        "Remote"
+      ],
+      "remoteModes": [
+        "remote"
+      ],
+      "seniorities": [
+        "senior"
+      ],
+      "employmentTypes": [
+        "full_time"
+      ],
+      "salaryMinUsdYear": 100000,
+      "salaryKnownOnly": true,
+      "sources": [
+        "greenhouse"
+      ],
+      "sort": "relevance",
+      "limit": 40
+    },
+    "searchPage": {
+      "items": [
+        {
+          "id": "42",
+          "title": "Senior Python Engineer",
+          "company": "Acme",
+          "locationText": "Remote",
+          "remoteMode": "remote",
+          "seniority": "senior",
+          "salaryMin": 120000,
+          "salaryMax": 150000,
+          "salaryCurrency": "USD",
+          "salaryPeriod": "year",
+          "postedAt": "2026-07-29T12:00:00Z",
+          "source": "greenhouse",
+          "attribution": "Greenhouse"
+        }
+      ],
+      "nextCursor": null,
+      "total": 1,
+      "suggestion": "python developer"
+    },
+    "jobDetail": {
+      "id": "42",
+      "title": "Senior Python Engineer",
+      "company": "Acme",
+      "locationText": "Remote",
+      "remoteMode": "remote",
+      "seniority": "senior",
+      "salaryMin": 120000,
+      "salaryMax": 150000,
+      "salaryCurrency": "USD",
+      "salaryPeriod": "year",
+      "postedAt": "2026-07-29T12:00:00Z",
+      "source": "greenhouse",
+      "attribution": "Greenhouse",
+      "description": "Build reliable systems — надёжные системы.",
+      "skills": [
+        "Python (computer programming)",
+        "SQL"
+      ],
+      "employmentType": "full_time",
+      "salaryUsdYear": 135000,
+      "sourceUrl": "https://example.com/jobs/42",
+      "applyUrl": "https://example.com/jobs/42/apply",
+      "snapshotVersion": "1"
+    },
+    "facets": {
+      "skills": [
+        {
+          "skill": "Python (computer programming)",
+          "count": 9302
+        }
+      ],
+      "locations": [
+        {
+          "location": "Remote",
+          "count": 12000
+        }
+      ],
+      "sources": [
+        {
+          "source": "greenhouse",
+          "count": 7918
+        }
+      ]
+    },
+    "autocompleteRequest": {
+      "query": "Python",
+      "limit": 10
+    },
+    "filterOptions": {
+      "sources": [
+        {
+          "source": "himalayas",
+          "count": 68356
+        },
+        {
+          "source": "greenhouse",
+          "count": 7918
+        }
+      ],
+      "remoteModes": ["remote", "hybrid", "onsite"],
+      "seniorities": [
+        "intern",
+        "junior",
+        "middle",
+        "senior",
+        "lead",
+        "staff",
+        "principal",
+        "manager",
+        "director",
+        "executive"
+      ],
+      "employmentTypes": [
+        "full_time",
+        "contract",
+        "part_time",
+        "internship",
+        "temporary",
+        "volunteer",
+        "other"
+      ]
+    },
+    "skillSuggestions": [
+      {
+        "label": "Python",
+        "canonicalName": "Python (computer programming)",
+        "count": 9302
+      }
+    ],
+    "locationSuggestions": [
+      {
+        "label": "Berlin",
+        "canonicalValue": "Berlin",
+        "kind": "city",
+        "count": 16
+      }
+    ],
+    "ipcErrors": [
+      {
+        "code": "catalog_missing"
+      },
+      {
+        "code": "catalog_corrupt"
+      },
+      {
+        "code": "invalid_query"
+      },
+      {
+        "code": "not_found"
+      },
+      {
+        "code": "open_failed"
+      },
+      {
+        "code": "internal"
+      }
+    ]
+  },
+  "invalidSearchQueries": [
+    {
+      "name": "unknown field",
+      "value": {
+        "text": "Python разработчик",
+        "skills": [
+          "Python"
+        ],
+        "locations": [
+          "Remote"
+        ],
+        "remoteModes": [
+          "remote"
+        ],
+        "seniorities": [
+          "senior"
+        ],
+        "employmentTypes": [
+          "full_time"
+        ],
+        "salaryMinUsdYear": 100000,
+        "salaryKnownOnly": true,
+        "sources": [
+          "greenhouse"
+        ],
+        "sort": "relevance",
+        "limit": 40,
+        "rawSql": "DROP TABLE jobs"
+      }
+    },
+    {
+      "name": "unknown enum",
+      "value": {
+        "text": "Python разработчик",
+        "skills": [
+          "Python"
+        ],
+        "locations": [
+          "Remote"
+        ],
+        "remoteModes": [
+          "anywhere"
+        ],
+        "seniorities": [
+          "senior"
+        ],
+        "employmentTypes": [
+          "full_time"
+        ],
+        "salaryMinUsdYear": 100000,
+        "salaryKnownOnly": true,
+        "sources": [
+          "greenhouse"
+        ],
+        "sort": "relevance",
+        "limit": 40
+      }
+    },
+    {
+      "name": "array over maximum",
+      "value": {
+        "text": "Python разработчик",
+        "skills": [
+          "skill-1",
+          "skill-2",
+          "skill-3",
+          "skill-4",
+          "skill-5",
+          "skill-6",
+          "skill-7",
+          "skill-8",
+          "skill-9",
+          "skill-10",
+          "skill-11",
+          "skill-12",
+          "skill-13",
+          "skill-14",
+          "skill-15",
+          "skill-16",
+          "skill-17",
+          "skill-18",
+          "skill-19",
+          "skill-20",
+          "skill-21",
+          "skill-22",
+          "skill-23",
+          "skill-24",
+          "skill-25",
+          "skill-26",
+          "skill-27",
+          "skill-28",
+          "skill-29",
+          "skill-30",
+          "skill-31",
+          "skill-32",
+          "skill-33",
+          "skill-34",
+          "skill-35",
+          "skill-36",
+          "skill-37",
+          "skill-38",
+          "skill-39",
+          "skill-40",
+          "skill-41",
+          "skill-42",
+          "skill-43",
+          "skill-44",
+          "skill-45",
+          "skill-46",
+          "skill-47",
+          "skill-48",
+          "skill-49",
+          "skill-50",
+          "skill-51"
+        ],
+        "locations": [
+          "Remote"
+        ],
+        "remoteModes": [
+          "remote"
+        ],
+        "seniorities": [
+          "senior"
+        ],
+        "employmentTypes": [
+          "full_time"
+        ],
+        "salaryMinUsdYear": 100000,
+        "salaryKnownOnly": true,
+        "sources": [
+          "greenhouse"
+        ],
+        "sort": "relevance",
+        "limit": 40
+      }
+    },
+    {
+      "name": "invalid negative salary",
+      "value": {
+        "text": "Python разработчик",
+        "skills": [
+          "Python"
+        ],
+        "locations": [
+          "Remote"
+        ],
+        "remoteModes": [
+          "remote"
+        ],
+        "seniorities": [
+          "senior"
+        ],
+        "employmentTypes": [
+          "full_time"
+        ],
+        "salaryMinUsdYear": -1,
+        "salaryKnownOnly": true,
+        "sources": [
+          "greenhouse"
+        ],
+        "sort": "relevance",
+        "limit": 40
+      }
+    },
+    {
+      "name": "salary over maximum",
+      "value": {
+        "text": "Python разработчик",
+        "skills": [
+          "Python"
+        ],
+        "locations": [
+          "Remote"
+        ],
+        "remoteModes": [
+          "remote"
+        ],
+        "seniorities": [
+          "senior"
+        ],
+        "employmentTypes": [
+          "full_time"
+        ],
+        "salaryMinUsdYear": 10000001,
+        "salaryKnownOnly": true,
+        "sources": [
+          "greenhouse"
+        ],
+        "sort": "relevance",
+        "limit": 40
+      }
+    },
+    {
+      "name": "cursor over maximum",
+      "value": {
+        "text": "Python разработчик",
+        "skills": [
+          "Python"
+        ],
+        "locations": [
+          "Remote"
+        ],
+        "remoteModes": [
+          "remote"
+        ],
+        "seniorities": [
+          "senior"
+        ],
+        "employmentTypes": [
+          "full_time"
+        ],
+        "salaryMinUsdYear": 100000,
+        "salaryKnownOnly": true,
+        "sources": [
+          "greenhouse"
+        ],
+        "sort": "relevance",
+        "limit": 40,
+        "cursor": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    }
+  ],
+  "unicodeLengthCases": [
+    {
+      "name": "200 astral Unicode scalars",
+      "scalar": "😀",
+      "count": 200,
+      "valid": true
+    },
+    {
+      "name": "201 astral Unicode scalars",
+      "scalar": "😀",
+      "count": 201,
+      "valid": false
+    }
+  ],
+  "invalidAutocompleteRequests": [
+    {
+      "name": "autocomplete unknown field",
+      "value": {
+        "query": "Python",
+        "limit": 10,
+        "network": true
+      }
+    },
+    {
+      "name": "autocomplete zero limit",
+      "value": {
+        "query": "Python",
+        "limit": 0
+      }
+    },
+    {
+      "name": "autocomplete excessive limit",
+      "value": {
+        "query": "Python",
+        "limit": 21
+      }
+    }
+  ],
+  "invalidResponses": [
+    {
+      "name": "catalog status unknown field",
+      "schema": "catalogStatus",
+      "value": {
+        "state": "ready",
+        "catalogVersion": "1",
+        "sourceFrozenAt": null,
+        "totalJobs": 78719,
+        "message": null,
+        "path": "C:\\private\\catalog.sqlite"
+      }
+    },
+    {
+      "name": "search page unknown field",
+      "schema": "searchPage",
+      "value": {
+        "items": [
+          {
+            "id": "42",
+            "title": "Senior Python Engineer",
+            "company": "Acme",
+            "locationText": "Remote",
+            "remoteMode": "remote",
+            "seniority": "senior",
+            "salaryMin": 120000,
+            "salaryMax": 150000,
+            "salaryCurrency": "USD",
+            "salaryPeriod": "year",
+            "postedAt": "2026-07-29T12:00:00Z",
+            "source": "greenhouse",
+            "attribution": "Greenhouse"
+          }
+        ],
+        "nextCursor": null,
+        "total": 1,
+        "suggestion": "python developer",
+        "debug": true
+      }
+    },
+    {
+      "name": "nested job summary unknown field",
+      "schema": "searchPage",
+      "value": {
+        "items": [
+          {
+            "id": "42",
+            "title": "Senior Python Engineer",
+            "company": "Acme",
+            "locationText": "Remote",
+            "remoteMode": "remote",
+            "seniority": "senior",
+            "salaryMin": 120000,
+            "salaryMax": 150000,
+            "salaryCurrency": "USD",
+            "salaryPeriod": "year",
+            "postedAt": "2026-07-29T12:00:00Z",
+            "source": "greenhouse",
+            "attribution": "Greenhouse",
+            "rawSql": "SELECT *"
+          }
+        ],
+        "nextCursor": null,
+        "total": 1,
+        "suggestion": "python developer"
+      }
+    },
+    {
+      "name": "job detail unknown enum",
+      "schema": "jobDetail",
+      "value": {
+        "id": "42",
+        "title": "Senior Python Engineer",
+        "company": "Acme",
+        "locationText": "Remote",
+        "remoteMode": "remote",
+        "seniority": "senior",
+        "salaryMin": 120000,
+        "salaryMax": 150000,
+        "salaryCurrency": "USD",
+        "salaryPeriod": "year",
+        "postedAt": "2026-07-29T12:00:00Z",
+        "source": "greenhouse",
+        "attribution": "Greenhouse",
+        "description": "Build reliable systems — надёжные системы.",
+        "skills": [
+          "Python",
+          "SQL"
+        ],
+        "employmentType": "gig",
+        "salaryUsdYear": 135000,
+        "sourceUrl": "https://example.com/jobs/42",
+        "applyUrl": "https://example.com/jobs/42/apply",
+        "snapshotVersion": "1"
+      }
+    },
+    {
+      "name": "facets unknown field",
+      "schema": "facets",
+      "value": {
+        "skills": [
+          {
+            "skill": "Python",
+            "count": 9306
+          }
+        ],
+        "locations": [
+          {
+            "location": "Remote",
+            "count": 12000
+          }
+        ],
+        "sources": [
+          {
+            "source": "greenhouse",
+            "count": 7918
+          }
+        ],
+        "debug": true
+      }
+    },
+    {
+      "name": "filter options unknown enum",
+      "schema": "filterOptions",
+      "value": {
+        "sources": [],
+        "remoteModes": ["distributed"],
+        "seniorities": ["senior"],
+        "employmentTypes": ["full_time"]
+      }
+    },
+    {
+      "name": "skill suggestion unknown field",
+      "schema": "skillSuggestions",
+      "value": [
+        {
+          "label": "Python",
+          "canonicalName": "Python (computer programming)",
+          "count": 9302,
+          "provider": "network"
+        }
+      ]
+    },
+    {
+      "name": "location suggestion unknown kind",
+      "schema": "locationSuggestions",
+      "value": [
+        {
+          "label": "Berlin",
+          "canonicalValue": "Berlin",
+          "kind": "region",
+          "count": 16
+        }
+      ]
+    },
+    {
+      "name": "IPC error unknown field",
+      "schema": "ipcError",
+      "value": {
+        "code": "open_failed",
+        "path": "C:\\private\\catalog.sqlite"
+      }
+    }
+  ]
+}

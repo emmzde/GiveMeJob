@@ -69,6 +69,27 @@ jobs:
           Copy-Item apps/desktop/src-tauri/resources/catalog-v1.sqlite.zst portable/resources/
           Compress-Archive -Path portable/* -DestinationPath GiveMeJob-portable-x64.zip
 
+      - name: Verify catalog resource paths in Windows artifacts
+        shell: pwsh
+        run: |
+          $manifest = Get-Content config/catalog-manifest.json -Raw | ConvertFrom-Json
+          $portablePath = "resources/$($manifest.archive_file)"
+          $portableEntries = @(tar -tf GiveMeJob-portable-x64.zip) -replace '\\', '/'
+          if ($portablePath -notin $portableEntries) {
+            throw "Portable catalog resource is missing at $portablePath"
+          }
+
+          $installer = Get-ChildItem apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe |
+            Select-Object -First 1
+          if ($null -eq $installer) {
+            throw "NSIS installer was not produced"
+          }
+          $nsisPath = "resources\\$($manifest.archive_file)"
+          $nsisListing = & 7z l -slt $installer.FullName
+          if ($nsisListing -notcontains "Path = $nsisPath") {
+            throw "NSIS catalog resource is missing at $nsisPath"
+          }
+
       - uses: actions/upload-artifact@v7
         with:
           name: GiveMeJob-Windows

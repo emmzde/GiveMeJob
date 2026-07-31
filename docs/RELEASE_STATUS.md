@@ -22,8 +22,13 @@
 source counts и локальные skill/location autocomplete имеют строгий
 Rust/TypeScript IPC-контракт. Filter/location/salary corpus benchmark прошёл
 hard gate с worst clean release p95 `273.02 ms`; новые SQLite indexes не
-добавлялись. Подключение фильтров/сортировок в UI, виртуализация, полный
-end-to-end M2 benchmark и законченная job detail navigation ещё не готовы.
+добавлялись. Catalog lifecycle вынесен в `catalog.rs`: реализованы seal-based
+fast startup, полная install/recovery validation, streaming unpack, progress UI,
+lock, stale-temp cleanup, `.previous` rollback и пользовательский retry.
+Job detail navigation и безопасный original-link flow готовы: detail загружается
+отдельным IPC, description выводится как недоверенный plain text, а Rust открывает
+только HTTPS URL, повторно полученный по `JobId`. Подключение фильтров/сортировок
+в UI, виртуализация и полный end-to-end M2 benchmark ещё не готовы.
 `match`-sort относится к M3 и также не реализован. M3, M4 и
 release-hardening M5 не завершены.
 

@@ -250,10 +250,16 @@ whitespace. Filter arrays сортируются и dedupe до query/fingerprin
 expression строится только из quoted literals: AND между concepts и OR между
 aliases одного concept; пользовательский FTS syntax остаётся данными.
 
-Relevance использует cursor v2 и детерминированный tuple: exact normalized
-title, число exact canonical skill matches, BM25, job ID. Spelling suggestion
-разрешён только при `total <= 3`, считается bounded edit distance по curated
-словарю ролей/skills и не запускает исправленный поиск автоматически.
+Relevance использует cursor v3 и детерминированный tuple: exact normalized
+title, число exact canonical skill matches, BM25, `posted_at` с `NULL` после
+известных дат, затем job ID. BM25 хранится в cursor как 16-символьный hex
+bit-pattern IEEE 754, поэтому сериализация не меняет ни одного бита rank.
+`newest` аналогично ставит `posted_at IS NULL` после известных дат, а `salary`
+оставляет неизвестные зарплаты после известных. Страница выбирает `limit + 1`
+строку только для определения `nextCursor`; lookahead-строка в `items` не
+попадает. Spelling suggestion разрешён только при `total <= 3`, считается
+bounded edit distance по curated словарю ролей/skills и не запускает
+исправленный поиск автоматически.
 
 ## ADR-016. Временные метки catalog artifact
 

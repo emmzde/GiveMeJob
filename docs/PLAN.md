@@ -105,21 +105,32 @@ checksum.
 
 ### 2.2 Первый запуск и обновление
 
-Tauri bundle содержит compressed catalog. На первом запуске:
+Tauri bundle содержит compressed catalog по пути
+`resources/<archive_file>`. На первом запуске окно и initialization UI
+показываются до завершения blocking worker:
 
-1. Проверить свободное место.
-2. Распаковать во временный файл в Local AppData.
-3. Проверить SHA-256 и SQLite integrity.
-4. Переименовать файл атомарно.
-5. Открыть catalog read-only.
-6. Создать или мигрировать `user.sqlite`.
+1. Взять install lock, удалить stale temp и проверить свободное место.
+2. Проверить archive SHA-256, потоково распаковать в уникальный temp и выполнить
+   `flush`/`sync`.
+3. Проверить decompressed SHA-256, catalog/schema versions, required tables,
+   job/FTS count, foreign keys и полный SQLite `integrity_check`.
+4. Переименовать файл атомарно с `.previous` rollback и открыть catalog
+   read-only.
+5. Записать строгий sidecar seal: checksum, size, versions и file metadata.
+6. Создать или мигрировать `user.sqlite` на отдельном этапе; catalog recovery
+   никогда его не затрагивает.
 
 Первичная распаковка может занимать дольше обычного запуска и показывает
 прогресс с состоянием Emmy `searching`. После инициализации целевой startup
 меньше 1,5 секунды.
 
-При обновлении новый catalog ставится side-by-side. Старый удаляется только
-после успешной проверки нового. Пользовательская база не заменяется.
+При обычном старте fast validation сравнивает seal и file metadata без полного
+hash 1 ГБ SQLite. Изменение size/mtime или отсутствие seal переводит lifecycle
+в `verifying`; неуспешная проверка с доступным archive — в `recovering`.
+Установка защищена межпроцессным file lock, удаляет stale install temp после
+прерванного запуска и заранее проверяет свободное место с резервом. При
+обновлении новый catalog ставится side-by-side. Старый удаляется только после
+успешного открытия нового. Пользовательская база не заменяется.
 
 Необязательная проверка обновления приложения запускается асинхронно после
 старта. Timeout, отсутствие сети или ошибка updater endpoint не блокируют
@@ -168,7 +179,11 @@ interface JobSummary {
 }
 
 interface CatalogStatus {
-  state: "ready" | "missing" | "error";
+  state: "initializing" | "verifying" | "ready" | "missing" | "recovering" | "error";
+  stage: "starting" | "checking_seal" | "checking_space" |
+    "checking_archive" | "decompressing" | "checking_catalog" |
+    "checking_sqlite" | "activating" | "opening" | "cleaning_up" | null;
+  progress: number; // monotonic 0..100 within one lifecycle run
   catalogVersion: string | null;
   sourceFrozenAt: string | null;
   totalJobs: number;
@@ -186,11 +201,11 @@ interface SearchPage<T> {
 }
 
 interface JobDetail extends JobSummary {
-  description: string;
+  description: string; // максимум 64 000 Unicode scalars
   skills: string[];
   employmentType: EmploymentType | null;
   salaryUsdYear: number | null;
-  sourceUrl: string;
+  sourceUrl: string; // HTTPS в catalog-v1
   applyUrl: string | null;
   snapshotVersion: string;
 }
@@ -234,9 +249,12 @@ interface LocationSuggestion {
 type IpcError =
   | { code: "catalog_missing" }
   | { code: "catalog_corrupt" }
+  | { code: "catalog_busy" }
+  | { code: "disk_full" }
   | { code: "invalid_query" }
   | { code: "not_found" }
   | { code: "open_failed" }
+  | { code: "recovery_failed" }
   | { code: "internal" };
 ```
 
@@ -247,8 +265,10 @@ fixtures находятся в `tests/contracts/m2_ipc_contracts.json`.
 
 ```ts
 invoke("catalog_status"): Promise<CatalogStatus>
+invoke("recover_catalog"): Promise<CatalogStatus>
 invoke("search_jobs", { request: query }): Promise<SearchPage<JobSummary>>
 invoke("get_job", { id }): Promise<JobDetail>
+invoke("open_original", { jobId }): Promise<void>
 invoke("get_search_facets"): Promise<SearchFacets>
 invoke("get_filter_options"): Promise<FilterOptions>
 invoke("autocomplete_skills", { request }): Promise<SkillSuggestion[]>
@@ -262,6 +282,13 @@ snapshot. Autocomplete выполняется только локально. Ski
 `label = "Python"`, `canonicalName = "Python (computer programming)"`.
 Location suggestion возвращает точное значение для существующей OR-семантики,
 его основной kind и count уникальных jobs.
+
+`get_job` проверяет branded decimal `JobId` до обращения к SQLite и возвращает
+description только в detail payload. Catalog-v1 имеет `description_format =
+"plain_text"`; frontend выводит description как обычный React-текст без HTML.
+`open_original` принимает только `jobId`, заново читает `source_url` в Rust,
+разрешает для текущего snapshot только HTTPS и передаёт ссылку системному
+браузеру. Произвольный URL из frontend команда не принимает.
 
 Команды отклоняются только закрытым `IpcError`; локальные path и сырые SQLite
 errors в frontend не передаются.
@@ -372,9 +399,14 @@ Location сохраняет прежнюю точную семантику бе�
 
 Пагинация реализована как cursor/keyset по ranking tuple соответствующей
 сортировки и `job_id`, limit не больше 50. Offset pagination не используется.
-Opaque cursor v2 содержит catalog version, fingerprint нормализованного
-query/filter/sort и позицию с `JobId` как decimal string. Cursor другого query,
-sort, catalog или envelope version отклоняется как `invalid_query`.
+Запрос получает `limit + 1` строку, но возвращает в `items` не больше `limit`.
+Opaque cursor v3 содержит catalog version, fingerprint нормализованного
+query/filter/sort и позицию с `JobId` как decimal string. Relevance cursor
+продолжается по final ranking tuple, `posted_at` и ID; BM25 кодируется как
+бит-точный hex IEEE 754. `newest` явно ставит `posted_at IS NULL` после
+известных дат, `salary` — неизвестные зарплаты после известных. Cursor другого
+query, filter, sort, catalog или envelope version отклоняется как
+`invalid_query`.
 
 Exact total вычисляется только для первой страницы. Контракт оставляет поле
 optional; следующие страницы не повторяют count, а UI при отсутствующем total
@@ -701,7 +733,7 @@ Authenticode отсутствует в v1; SmartScreen warning документ�
 - [x] Three-column UI shell.
 - [ ] Filter/sort UI wiring.
 - [ ] Virtualized feed.
-- [ ] Job detail и original link.
+- [x] Job detail и original link.
 - [ ] Themes, keyboard, error states.
 
 Критерий: поиск без сети; hard gate warm p95 строго <300 мс. Значение строго

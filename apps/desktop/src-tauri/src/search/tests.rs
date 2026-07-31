@@ -1,4 +1,4 @@
-use std::{env, path::PathBuf, time::Instant};
+use std::{collections::HashSet, env, path::PathBuf, process::Command, time::Instant};
 
 use base64::Engine as _;
 use rusqlite::{params_from_iter, Connection, OpenFlags};
@@ -6,6 +6,7 @@ use serde::Deserialize;
 
 use crate::ipc::IpcError;
 
+use super::dto::MAX_JOB_DESCRIPTION_LENGTH;
 use super::{
     aliases::embedded_alias_maps,
     cursor::{decode_cursor, query_fingerprint, TEST_CURSOR_VERSION},
@@ -16,11 +17,13 @@ use super::{
     get_facets, get_filter_options, get_job_detail,
     query_builder::{build_query_parts, placeholders},
     search_catalog,
-    validation::validate_and_normalize,
+    validation::{validate_and_normalize, MAX_CURSOR_LENGTH},
     {autocomplete_locations, autocomplete_skills},
 };
 
 const GOLDEN_FIXTURES: &str = include_str!("../../../../../tests/fixtures/m2_search_golden.json");
+const PAGINATION_SEQUENCE_ENV: &str = "GIVEMEJOB_PAGINATION_SEQUENCE_SUBPROCESS";
+const PAGINATION_SEQUENCE_MARKER: &str = "GIVEMEJOB_PAGINATION_SEQUENCE=";
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -179,8 +182,38 @@ fn fixture_catalog() -> Connection {
     connection
 }
 
+fn pagination_fixture_catalog() -> Connection {
+    let connection = fixture_catalog();
+    connection
+        .execute_batch(
+            r#"
+            UPDATE jobs SET posted_at = NULL WHERE id IN (2, 3);
+            UPDATE jobs SET posted_at = '2026-01-12T00:00:00Z' WHERE id = 11;
+            UPDATE jobs SET salary_usd_year = NULL WHERE id = 10;
+            UPDATE jobs
+            SET title = 'Pagination Engineer',
+                title_normalized = 'pagination engineer',
+                company = 'Paging',
+                location_text = 'Remote',
+                description_text = 'Stable pagination result.',
+                skills_text = '',
+                search_aliases = '',
+                source = 'pagination',
+                posted_at = CASE
+                  WHEN id IN (7, 8) THEN '2026-01-09T00:00:00Z'
+                  ELSE NULL
+                END
+            WHERE id IN (4, 7, 8, 9);
+            INSERT INTO jobs_fts(jobs_fts) VALUES('rebuild');
+            "#,
+        )
+        .expect("pagination tie fixtures should be valid");
+    connection
+}
+
 fn collect_all_ids(connection: &Connection, mut query: SearchQuery) -> Vec<String> {
     let mut ids = Vec::new();
+    let mut seen_cursors = HashSet::new();
     loop {
         let page = search_catalog(connection, &query, "catalog-v1")
             .expect("paginated search should succeed");
@@ -188,6 +221,7 @@ fn collect_all_ids(connection: &Connection, mut query: SearchQuery) -> Vec<Strin
         let Some(cursor) = page.next_cursor else {
             break;
         };
+        assert!(seen_cursors.insert(cursor.clone()), "cursor loop detected");
         query.cursor = Some(cursor);
     }
     ids
@@ -580,22 +614,180 @@ fn candidate_query_plans_use_existing_location_and_salary_indexes() {
 }
 
 #[test]
-fn pagination_is_stable_for_all_sorts_and_null_values() {
-    let connection = fixture_catalog();
+fn first_two_pages_use_tie_keys_without_duplicates_or_lookahead_items() {
+    let connection = pagination_fixture_catalog();
+    let cases = [
+        (
+            "newest posted-at tie",
+            {
+                let mut query = search_query();
+                query.limit = 1;
+                query
+            },
+            vec!["10"],
+            vec!["11"],
+        ),
+        (
+            "salary tie",
+            {
+                let mut query = search_query();
+                query.sort = SearchSort::Salary;
+                query.limit = 4;
+                query
+            },
+            vec!["5", "1", "6", "2"],
+            vec!["11", "4", "7", "8"],
+        ),
+        (
+            "relevance rank and posted-at tie",
+            {
+                let mut query = search_query();
+                query.text = "pagination engineer".to_owned();
+                query.sources = vec!["pagination".to_owned()];
+                query.limit = 1;
+                query
+            },
+            vec!["7"],
+            vec!["8"],
+        ),
+    ];
+
+    for (name, mut query, expected_first, expected_second) in cases {
+        let first = search_catalog(&connection, &query, "catalog-v1")
+            .unwrap_or_else(|error| panic!("{name} first page failed: {error:?}"));
+        assert_eq!(first.items.len(), query.limit as usize, "{name}");
+        assert_eq!(
+            first
+                .items
+                .iter()
+                .map(|job| job.id.as_str())
+                .collect::<Vec<_>>(),
+            expected_first,
+            "{name} first page"
+        );
+        query.cursor = first.next_cursor;
+        let second = search_catalog(&connection, &query, "catalog-v1")
+            .unwrap_or_else(|error| panic!("{name} second page failed: {error:?}"));
+        assert_eq!(second.items.len(), query.limit as usize, "{name}");
+        assert_eq!(
+            second
+                .items
+                .iter()
+                .map(|job| job.id.as_str())
+                .collect::<Vec<_>>(),
+            expected_second,
+            "{name} second page"
+        );
+        let first_ids = expected_first.into_iter().collect::<HashSet<_>>();
+        assert!(
+            expected_second
+                .into_iter()
+                .all(|job_id| !first_ids.contains(job_id)),
+            "{name} duplicated a job across pages"
+        );
+    }
+}
+
+#[test]
+fn full_fixture_traversal_has_no_duplicates_or_omissions_for_every_sort() {
+    let connection = pagination_fixture_catalog();
+    let cases = [
+        (
+            "newest",
+            search_query(),
+            1,
+            vec!["10", "11", "7", "8", "6", "5", "1", "2", "3", "4", "9"],
+        ),
+        (
+            "salary",
+            {
+                let mut query = search_query();
+                query.sort = SearchSort::Salary;
+                query
+            },
+            1,
+            vec!["5", "1", "6", "2", "11", "4", "7", "8", "9", "3", "10"],
+        ),
+        (
+            "relevance",
+            {
+                let mut query = search_query();
+                query.text = "pagination engineer".to_owned();
+                query.sources = vec!["pagination".to_owned()];
+                query
+            },
+            1,
+            vec!["7", "8", "4", "9"],
+        ),
+    ];
+
+    for (name, mut query, page_size, expected) in cases {
+        query.limit = page_size;
+        let actual = collect_all_ids(&connection, query);
+        assert_eq!(actual, expected, "{name}");
+        assert_eq!(
+            actual.iter().collect::<HashSet<_>>().len(),
+            actual.len(),
+            "{name} returned duplicates"
+        );
+    }
+}
+
+#[test]
+fn pagination_sequence_subprocess_helper() {
+    if env::var_os(PAGINATION_SEQUENCE_ENV).is_none() {
+        return;
+    }
+    let connection = pagination_fixture_catalog();
     let newest = collect_all_ids(&connection, search_query());
-    assert_eq!(newest.len(), 11);
-    assert_eq!(newest[0], "11");
+    let salary = collect_all_ids(&connection, {
+        let mut query = search_query();
+        query.sort = SearchSort::Salary;
+        query
+    });
+    let relevance = collect_all_ids(&connection, {
+        let mut query = search_query();
+        query.text = "pagination engineer".to_owned();
+        query.sources = vec!["pagination".to_owned()];
+        query.limit = 1;
+        query
+    });
+    println!(
+        "{PAGINATION_SEQUENCE_MARKER}{}",
+        serde_json::to_string(&(newest, salary, relevance))
+            .expect("pagination sequence should serialize")
+    );
+}
 
-    let mut salary = search_query();
-    salary.sort = SearchSort::Salary;
-    let salary_ids = collect_all_ids(&connection, salary);
-    assert_eq!(salary_ids.len(), 11);
-    assert_eq!(salary_ids[0], "5");
-    assert_eq!(salary_ids.last().map(String::as_str), Some("3"));
+#[test]
+fn pagination_sequence_is_deterministic_between_processes() {
+    let run_subprocess = || {
+        let output = Command::new(env::current_exe().expect("test executable should exist"))
+            .args([
+                "--exact",
+                "search::tests::pagination_sequence_subprocess_helper",
+                "--nocapture",
+                "--test-threads=1",
+            ])
+            .env(PAGINATION_SEQUENCE_ENV, "1")
+            .output()
+            .expect("pagination subprocess should start");
+        assert!(
+            output.status.success(),
+            "pagination subprocess failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let stdout = String::from_utf8(output.stdout).expect("test output should be UTF-8");
+        stdout
+            .lines()
+            .find_map(|line| {
+                line.find(PAGINATION_SEQUENCE_MARKER)
+                    .map(|index| line[index + PAGINATION_SEQUENCE_MARKER.len()..].to_owned())
+            })
+            .unwrap_or_else(|| panic!("pagination marker missing from subprocess output: {stdout}"))
+    };
 
-    let mut relevance = search_query();
-    relevance.text = "python".to_owned();
-    assert_eq!(collect_all_ids(&connection, relevance), vec!["1", "2"]);
+    assert_eq!(run_subprocess(), run_subprocess());
 }
 
 #[test]
@@ -651,7 +843,28 @@ fn query_fingerprint_normalizes_unicode_filter_order_and_duplicates() {
 }
 
 #[test]
-fn cursor_rejects_other_query_catalog_and_envelope_version() {
+fn cursor_rejects_malformed_and_oversized_values() {
+    let connection = fixture_catalog();
+    for malformed in ["not base64!", "e30"] {
+        let mut query = search_query();
+        query.cursor = Some(malformed.to_owned());
+        assert_eq!(
+            search_catalog(&connection, &query, "catalog-v1"),
+            Err(IpcError::InvalidQuery),
+            "malformed cursor: {malformed}"
+        );
+    }
+
+    let mut oversized = search_query();
+    oversized.cursor = Some("x".repeat(MAX_CURSOR_LENGTH + 1));
+    assert_eq!(
+        search_catalog(&connection, &oversized, "catalog-v1"),
+        Err(IpcError::InvalidQuery)
+    );
+}
+
+#[test]
+fn cursor_rejects_other_query_filter_catalog_and_envelope_version() {
     let connection = fixture_catalog();
     let query = search_query();
     let page = search_catalog(&connection, &query, "catalog-v1").expect("first page");
@@ -662,6 +875,14 @@ fn cursor_rejects_other_query_catalog_and_envelope_version() {
     changed_query.cursor = Some(cursor.clone());
     assert_eq!(
         search_catalog(&connection, &changed_query, "catalog-v1"),
+        Err(IpcError::InvalidQuery)
+    );
+
+    let mut changed_filter = query.clone();
+    changed_filter.sources = vec!["lever".to_owned()];
+    changed_filter.cursor = Some(cursor.clone());
+    assert_eq!(
+        search_catalog(&connection, &changed_filter, "catalog-v1"),
         Err(IpcError::InvalidQuery)
     );
 
@@ -705,6 +926,13 @@ fn job_detail_facets_and_not_found_follow_the_contract() {
     let job_id = super::dto::JobId::parse("1").expect("job ID should parse");
     let detail = get_job_detail(&connection, &job_id).expect("job should exist");
     assert_eq!(detail.skills, vec!["Python (computer programming)"]);
+    assert_eq!(detail.description, "Build APIs and reliable services.");
+    assert_eq!(detail.remote_mode, Some(RemoteMode::Remote));
+    assert_eq!(detail.seniority, Some(Seniority::Senior));
+    assert_eq!(detail.employment_type, Some(EmploymentType::FullTime));
+    assert_eq!(detail.source, "greenhouse");
+    assert_eq!(detail.attribution, "Greenhouse");
+    assert_eq!(detail.snapshot_version, "1");
     assert_eq!(detail.source_url, "https://example.test/1");
 
     let facets = get_facets(&connection).expect("facets should load");
@@ -719,6 +947,23 @@ fn job_detail_facets_and_not_found_follow_the_contract() {
     assert_eq!(
         get_job_detail(&connection, &missing),
         Err(IpcError::NotFound)
+    );
+}
+
+#[test]
+fn job_detail_rejects_description_above_the_ipc_schema_limit() {
+    let connection = fixture_catalog();
+    connection
+        .execute(
+            "UPDATE jobs SET description_text = ? WHERE id = 1",
+            ["x".repeat(MAX_JOB_DESCRIPTION_LENGTH + 1)],
+        )
+        .expect("fixture description should update");
+    let job_id = super::dto::JobId::parse("1").expect("job ID should parse");
+
+    assert_eq!(
+        get_job_detail(&connection, &job_id),
+        Err(IpcError::CatalogCorrupt)
     );
 }
 

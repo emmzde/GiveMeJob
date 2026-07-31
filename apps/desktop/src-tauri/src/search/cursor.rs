@@ -11,7 +11,7 @@ use super::{
     validation::MAX_CURSOR_LENGTH,
 };
 
-const CURSOR_VERSION: u8 = 2;
+const CURSOR_VERSION: u8 = 3;
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -28,7 +28,9 @@ pub(super) enum CursorPosition {
     Relevance {
         exact_title: bool,
         exact_skill_matches: u32,
+        #[serde(with = "f64_bits_hex")]
         bm25_score: f64,
+        posted_at: Option<String>,
         job_id: JobId,
     },
     Newest {
@@ -139,29 +141,42 @@ pub(super) fn cursor_clause(
             exact_title,
             exact_skill_matches,
             bm25_score,
+            posted_at,
             job_id,
         } => {
             let exact_title = i64::from(*exact_title);
             let exact_skills = i64::from(*exact_skill_matches);
+            parameters.extend([Value::Integer(exact_title)]);
+            parameters.extend([Value::Integer(exact_title), Value::Integer(exact_skills)]);
             parameters.extend([
                 Value::Integer(exact_title),
-                Value::Integer(exact_title),
-                Value::Integer(exact_skills),
-                Value::Integer(exact_title),
                 Value::Integer(exact_skills),
                 Value::Real(*bm25_score),
-                Value::Integer(exact_title),
-                Value::Integer(exact_skills),
-                Value::Real(*bm25_score),
-                Value::Integer(job_id.as_i64()?),
             ]);
-            Ok("WHERE (
-              page.exact_title < ?
-              OR (page.exact_title = ? AND page.exact_skill_matches < ?)
-              OR (page.exact_title = ? AND page.exact_skill_matches = ? AND page.bm25_score > ?)
-              OR (page.exact_title = ? AND page.exact_skill_matches = ? AND page.bm25_score = ? AND page.id > ?)
-            )"
-                .to_owned())
+            parameters.extend([
+                Value::Integer(exact_title),
+                Value::Integer(exact_skills),
+                Value::Real(*bm25_score),
+            ]);
+            let date_clause = if let Some(posted_at) = posted_at {
+                parameters.extend([
+                    Value::Text(posted_at.clone()),
+                    Value::Text(posted_at.clone()),
+                    Value::Integer(job_id.as_i64()?),
+                ]);
+                "(page.sort_text < ? OR page.sort_text IS NULL OR (page.sort_text = ? AND page.id > ?))"
+            } else {
+                parameters.push(Value::Integer(job_id.as_i64()?));
+                "page.sort_text IS NULL AND page.id > ?"
+            };
+            Ok(format!(
+                "WHERE (
+                  page.exact_title < ?
+                  OR (page.exact_title = ? AND page.exact_skill_matches < ?)
+                  OR (page.exact_title = ? AND page.exact_skill_matches = ? AND page.bm25_score > ?)
+                  OR (page.exact_title = ? AND page.exact_skill_matches = ? AND page.bm25_score = ? AND ({date_clause}))
+                )"
+            ))
         }
         CursorPosition::Newest {
             posted_at: Some(posted_at),
@@ -210,6 +225,7 @@ pub(super) fn cursor_for_row(
             exact_title: row.exact_title,
             exact_skill_matches: row.exact_skill_matches,
             bm25_score: row.bm25_score.ok_or(IpcError::CatalogCorrupt)?,
+            posted_at: row.sort_text.clone(),
             job_id,
         },
         EffectiveSort::Newest => CursorPosition::Newest {
@@ -224,5 +240,110 @@ pub(super) fn cursor_for_row(
     encode_cursor(catalog_version, fingerprint, position)
 }
 
+mod f64_bits_hex {
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub(super) fn serialize<S>(value: &f64, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&format!("{:016x}", value.to_bits()))
+    }
+
+    pub(super) fn deserialize<'de, D>(deserializer: D) -> Result<f64, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let encoded = String::deserialize(deserializer)?;
+        if encoded.len() != 16
+            || !encoded
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        {
+            return Err(serde::de::Error::custom("invalid f64 bit pattern"));
+        }
+        let bits = u64::from_str_radix(&encoded, 16)
+            .map_err(|_| serde::de::Error::custom("invalid f64 bit pattern"))?;
+        Ok(f64::from_bits(bits))
+    }
+}
+
 #[cfg(test)]
 pub(super) const TEST_CURSOR_VERSION: u8 = CURSOR_VERSION;
+
+#[cfg(test)]
+mod cursor_tests {
+    use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+
+    use super::{decode_cursor, encode_cursor, CursorPosition};
+    use crate::ipc::IpcError;
+    use crate::search::dto::{EffectiveSort, JobId};
+
+    #[test]
+    fn relevance_rank_round_trip_preserves_every_f64_bit() {
+        let rank = f64::from_bits(0xbfc2_3456_789a_bcde);
+        let encoded = encode_cursor(
+            "catalog-v1",
+            "fingerprint",
+            CursorPosition::Relevance {
+                exact_title: false,
+                exact_skill_matches: 0,
+                bm25_score: rank,
+                posted_at: Some("2026-01-01T00:00:00Z".to_owned()),
+                job_id: JobId::parse("1").expect("test JobId should be valid"),
+            },
+        )
+        .expect("cursor should encode");
+        let decoded = decode_cursor(
+            &encoded,
+            "catalog-v1",
+            "fingerprint",
+            EffectiveSort::Relevance,
+        )
+        .expect("cursor should decode");
+        let CursorPosition::Relevance { bm25_score, .. } = decoded else {
+            panic!("relevance cursor expected");
+        };
+        assert_eq!(bm25_score.to_bits(), rank.to_bits());
+    }
+
+    #[test]
+    fn relevance_rank_rejects_malformed_and_non_finite_bit_patterns() {
+        let encoded = encode_cursor(
+            "catalog-v1",
+            "fingerprint",
+            CursorPosition::Relevance {
+                exact_title: false,
+                exact_skill_matches: 0,
+                bm25_score: -1.0,
+                posted_at: None,
+                job_id: JobId::parse("1").expect("test JobId should be valid"),
+            },
+        )
+        .expect("cursor should encode");
+        let bytes = URL_SAFE_NO_PAD
+            .decode(encoded)
+            .expect("cursor base64 should decode");
+        let envelope: serde_json::Value =
+            serde_json::from_slice(&bytes).expect("cursor JSON should decode");
+
+        for invalid_rank in [
+            serde_json::json!("not-a-bit-pattern"),
+            serde_json::json!("7ff0000000000000"),
+        ] {
+            let mut malformed = envelope.clone();
+            malformed["position"]["bm25Score"] = invalid_rank;
+            let malformed = URL_SAFE_NO_PAD
+                .encode(serde_json::to_vec(&malformed).expect("malformed cursor should serialize"));
+            assert_eq!(
+                decode_cursor(
+                    &malformed,
+                    "catalog-v1",
+                    "fingerprint",
+                    EffectiveSort::Relevance,
+                ),
+                Err(IpcError::InvalidQuery)
+            );
+        }
+    }
+}

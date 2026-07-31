@@ -2,6 +2,8 @@
   "valid": {
     "catalogStatus": {
       "state": "ready",
+      "stage": null,
+      "progress": 100,
       "catalogVersion": "1",
       "sourceFrozenAt": "2026-07-29T20:30:03.846872Z",
       "totalJobs": 78719,
@@ -160,6 +162,12 @@
         "code": "catalog_corrupt"
       },
       {
+        "code": "catalog_busy"
+      },
+      {
+        "code": "disk_full"
+      },
+      {
         "code": "invalid_query"
       },
       {
@@ -167,6 +175,9 @@
       },
       {
         "code": "open_failed"
+      },
+      {
+        "code": "recovery_failed"
       },
       {
         "code": "internal"
@@ -409,6 +420,26 @@
       "valid": false
     }
   ],
+  "descriptionLengthCases": [
+    {
+      "name": "description at maximum",
+      "scalar": "x",
+      "count": 64000,
+      "valid": true
+    },
+    {
+      "name": "description over maximum",
+      "scalar": "x",
+      "count": 64001,
+      "valid": false
+    },
+    {
+      "name": "astral description over maximum",
+      "scalar": "😀",
+      "count": 64001,
+      "valid": false
+    }
+  ],
   "invalidAutocompleteRequests": [
     {
       "name": "autocomplete unknown field",
@@ -439,6 +470,8 @@
       "schema": "catalogStatus",
       "value": {
         "state": "ready",
+        "stage": null,
+        "progress": 100,
         "catalogVersion": "1",
         "sourceFrozenAt": null,
         "totalJobs": 78719,

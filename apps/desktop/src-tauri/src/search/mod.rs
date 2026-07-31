@@ -21,7 +21,7 @@ use aliases::embedded_alias_maps;
 use cursor::{cursor_clause, cursor_for_row, decode_cursor, query_fingerprint};
 use dto::{
     EffectiveSort, JobDetail, JobId, JobSummary, LocationFacet, SearchFacets, SearchPage,
-    SearchQuery, SearchRow, SkillFacet,
+    SearchQuery, SearchRow, SkillFacet, MAX_JOB_DESCRIPTION_LENGTH,
 };
 use facets::list_sources;
 pub(crate) use facets::{autocomplete_locations, autocomplete_skills, get_filter_options};
@@ -48,6 +48,16 @@ where
                 .map_err(|_| row_contract_error(index, "catalog enum is invalid"))
         })
         .transpose()
+}
+
+fn bounded_description(value: String, index: usize) -> rusqlite::Result<String> {
+    if value.chars().count() > MAX_JOB_DESCRIPTION_LENGTH {
+        return Err(row_contract_error(
+            index,
+            "job description exceeds IPC limit",
+        ));
+    }
+    Ok(value)
 }
 
 fn map_search_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SearchRow> {
@@ -136,8 +146,8 @@ pub(crate) fn search_catalog(
                     projection.exact_title_sql,
                     projection.exact_skill_sql,
                     "NULL",
-                    "NULL",
-                    "ORDER BY page.exact_title DESC, page.exact_skill_matches DESC, page.bm25_score, page.id",
+                    "job.posted_at",
+                    "ORDER BY page.exact_title DESC, page.exact_skill_matches DESC, page.bm25_score, page.sort_text IS NULL, page.sort_text DESC, page.id",
                     projection.parameters,
                 )
         }
@@ -147,7 +157,7 @@ pub(crate) fn search_catalog(
             "0".to_owned(),
             "NULL",
             "job.posted_at",
-            "ORDER BY page.sort_text DESC, page.id",
+            "ORDER BY page.sort_text IS NULL, page.sort_text DESC, page.id",
             Vec::new(),
         ),
         EffectiveSort::Salary => (
@@ -282,7 +292,7 @@ pub(crate) fn get_job_detail(
                     posted_at: row.get(10)?,
                     source: row.get(11)?,
                     attribution: row.get(12)?,
-                    description: row.get(13)?,
+                    description: bounded_description(row.get(13)?, 13)?,
                     skills: Vec::new(),
                     employment_type: parse_optional_enum(row.get(14)?, 14)?,
                     salary_usd_year: row.get(15)?,

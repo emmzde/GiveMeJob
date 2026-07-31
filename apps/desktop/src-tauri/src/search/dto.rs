@@ -2,6 +2,21 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::ipc::IpcError;
 
+pub(crate) const MAX_JOB_DESCRIPTION_LENGTH: usize = 64_000;
+
+fn deserialize_job_description<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = String::deserialize(deserializer)?;
+    if value.chars().count() > MAX_JOB_DESCRIPTION_LENGTH {
+        return Err(serde::de::Error::custom(
+            "job description exceeds IPC limit",
+        ));
+    }
+    Ok(value)
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(transparent)]
 pub(crate) struct JobId(String);
@@ -219,6 +234,7 @@ pub(crate) struct JobDetail {
     pub(crate) posted_at: Option<String>,
     pub(crate) source: String,
     pub(crate) attribution: String,
+    #[serde(deserialize_with = "deserialize_job_description")]
     pub(crate) description: String,
     pub(crate) skills: Vec<String>,
     pub(crate) employment_type: Option<EmploymentType>,

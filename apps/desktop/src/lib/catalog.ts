@@ -1,8 +1,11 @@
-import { invoke } from "@tauri-apps/api/core";
 import { z } from "zod";
+
+import { tauriAdapter } from "@/lib/tauri/adapter";
+import type { TauriAdapter, Unlisten } from "@/lib/tauri/adapter";
 
 const MAX_CURSOR_LENGTH = 2_048;
 const MAX_FILTER_VALUE_LENGTH = 100;
+const MAX_JOB_DESCRIPTION_LENGTH = 64_000;
 const MAX_QUERY_LENGTH = 200;
 
 function hasAtMostUnicodeScalars(value: string, maximum: number): boolean {
@@ -24,6 +27,7 @@ const httpUrlSchema = z.url().refine((value) => {
   const protocol = new URL(value).protocol;
   return protocol === "http:" || protocol === "https:";
 });
+const httpsUrlSchema = z.url().refine((value) => new URL(value).protocol === "https:");
 
 export const remoteModeSchema = z.enum(["remote", "hybrid", "onsite"]);
 export const senioritySchema = z.enum([
@@ -92,9 +96,31 @@ export const searchQuerySchema = z
   })
   .strict();
 
+export const catalogStatusKindSchema = z.enum([
+  "initializing",
+  "verifying",
+  "ready",
+  "missing",
+  "recovering",
+  "error",
+]);
+export const catalogStageSchema = z.enum([
+  "starting",
+  "checking_seal",
+  "checking_space",
+  "checking_archive",
+  "decompressing",
+  "checking_catalog",
+  "checking_sqlite",
+  "activating",
+  "opening",
+  "cleaning_up",
+]);
 export const catalogStatusSchema = z
   .object({
-    state: z.enum(["ready", "missing", "error"]),
+    state: catalogStatusKindSchema,
+    stage: catalogStageSchema.nullable(),
+    progress: z.number().int().min(0).max(100),
     catalogVersion: z.string().min(1).nullable(),
     sourceFrozenAt: z.string().min(1).nullable(),
     totalJobs: z.number().int().nonnegative(),
@@ -131,11 +157,15 @@ export const jobSearchPageSchema = z
 
 export const jobDetailSchema = jobSummarySchema
   .extend({
-    description: z.string(),
+    description: z
+      .string()
+      .refine((value) => hasAtMostUnicodeScalars(value, MAX_JOB_DESCRIPTION_LENGTH), {
+        message: `Must contain at most ${MAX_JOB_DESCRIPTION_LENGTH} Unicode characters`,
+      }),
     skills: z.array(boundedTrimmedString(MAX_FILTER_VALUE_LENGTH)).max(100),
     employmentType: employmentTypeSchema.nullable(),
     salaryUsdYear: finiteNonnegativeSchema.nullable(),
-    sourceUrl: httpUrlSchema,
+    sourceUrl: httpsUrlSchema,
     applyUrl: httpUrlSchema.nullable(),
     snapshotVersion: z.string().min(1),
   })
@@ -221,14 +251,18 @@ export const ipcErrorSchema = z.discriminatedUnion(
   [
     z.object({ code: z.literal("catalog_missing") }).strict(),
     z.object({ code: z.literal("catalog_corrupt") }).strict(),
+    z.object({ code: z.literal("catalog_busy") }).strict(),
+    z.object({ code: z.literal("disk_full") }).strict(),
     z.object({ code: z.literal("invalid_query") }).strict(),
     z.object({ code: z.literal("not_found") }).strict(),
     z.object({ code: z.literal("open_failed") }).strict(),
+    z.object({ code: z.literal("recovery_failed") }).strict(),
     z.object({ code: z.literal("internal") }).strict(),
   ],
 );
 
 export type CatalogStatus = z.infer<typeof catalogStatusSchema>;
+export type CatalogStatusKind = z.infer<typeof catalogStatusKindSchema>;
 export type AutocompleteRequest = z.infer<typeof autocompleteRequestSchema>;
 export type EmploymentType = z.infer<typeof employmentTypeSchema>;
 export type FilterOptions = z.infer<typeof filterOptionsSchema>;
@@ -264,92 +298,127 @@ const defaultSearchQuery: SearchQuery = {
   limit: 40,
 };
 
-function isTauriRuntime(): boolean {
-  return "__TAURI_INTERNALS__" in window;
-}
-
 function asIpcError(error: unknown): IpcError {
   const parsed = ipcErrorSchema.safeParse(error);
   return parsed.success ? parsed.data : { code: "internal" };
-}
-
-async function invokeValidated<T>(
-  command: string,
-  schema: z.ZodType<T>,
-  args?: Record<string, unknown>,
-): Promise<T> {
-  try {
-    return schema.parse(await invoke<unknown>(command, args));
-  } catch (error) {
-    if (error instanceof z.ZodError) throw error;
-    throw asIpcError(error);
-  }
-}
-
-export async function getCatalogStatus(): Promise<CatalogStatus> {
-  if (!isTauriRuntime()) {
-    return catalogStatusSchema.parse({
-      state: "missing",
-      catalogVersion: null,
-      sourceFrozenAt: null,
-      totalJobs: 0,
-      message: "Каталог доступен в Windows-приложении.",
-    });
-  }
-  return invokeValidated("catalog_status", catalogStatusSchema);
 }
 
 export function createSearchQuery(overrides: Partial<SearchQuery> = {}): SearchQuery {
   return searchQuerySchema.parse({ ...defaultSearchQuery, ...overrides });
 }
 
-export async function searchLocalJobs(input: SearchQuery): Promise<JobSearchPage> {
-  const request = searchQuerySchema.parse(input);
-  if (!isTauriRuntime()) {
-    return jobSearchPageSchema.parse({ items: [], nextCursor: null, total: 0 });
+export interface CatalogApi {
+  getCatalogStatus(): Promise<CatalogStatus>;
+  watchCatalogStatus(onStatus: (status: CatalogStatus) => void): Promise<Unlisten>;
+  recoverLocalCatalog(): Promise<CatalogStatus>;
+  searchLocalJobs(input: SearchQuery): Promise<JobSearchPage>;
+  getLocalJob(input: JobId): Promise<JobDetail>;
+  openOriginalJob(input: JobId): Promise<void>;
+  getSearchFacets(): Promise<SearchFacets>;
+  getFilterOptions(): Promise<FilterOptions>;
+  autocompleteSkills(query: string, limit?: number): Promise<SkillSuggestion[]>;
+  autocompleteLocations(query: string, limit?: number): Promise<LocationSuggestion[]>;
+}
+
+export function createCatalogApi(adapter: TauriAdapter): CatalogApi {
+  async function invokeValidated<T>(
+    command: string,
+    schema: z.ZodType<T>,
+    args?: Record<string, unknown>,
+  ): Promise<T> {
+    try {
+      return schema.parse(await adapter.invoke(command, args));
+    } catch (error) {
+      if (error instanceof z.ZodError) throw error;
+      throw asIpcError(error);
+    }
   }
-  return invokeValidated("search_jobs", jobSearchPageSchema, { request });
+
+  return {
+    async getCatalogStatus() {
+      if (!adapter.isAvailable()) {
+        return catalogStatusSchema.parse({
+          state: "missing",
+          stage: null,
+          progress: 0,
+          catalogVersion: null,
+          sourceFrozenAt: null,
+          totalJobs: 0,
+          message: "Каталог доступен в Windows-приложении.",
+        });
+      }
+      return invokeValidated("catalog_status", catalogStatusSchema);
+    },
+    async watchCatalogStatus(onStatus) {
+      if (!adapter.isAvailable()) return () => undefined;
+      return adapter.listen("catalog://status", (payload) => {
+        const status = catalogStatusSchema.safeParse(payload);
+        if (status.success) onStatus(status.data);
+      });
+    },
+    async recoverLocalCatalog() {
+      if (!adapter.isAvailable()) throw { code: "catalog_missing" } satisfies IpcError;
+      return invokeValidated("recover_catalog", catalogStatusSchema);
+    },
+    async searchLocalJobs(input) {
+      const request = searchQuerySchema.parse(input);
+      if (!adapter.isAvailable()) {
+        return jobSearchPageSchema.parse({ items: [], nextCursor: null, total: 0 });
+      }
+      return invokeValidated("search_jobs", jobSearchPageSchema, { request });
+    },
+    async getLocalJob(input) {
+      const id = jobIdSchema.parse(input);
+      if (!adapter.isAvailable()) throw { code: "catalog_missing" } satisfies IpcError;
+      return invokeValidated("get_job", jobDetailSchema, { id });
+    },
+    async openOriginalJob(input) {
+      const jobId = jobIdSchema.parse(input);
+      if (!adapter.isAvailable()) throw { code: "catalog_missing" } satisfies IpcError;
+      await invokeValidated("open_original", z.null(), { jobId });
+    },
+    async getSearchFacets() {
+      if (!adapter.isAvailable()) {
+        return searchFacetsSchema.parse({ skills: [], locations: [], sources: [] });
+      }
+      return invokeValidated("get_search_facets", searchFacetsSchema);
+    },
+    async getFilterOptions() {
+      if (!adapter.isAvailable()) {
+        return filterOptionsSchema.parse({
+          sources: [],
+          remoteModes: remoteModeSchema.options,
+          seniorities: senioritySchema.options,
+          employmentTypes: employmentTypeSchema.options,
+        });
+      }
+      return invokeValidated("get_filter_options", filterOptionsSchema);
+    },
+    async autocompleteSkills(query, limit = 10) {
+      const request = autocompleteRequestSchema.parse({ query, limit });
+      if (!adapter.isAvailable()) return skillSuggestionsSchema.parse([]);
+      return invokeValidated("autocomplete_skills", skillSuggestionsSchema, { request });
+    },
+    async autocompleteLocations(query, limit = 10) {
+      const request = autocompleteRequestSchema.parse({ query, limit });
+      if (!adapter.isAvailable()) return locationSuggestionsSchema.parse([]);
+      return invokeValidated("autocomplete_locations", locationSuggestionsSchema, { request });
+    },
+  };
 }
 
-export async function getLocalJob(input: JobId): Promise<JobDetail> {
-  const id = jobIdSchema.parse(input);
-  if (!isTauriRuntime()) throw { code: "catalog_missing" } satisfies IpcError;
-  return invokeValidated("get_job", jobDetailSchema, { id });
-}
+export const catalogApi = createCatalogApi(tauriAdapter);
 
-export async function getSearchFacets(): Promise<SearchFacets> {
-  if (!isTauriRuntime()) {
-    return searchFacetsSchema.parse({ skills: [], locations: [], sources: [] });
-  }
-  return invokeValidated("get_search_facets", searchFacetsSchema);
-}
-
-export async function getFilterOptions(): Promise<FilterOptions> {
-  if (!isTauriRuntime()) {
-    return filterOptionsSchema.parse({
-      sources: [],
-      remoteModes: remoteModeSchema.options,
-      seniorities: senioritySchema.options,
-      employmentTypes: employmentTypeSchema.options,
-    });
-  }
-  return invokeValidated("get_filter_options", filterOptionsSchema);
-}
-
-export async function autocompleteSkills(
-  query: string,
-  limit = 10,
-): Promise<SkillSuggestion[]> {
-  const request = autocompleteRequestSchema.parse({ query, limit });
-  if (!isTauriRuntime()) return skillSuggestionsSchema.parse([]);
-  return invokeValidated("autocomplete_skills", skillSuggestionsSchema, { request });
-}
-
-export async function autocompleteLocations(
-  query: string,
-  limit = 10,
-): Promise<LocationSuggestion[]> {
-  const request = autocompleteRequestSchema.parse({ query, limit });
-  if (!isTauriRuntime()) return locationSuggestionsSchema.parse([]);
-  return invokeValidated("autocomplete_locations", locationSuggestionsSchema, { request });
-}
+export const getCatalogStatus = () => catalogApi.getCatalogStatus();
+export const watchCatalogStatus = (onStatus: (status: CatalogStatus) => void) =>
+  catalogApi.watchCatalogStatus(onStatus);
+export const recoverLocalCatalog = () => catalogApi.recoverLocalCatalog();
+export const searchLocalJobs = (input: SearchQuery) => catalogApi.searchLocalJobs(input);
+export const getLocalJob = (input: JobId) => catalogApi.getLocalJob(input);
+export const openOriginalJob = (input: JobId) => catalogApi.openOriginalJob(input);
+export const getSearchFacets = () => catalogApi.getSearchFacets();
+export const getFilterOptions = () => catalogApi.getFilterOptions();
+export const autocompleteSkills = (query: string, limit = 10) =>
+  catalogApi.autocompleteSkills(query, limit);
+export const autocompleteLocations = (query: string, limit = 10) =>
+  catalogApi.autocompleteLocations(query, limit);

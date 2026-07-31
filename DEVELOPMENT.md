@@ -38,11 +38,20 @@ pnpm -C apps/desktop test
 pnpm -C apps/desktop web:build
 ```
 
-В debug-сборке Rust ищет каталог в
+В debug/test-сборке Rust ищет каталог в
 `.artifacts/catalog/catalog-v1.sqlite`. Путь можно явно задать переменной
-`GIVEMEJOB_CATALOG_PATH`. Release-сборка получает `.zst` как bundle resource,
-проверяет оба SHA-256 и атомарно распаковывает catalog в
+`GIVEMEJOB_CATALOG_PATH`; release-код эту переменную не читает. Release-сборка
+получает `.zst` как `resources/<archive_file>`, а тяжёлый lifecycle выполняет в
+blocking worker: проверяет archive SHA-256, свободное место, потоково
+распаковывает во временный файл, проверяет decompressed SHA-256, полный SQLite
+contract и только затем атомарно устанавливает catalog в
 `%LOCALAPPDATA%\GiveMeJob!\data`.
+
+После full validation рядом записывается строгий `.seal.json` с checksum,
+размером, версиями и file metadata. Обычный старт сравнивает seal, size/mtime и
+metadata без повторного hash всего SQLite; любое расхождение запускает полную
+verification/recovery. `user.sqlite` в этом lifecycle не открывается и не
+изменяется.
 
 Rust-проверки:
 

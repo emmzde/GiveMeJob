@@ -7,24 +7,47 @@ import {
   autocompleteRequestSchema,
   autocompleteSkills,
   catalogStatusSchema,
+  createCatalogApi,
   createSearchQuery,
   filterOptionsSchema,
   getCatalogStatus,
   getFilterOptions,
+  getLocalJob,
   getSearchFacets,
   ipcErrorSchema,
   jobDetailSchema,
   jobIdSchema,
   jobSearchPageSchema,
   locationSuggestionsSchema,
+  openOriginalJob,
   searchCursorSchema,
   searchFacetsSchema,
   searchLocalJobs,
   searchQuerySchema,
   skillSuggestionsSchema,
 } from "@/lib/catalog";
+import type { TauriAdapter } from "@/lib/tauri/adapter";
 
 describe("catalog IPC boundary", () => {
+  it("routes IPC through an injectable adapter and validates its response", async () => {
+    const calls: Array<{ command: string; args: Record<string, unknown> | undefined }> = [];
+    const adapter: TauriAdapter = {
+      isAvailable: () => true,
+      invoke: (command, args) => {
+        calls.push({ command, args });
+        return Promise.resolve(contractFixtures.valid.searchPage);
+      },
+      listen: () => Promise.resolve(() => undefined),
+    };
+    const api = createCatalogApi(adapter);
+    const request = createSearchQuery({ text: "rust" });
+
+    await expect(api.searchLocalJobs(request)).resolves.toEqual(
+      contractFixtures.valid.searchPage,
+    );
+    expect(calls).toEqual([{ command: "search_jobs", args: { request } }]);
+  });
+
   it("uses validated browser fallbacks outside Tauri", async () => {
     await expect(getCatalogStatus()).resolves.toMatchObject({
       state: "missing",
@@ -46,6 +69,9 @@ describe("catalog IPC boundary", () => {
     });
     await expect(autocompleteSkills("Python")).resolves.toEqual([]);
     await expect(autocompleteLocations("Berlin")).resolves.toEqual([]);
+    const id = jobIdSchema.parse("1");
+    await expect(getLocalJob(id)).rejects.toEqual({ code: "catalog_missing" });
+    await expect(openOriginalJob(id)).rejects.toEqual({ code: "catalog_missing" });
   });
 
   it("creates a normalized typed search query with an optional bounded cursor", () => {
@@ -119,6 +145,25 @@ describe("catalog IPC boundary", () => {
       };
       expect(searchQuerySchema.safeParse(value).success, fixture.name).toBe(fixture.valid);
     }
+  });
+
+  it("enforces the shared Unicode-scalar limit for job descriptions", () => {
+    for (const fixture of contractFixtures.descriptionLengthCases) {
+      const value = {
+        ...contractFixtures.valid.jobDetail,
+        description: fixture.scalar.repeat(fixture.count),
+      };
+      expect(jobDetailSchema.safeParse(value).success, fixture.name).toBe(fixture.valid);
+    }
+  });
+
+  it("requires the current snapshot original URL to use HTTPS", () => {
+    expect(
+      jobDetailSchema.safeParse({
+        ...contractFixtures.valid.jobDetail,
+        sourceUrl: "http://example.com/jobs/42",
+      }).success,
+    ).toBe(false);
   });
 
   it("keeps every response object strict, including nested objects", () => {

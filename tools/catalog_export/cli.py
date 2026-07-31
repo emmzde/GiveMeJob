@@ -12,6 +12,7 @@ from tools.catalog_export.exporter import (
     export_catalog,
     validate_catalog,
     verify_archive,
+    verify_catalog_manifest,
 )
 
 
@@ -25,6 +26,7 @@ def _parser() -> argparse.ArgumentParser:
     export = subparsers.add_parser("export", help="Export the read-only PostgreSQL snapshot")
     export.add_argument("--env-file", type=Path, default=Path(".env"))
     export.add_argument("--output-dir", type=Path, default=Path(".artifacts/catalog"))
+    export.add_argument("--product", type=Path, default=Path("config/product.json"))
     export.add_argument(
         "--manifest",
         type=Path,
@@ -44,6 +46,8 @@ def _parser() -> argparse.ArgumentParser:
     verify = subparsers.add_parser("verify", help="Verify an existing catalog artifact")
     verify.add_argument("catalog", type=Path)
     verify.add_argument("--archive", type=Path)
+    verify.add_argument("--manifest", type=Path)
+    verify.add_argument("--product", type=Path, default=Path("config/product.json"))
     verify.add_argument("--expected-jobs", type=int, default=EXPECTED_CANONICAL_JOBS)
     verify.add_argument("--fts-probe", default="developer")
 
@@ -86,17 +90,30 @@ def main(argv: Sequence[str] | None = None) -> int:
             output_dir=args.output_dir,
             release_manifest_path=args.manifest,
             options=options,
+            product_config_path=args.product,
+            repository_root=Path.cwd(),
         )
         print(json.dumps(manifest.to_dict(), ensure_ascii=False, indent=2))
         return 0
 
-    report = validate_catalog(
-        args.catalog,
-        expected_jobs=args.expected_jobs,
-        fts_probe=args.fts_probe,
-    )
-    if args.archive:
-        archive_sha256 = verify_archive(args.archive, args.catalog)
-        report["archive_sha256"] = archive_sha256
+    if args.manifest:
+        if args.archive is None:
+            raise SystemExit("verify --manifest requires --archive")
+        report = verify_catalog_manifest(
+            catalog_path=args.catalog,
+            archive_path=args.archive,
+            manifest_path=args.manifest,
+            product_config_path=args.product,
+            repository_root=Path.cwd(),
+            fts_probe=args.fts_probe,
+        )
+    else:
+        report = validate_catalog(
+            args.catalog,
+            expected_jobs=args.expected_jobs,
+            fts_probe=args.fts_probe,
+        )
+        if args.archive:
+            report.update(verify_archive(args.archive, args.catalog))
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0

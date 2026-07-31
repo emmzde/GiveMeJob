@@ -3,22 +3,30 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import subprocess
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
-import zstandard
 
 from tools.catalog_export.exporter import (
-    CatalogManifest,
     ExportOptions,
     SourceMetadata,
     build_catalog,
-    normalize_search_text,
+    calculate_logical_checksum,
+    compress_catalog,
+    sha256_file,
     validate_catalog,
+    validate_export_repository,
     verify_archive,
+    verify_catalog_manifest,
 )
+from tools.catalog_export.manifest import CatalogManifest
+from tools.catalog_export.text import description_to_plain_text
+
+_COMMIT_SHA = "a" * 40
+_EXPORTED_AT = "2026-07-31T10:00:00Z"
 
 
 @dataclass
@@ -50,7 +58,7 @@ class FixtureSource:
         return self.job_rows
 
 
-def _source() -> FixtureSource:
+def _source(description: str = "Build reliable offline software.") -> FixtureSource:
     return FixtureSource(
         job_rows=[
             {
@@ -59,7 +67,7 @@ def _source() -> FixtureSource:
                 "title": "Senior Python Developer",
                 "title_normalized": "senior python developer",
                 "company": "Example Co",
-                "description_md": "Build reliable offline software.",
+                "description_md": description,
                 "seniority": "senior",
                 "employment_type": "full_time",
                 "remote_type": "remote",
@@ -80,28 +88,76 @@ def _source() -> FixtureSource:
     )
 
 
-def test_build_catalog_creates_searchable_deterministic_snapshot(tmp_path: Path) -> None:
+def _options(source_commit_sha: str = _COMMIT_SHA) -> ExportOptions:
+    return ExportOptions(
+        expected_jobs=1,
+        fts_probe="python",
+        source_commit_sha=source_commit_sha,
+        exported_at=_EXPORTED_AT,
+    )
+
+
+def _git(repository: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(repository), *args],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
+
+
+def _fixture_repository(tmp_path: Path) -> tuple[Path, str]:
+    repository = tmp_path / "repository"
+    exporter = repository / "tools" / "catalog_export" / "exporter.py"
+    exporter.parent.mkdir(parents=True)
+    exporter.write_text("# fixture exporter\n", encoding="utf-8")
+    _git(repository, "init")
+    _git(repository, "config", "user.email", "fixture@example.test")
+    _git(repository, "config", "user.name", "Fixture")
+    _git(repository, "add", "tools/catalog_export/exporter.py")
+    _git(repository, "commit", "-m", "test: add fixture exporter")
+    return repository, _git(repository, "rev-parse", "HEAD")
+
+
+def test_build_catalog_is_byte_stable_in_the_pinned_fixture_toolchain(tmp_path: Path) -> None:
     first = tmp_path / "first.sqlite"
     second = tmp_path / "second.sqlite"
-    options = ExportOptions(expected_jobs=1, fts_probe="python", source_commit_sha="abc123")
 
-    first_metadata, first_logical = build_catalog(_source(), first, options)
-    second_metadata, second_logical = build_catalog(_source(), second, options)
+    first_metadata, first_logical = build_catalog(_source(), first, _options())
+    second_metadata, second_logical = build_catalog(_source(), second, _options())
 
     assert first_metadata == second_metadata
     assert first_logical == second_logical
-    assert validate_catalog(first, expected_jobs=1, fts_probe="python") == {
-        "integrity_check": "ok",
-        "foreign_key_errors": 0,
-        "canonical_jobs": 1,
-        "fts_probe": "python",
-        "fts_job_id": 1,
-        "logical_checksum": first_logical,
-    }
+    assert first.read_bytes() == second.read_bytes()
+    report = validate_catalog(first, expected_jobs=1, fts_probe="python")
+    assert report["integrity_check"] == "ok"
+    assert report["foreign_key_errors"] == 0
+    assert report["canonical_jobs"] == 1
+    assert report["fts_jobs"] == 1
+    assert report["jobs_with_skills"] == 1
+    assert report["jobs_with_salary"] == 1
+    assert report["logical_checksum"] == first_logical
     with sqlite3.connect(first) as connection:
         assert connection.execute(
             "SELECT skills_text, search_aliases FROM jobs WHERE id = 1"
         ).fetchone() == ("Python", "Python Py")
+
+
+def test_zstandard_archives_are_byte_stable(tmp_path: Path) -> None:
+    catalog = tmp_path / "catalog.sqlite"
+    first = tmp_path / "first.zst"
+    second = tmp_path / "second.zst"
+    build_catalog(_source(), catalog, _options())
+
+    compress_catalog(catalog, first)
+    compress_catalog(catalog, second)
+
+    assert first.read_bytes() == second.read_bytes()
+    report = verify_archive(first, catalog)
+    assert report["archive_sha256"] == sha256_file(first)
+    assert report["decompressed_sha256"] == sha256_file(catalog)
+    assert report["decompressed_size_bytes"] == catalog.stat().st_size
 
 
 def test_build_catalog_rejects_an_unexpected_source_count(tmp_path: Path) -> None:
@@ -109,67 +165,153 @@ def test_build_catalog_rejects_an_unexpected_source_count(tmp_path: Path) -> Non
         build_catalog(
             _source(),
             tmp_path / "catalog.sqlite",
-            ExportOptions(expected_jobs=2, source_commit_sha="abc123"),
+            ExportOptions(expected_jobs=2, source_commit_sha=_COMMIT_SHA),
         )
 
 
-def test_normalize_search_text_is_unicode_and_whitespace_stable() -> None:
-    assert normalize_search_text("  PYTHON\u00a0Developer  ") == "python developer"
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("# Heading\n\nBody", "Heading\n\nBody"),
+        ("- First\n- Second", "First\nSecond"),
+        ("Read [the docs](https://example.test).", "Read the docs."),
+        ("Fish &amp; Chips&nbsp;today", "Fish & Chips today"),
+        ("<p>Visible</p><script>alert(1)</script><style>p{}</style>", "Visible"),
+        ("Привет, мир 👋 — café", "Привет, мир 👋 — café"),
+    ],
+)
+def test_description_to_plain_text_fixtures(source: str, expected: str) -> None:
+    assert description_to_plain_text(source) == expected
 
 
-def test_verify_archive_checks_decompressed_sqlite(tmp_path: Path) -> None:
+def test_build_catalog_stores_normalized_plain_text_description(tmp_path: Path) -> None:
+    catalog = tmp_path / "catalog.sqlite"
+    build_catalog(
+        _source("## Role\n\n<ul><li>Build [tools](https://example.test)</li></ul>"),
+        catalog,
+        _options(),
+    )
+
+    with sqlite3.connect(catalog) as connection:
+        description = connection.execute("SELECT description_text FROM jobs").fetchone()[0]
+    assert description == "Role\n\nBuild tools"
+
+
+def test_logical_checksum_is_recalculated_instead_of_trusting_catalog_meta(
+    tmp_path: Path,
+) -> None:
+    catalog = tmp_path / "catalog.sqlite"
+    _, expected = build_catalog(_source(), catalog, _options())
+    with sqlite3.connect(catalog) as connection:
+        connection.execute(
+            "UPDATE catalog_meta SET value = ? WHERE key = 'logical_checksum'",
+            ("0" * 64,),
+        )
+        connection.commit()
+
+    assert calculate_logical_checksum(catalog) == expected
+    with pytest.raises(RuntimeError, match="catalog_meta logical_checksum mismatch"):
+        validate_catalog(catalog, expected_jobs=1, fts_probe="python")
+
+
+def test_verify_archive_rejects_different_decompressed_sqlite(tmp_path: Path) -> None:
     catalog = tmp_path / "catalog.sqlite"
     archive = tmp_path / "catalog.sqlite.zst"
     catalog.write_bytes(b"verified catalog")
-    archive.write_bytes(
-        zstandard.ZstdCompressor(write_checksum=True).compress(catalog.read_bytes())
-    )
-
-    assert verify_archive(archive, catalog) == hashlib.sha256(archive.read_bytes()).hexdigest()
+    compress_catalog(catalog, archive)
 
     catalog.write_bytes(b"different")
     with pytest.raises(RuntimeError, match="does not expand"):
         verify_archive(archive, catalog)
 
 
-def test_manifest_serializes_all_release_checksums() -> None:
+def test_validate_export_repository_requires_clean_tracked_head_with_exporter(
+    tmp_path: Path,
+) -> None:
+    repository, source_commit_sha = _fixture_repository(tmp_path)
+
+    assert validate_export_repository(repository) == source_commit_sha
+
+    exporter = repository / "tools" / "catalog_export" / "exporter.py"
+    exporter.write_text("# dirty fixture exporter\n", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="clean tracked Git tree"):
+        validate_export_repository(repository)
+
+
+def test_verify_catalog_manifest_checks_every_artifact_layer(tmp_path: Path) -> None:
+    repository, source_commit_sha = _fixture_repository(tmp_path)
+    artifacts = repository / ".artifacts" / "catalog"
+    artifacts.mkdir(parents=True)
+    catalog = artifacts / "catalog-v1.sqlite"
+    archive = artifacts / "catalog-v1.sqlite.zst"
+    checksum = artifacts / "catalog-v1.sqlite.zst.sha256"
+    _, logical_checksum = build_catalog(_source(), catalog, _options(source_commit_sha))
+    compress_catalog(catalog, archive)
+    sqlite_sha256 = sha256_file(catalog)
+    archive_sha256 = sha256_file(archive)
+    checksum.write_text(f"{archive_sha256}  {archive.name}\n", encoding="ascii")
+
+    config = repository / "config"
+    config.mkdir()
+    product = config / "product.json"
+    product.write_text(
+        json.dumps(
+            {
+                "dataset": {
+                    "manifestVersion": 1,
+                    "catalogVersion": "1",
+                    "schemaVersion": 1,
+                    "canonicalJobs": 1,
+                    "descriptionFormat": "plain_text",
+                    "sourceFrozenAt": "2026-07-29T20:30:03Z",
+                    "manifest": "config/catalog-manifest.json",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
     manifest = CatalogManifest(
+        manifest_version=1,
         catalog_version="1",
         schema_version=1,
+        description_format="plain_text",
         source_frozen_at="2026-07-29T20:30:03Z",
-        exported_at="2026-07-31T10:00:00Z",
+        exported_at=_EXPORTED_AT,
         published_at=None,
         canonical_jobs=1,
         jobs_with_skills=1,
         jobs_with_salary=1,
-        source_commit_sha="abc123",
-        logical_checksum="logical",
-        sqlite_file="catalog-v1.sqlite",
-        sqlite_sha256="sqlite",
-        archive_file="catalog-v1.sqlite.zst",
-        archive_sha256="archive",
+        source_commit_sha=source_commit_sha,
+        logical_checksum=logical_checksum,
+        sqlite_file=catalog.name,
+        sqlite_size_bytes=catalog.stat().st_size,
+        sqlite_sha256=sqlite_sha256,
+        archive_file=archive.name,
+        archive_size_bytes=archive.stat().st_size,
+        archive_sha256=archive_sha256,
+    )
+    manifest_path = config / "catalog-manifest.json"
+    manifest_path.write_text(json.dumps(manifest.to_dict()), encoding="utf-8")
+
+    report = verify_catalog_manifest(
+        catalog_path=catalog,
+        archive_path=archive,
+        manifest_path=manifest_path,
+        product_config_path=product,
+        repository_root=repository,
+        fts_probe="python",
     )
 
-    payload = manifest.to_dict()
-    assert payload["archive_sha256"] == "archive"
-    assert payload["source_frozen_at"] == "2026-07-29T20:30:03Z"
-    assert payload["exported_at"] == "2026-07-31T10:00:00Z"
-    assert payload["published_at"] is None
-    assert "created_at" not in payload
+    assert report["canonical_jobs"] == 1
+    assert report["fts_jobs"] == 1
+    assert report["archive_sha256"] == archive_sha256
+    assert report["decompressed_sha256"] == sqlite_sha256
+    assert report["logical_checksum"] == logical_checksum
+    assert report["checksum_file"] == checksum.name
 
 
-def test_release_manifest_describes_the_verified_frozen_snapshot() -> None:
-    manifest_path = Path(__file__).parents[2] / "config" / "catalog-manifest.json"
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+def test_sha256_file_returns_lowercase_digest(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact.bin"
+    artifact.write_bytes(b"catalog")
 
-    assert manifest["catalog_version"] == "1"
-    assert manifest["schema_version"] == 1
-    assert manifest["canonical_jobs"] == 78_719
-    assert manifest["jobs_with_skills"] == 68_881
-    assert manifest["jobs_with_salary"] == 22_467
-    assert manifest["source_frozen_at"] == "2026-07-29T20:30:03.846872Z"
-    assert manifest["exported_at"] == "2026-07-29T20:30:03.846872Z"
-    assert manifest["published_at"] is None
-    assert "created_at" not in manifest
-    assert len(manifest["sqlite_sha256"]) == 64
-    assert len(manifest["archive_sha256"]) == 64
+    assert sha256_file(artifact) == hashlib.sha256(b"catalog").hexdigest()

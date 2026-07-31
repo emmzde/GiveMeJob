@@ -49,9 +49,12 @@
   },
   "dataset": {
     "mode": "frozen-snapshot",
+    "manifestVersion": 1,
     "catalogVersion": "1",
     "schemaVersion": 1,
     "canonicalJobs": 78719,
+    "descriptionFormat": "plain_text",
+    "sourceFrozenAt": "2026-07-29T20:30:03.846872Z",
     "manifest": "config/catalog-manifest.json",
     "allowIngestion": false,
     "useEmbeddings": false,

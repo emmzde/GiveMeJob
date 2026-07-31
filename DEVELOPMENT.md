@@ -76,13 +76,33 @@ uv run python -m tools.catalog_export export
 
 Экспортёр:
 
-1. открывает repeatable-read read-only транзакцию;
-2. выбирает только active canonical jobs;
-3. требует ровно 78 719 записей и полные attribution/URL;
-4. строит SQLite STRICT tables и FTS5;
-5. выполняет integrity/foreign-key/FTS gates;
-6. создаёт `catalog-v1.sqlite.zst` и два SHA-256;
-7. атомарно обновляет release manifest.
+1. до подключения к PostgreSQL требует clean tracked tree и проверяет, что
+   `HEAD` содержит `tools/catalog_export/exporter.py`;
+2. сверяет версии, count и frozen boundary с `config/product.json`;
+3. открывает repeatable-read read-only транзакцию;
+4. выбирает только active canonical jobs и преобразует mixed Markdown/HTML
+   descriptions в детерминированный `plain_text`;
+5. требует ровно 78 719 записей и полные attribution/original URL;
+6. строит SQLite STRICT tables и FTS5;
+7. выполняет integrity, foreign-key, job/FTS count и metadata gates;
+8. создаёт `catalog-v1.sqlite.zst`, отдельные SHA-256 и release checksum asset
+   `catalog-v1.sqlite.zst.sha256`;
+9. атомарно обновляет локальную и tracked копии manifest.
+
+Manifest проверяется целиком, включая schema, оба размера, SQLite/archive/
+decompressed SHA-256, пересчитанный из таблиц logical checksum, counts и source
+commit:
+
+```powershell
+uv run python -m tools.catalog_export verify `
+  .artifacts/catalog/catalog-v1.sqlite `
+  --archive .artifacts/catalog/catalog-v1.sqlite.zst `
+  --manifest config/catalog-manifest.json `
+  --product config/product.json
+```
+
+Generated manifest содержит только artifact identity/provenance в `snake_case`.
+Release URL/locator появится отдельно в M5 release descriptor.
 
 Artifact находится в `.artifacts/` и не коммитится. PostgreSQL volume нельзя
 удалять без отдельного подтверждения пользователя.

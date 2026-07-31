@@ -1,23 +1,16 @@
-# Диагностические метрики качества данных
+# GiveMeJob! — метрики snapshot и Windows MVP
 
-Дата фиксации определений: 29 июля 2026 года.
+Последнее обновление: 31 июля 2026 года.
 
-Эти определения задают единый способ измерения данных. Метрики
-покрытия, свежести, дублей и embeddings считаются только по каноническим
-вакансиям. Сырые строки источников в знаменатель не входят.
+Этот документ задаёт воспроизводимые acceptance-проверки. Старые
+production-пороги freshness, salary coverage и embedding coverage отменены.
 
-С 30 июля 2026 года прежние production-пороги не являются gate фазы 1:
-GiveMeJob! переведён в scope pet-project MVP. Актуальное решение и срез —
-`docs/MVP_SCOPE.md`.
+## 1. Источник snapshot
 
-## 1. Каноническая и активная вакансия
+Canonical job — активная строка `jobs`, на которую ссылается
+`job_groups.canonical_job`.
 
-Одна `job_group` представляет одну вакансию, а `job_groups.canonical_job`
-указывает на единственную строку, которую получает UI. Репозиторий выбирает
-каноническую строку детерминированно: активная выше архивной, затем выше
-`quality_score`, свежее `posted_at`, затем меньший `id`.
-
-Базовый CTE для метрик и UI:
+Базовый PostgreSQL CTE:
 
 ```sql
 WITH canonical_jobs AS (
@@ -34,7 +27,7 @@ SELECT *
 FROM canonical_jobs;
 ```
 
-Запрос целостности канонических ссылок должен всегда возвращать нули:
+Перед экспортом ссылки должны быть целыми:
 
 ```sql
 SELECT
@@ -51,10 +44,25 @@ SELECT
 FROM job_groups;
 ```
 
-## 2. Единый acceptance-запрос
+Ожидание: оба значения равны нулю.
 
-`salary_coverage` означает пригодную для сравнения годовую зарплату в USD, а
-не просто встретившееся число или код валюты.
+## 2. Frozen source baseline
+
+Принятый срез:
+
+| Метрика | Значение |
+|---|---:|
+| Canonical active jobs | 78 719 |
+| Jobs with skills | 68 881 / 87,50% |
+| Jobs with usable `salary_usd_year` | 22 467 / 28,54% |
+| Residual duplicate jobs | 0 |
+| Historical 1024-dim embeddings | 1 |
+| Median age at freeze | 21,87 дня |
+| Active raw source rows | 78 877 |
+
+Embeddings не экспортируются и не измеряются в runtime catalog.
+
+PostgreSQL baseline query:
 
 ```sql
 WITH canonical_jobs AS (
@@ -82,176 +90,256 @@ source_url_clusters AS (
 residual_duplicate_ids AS (
   SELECT canonical.id
   FROM canonical_jobs AS canonical
-  JOIN fingerprint_clusters
-    USING (blocking_key, simhash)
+  JOIN fingerprint_clusters USING (blocking_key, simhash)
 
   UNION
 
   SELECT canonical.id
   FROM canonical_jobs AS canonical
-  JOIN source_url_clusters
-    USING (source_url)
-),
-metrics AS (
-  SELECT
-    count(*) AS canonical_jobs,
-    count(*) FILTER (
-      WHERE EXISTS (
-        SELECT 1
-        FROM job_skills
-        WHERE job_skills.job_id = canonical_jobs.id
-      )
-    ) AS with_skills,
-    count(*) FILTER (
-      WHERE salary_usd_year IS NOT NULL
-    ) AS with_salary,
-    count(*) FILTER (
-      WHERE embedding IS NOT NULL
-        AND vector_dims(embedding) = 1024
-    ) AS with_embeddings,
-    percentile_cont(0.5) WITHIN GROUP (
-      ORDER BY
-        extract(
-          epoch FROM (now() - coalesce(posted_at, first_seen_at))
-        ) / 86400.0
-    ) AS median_age_days
-  FROM canonical_jobs
+  JOIN source_url_clusters USING (source_url)
 )
 SELECT
-  canonical_jobs,
-  with_skills,
-  round(100.0 * with_skills / nullif(canonical_jobs, 0), 2)
-    AS skills_coverage_pct,
-  with_salary,
-  round(100.0 * with_salary / nullif(canonical_jobs, 0), 2)
-    AS salary_coverage_pct,
-  with_embeddings,
-  round(100.0 * with_embeddings / nullif(canonical_jobs, 0), 2)
-    AS embedding_coverage_pct,
-  round(median_age_days::numeric, 2) AS median_age_days,
-  (SELECT count(*) FROM residual_duplicate_ids) AS residual_duplicate_jobs,
-  round(
-    100.0 * (SELECT count(*) FROM residual_duplicate_ids)
-      / nullif(canonical_jobs, 0),
-    2
-  ) AS residual_duplicate_pct
-FROM metrics;
+  count(*) AS canonical_jobs,
+  count(*) FILTER (
+    WHERE EXISTS (
+      SELECT 1
+      FROM job_skills
+      WHERE job_skills.job_id = canonical_jobs.id
+    )
+  ) AS with_skills,
+  count(*) FILTER (
+    WHERE salary_usd_year IS NOT NULL
+  ) AS with_salary,
+  count(*) FILTER (
+    WHERE attribution IS NULL OR btrim(attribution) = ''
+  ) AS missing_attribution,
+  count(*) FILTER (
+    WHERE source_url IS NULL OR btrim(source_url) = ''
+  ) AS missing_source_url,
+  (SELECT count(*) FROM residual_duplicate_ids)
+    AS residual_duplicate_jobs
+FROM canonical_jobs;
 ```
 
-Исторические production-цели (`salary_coverage_pct >= 35`,
-`median_age_days < 5`, `embedding_coverage_pct = 100`) отменены для текущего
-MVP. Запрос остаётся диагностическим и регрессионным.
+Acceptance:
 
-## 3. Residual-дубли
-
-Residual-дубль — каноническая запись, для которой осталась другая каноническая
-запись с одним из двух строгих подтверждений:
-
-1. одинаковые `blocking_key` и `simhash`;
-2. абсолютно одинаковый `source_url`.
-
-Обе записи дублирующей пары входят в числитель. Query string из URL намеренно
-не удаляется: некоторые ATS используют один path и передают уникальный job id
-только в query string. Это строгая детерминированная нижняя граница; дополнительно
-каждый релиз фазы 1 требует ручного просмотра 30 крупнейших многозаписных групп.
-
-SQL ручного аудита:
-
-```sql
-SELECT
-  job_group.id AS group_id,
-  min(company.name) AS company,
-  count(*) AS members,
-  string_agg(DISTINCT job.title, ' | ' ORDER BY job.title) AS titles
-FROM job_groups AS job_group
-JOIN jobs AS job
-  ON job.group_id = job_group.id
-JOIN companies AS company
-  ON company.id = job.company_id
-GROUP BY job_group.id
-HAVING count(*) >= 2
-  AND count(DISTINCT company.id) = 1
-ORDER BY count(*) DESC, job_group.id
-LIMIT 30;
+```text
+canonical_jobs          = 78719
+with_skills             = 68881
+with_salary             = 22467
+missing_attribution     = 0
+missing_source_url      = 0
+residual_duplicate_jobs = 0
 ```
 
-### Аудит до исправления порога
+Если фактический read-only запрос расходится, export не продолжается, а
+расхождение документируется. Нельзя «добрать» данные новым ingestion.
 
-При пороге Хэмминга 3 было 971 многозаписных групп; 89 из них содержали разные
-`title_normalized` (260 строк). Выборка 30 крупнейших групп:
+## 3. Snapshot artifact
 
-| group | company | members | titles |
-|---:|---|---:|---|
-| 5255 | Apex Companies | 28 | Landscape Technician (Stormwater) |
-| 5254 | Apex Companies | 15 | Landscape Foreman (Stormwater) |
-| 2587 | Alpha Financial Markets Consulting | 12 | Manager |
-| 8620 | Cgsfederal | 11 | Affirmative Civil Enforcement (ACE) Investigator |
-| 8632 | Cgsfederal | 11 | Auditor |
-| 8658 | Cgsfederal | 11 | Data Specialist |
-| 4266 | Anduril Industries | 10 | Senior Reliability Engineer · Senior Software Engineer |
-| 6500 | AvePoint | 10 | Partner Development Manager |
-| 8621 | Cgsfederal | 10 | Agile Coach |
-| 8625 | Cgsfederal | 10 | ALS Lab Manager |
-| 8630 | Cgsfederal | 10 | APEX Developer (Top Secret Clearance Required) |
-| 8634 | Cgsfederal | 10 | Business Analyst |
-| 8643 | Cgsfederal | 10 | Cloud and Storage Engineer |
-| 8644 | Cgsfederal | 10 | Cloud Engineer (AWS) |
-| 8645 | Cgsfederal | 10 | Cloud Systems Architect |
-| 8646 | Cgsfederal | 10 | CommVault Systems Engineer |
-| 8648 | Cgsfederal | 10 | Contract Mandarin Document Review Attorney |
-| 8650 | Cgsfederal | 10 | Contracts Manager |
-| 8652 | Cgsfederal | 10 | Courtroom Presentation Specialist |
-| 8657 | Cgsfederal | 10 | Data Engineer |
-| 8659 | Cgsfederal | 10 | Desktop/Workstation Design Engineer |
-| 8660 | Cgsfederal | 10 | Digital Forensic Analyst I |
-| 8661 | Cgsfederal | 10 | Director of eDiscovery |
-| 8662 | Cgsfederal | 10 | Discovery Business and System Analyst (Top Secret Clearance Required) |
-| 8663 | Cgsfederal | 10 | Discovery Database Administrator (DBA) (Top Secret Clearance Required) |
-| 8664 | Cgsfederal | 10 | Discovery IT System Administrator (Top Secret Clearance Required) |
-| 2597 | Alpha Financial Markets Consulting | 9 | Senior Consultant |
-| 3946 | Anduril Industries | 9 | Senior Cloud Deployment Engineer, Space · Senior Electrical Engineer · Senior GNC Engineer · Senior Procurement Engineer |
-| 4223 | Anduril Industries | 9 | Senior Product Quality Engineer |
-| 4123 | Anduril Industries | 8 | Senior Manufacturing Engineer · Senior Production Engineer · Senior Thermal Engineer |
+Artifact:
 
-Разные вакансии действительно склеивались. Порог уменьшен до 0. Дополнительно
-устранена причина точных SimHash-коллизий: `blocking_key` теперь включает
-нормализованные company, title и location, как требует `PLAN.md` §2.4, а
-SimHash считается по описанию внутри блока. После перестройки 10 468 строк:
-10 363 группы, 95 многозаписных групп, групп с разными
-`title_normalized` — 0.
+```text
+catalog-v1.sqlite.zst
+catalog-manifest.json
+catalog-v1.sqlite.zst.sha256
+```
 
-## 4. Свежесть и first_seen_at
+Manifest содержит:
 
-Свежесть — медиана
-`now() - coalesce(posted_at, first_seen_at)` по активным каноническим
-вакансиям. `first_seen_at` устанавливается default-значением только при первом
-INSERT. Batch upsert намеренно не включает его в `DO UPDATE SET`.
+- `catalogVersion`;
+- `schemaVersion`;
+- `createdAt`;
+- source baseline date;
+- canonical job count;
+- skills/salary counts;
+- uncompressed/compressed size;
+- artifact SHA-256;
+- export commit SHA.
 
-Проверка целостности:
+Reproducibility означает:
+
+- одинаковый source snapshot и export commit дают одинаковые logical rows;
+- rows сортируются по stable canonical ID;
+- timestamp упаковки не входит в logical checksum;
+- `VACUUM` выполняется после заполнения;
+- случайные ID и нестабильный порядок запрещены.
+
+## 4. SQLite catalog acceptance
+
+После распаковки:
 
 ```sql
-SELECT
-  count(*) FILTER (WHERE first_seen_at IS NULL) AS missing_first_seen,
-  count(*) FILTER (WHERE first_seen_at > last_seen_at) AS invalid_seen_order
+PRAGMA integrity_check;
+
+SELECT value
+FROM catalog_meta
+WHERE key = 'catalog_version';
+
+SELECT count(*) AS jobs
 FROM jobs;
+
+SELECT count(*) AS fts_rows
+FROM jobs_fts;
+
+SELECT count(*) AS missing_attribution
+FROM jobs
+WHERE trim(attribution) = '';
+
+SELECT count(*) AS missing_source_url
+FROM jobs
+WHERE trim(source_url) = '';
+
+SELECT count(*) AS duplicate_source_url
+FROM (
+  SELECT source_url
+  FROM jobs
+  GROUP BY source_url
+  HAVING count(*) > 1
+);
+
+PRAGMA foreign_key_check;
 ```
 
-Повторный bulk upsert и неизменность `first_seen_at` покрыты integration-тестом
-`tests/ingest/test_repository_integration.py`.
+Ожидание:
 
-## 5. Текущий снимок
+```text
+integrity_check       = ok
+catalog_version       = 1
+jobs                  = 78719
+fts_rows              = 78719
+missing_attribution   = 0
+missing_source_url    = 0
+duplicate_source_url  = 0
+foreign_key_check     = no rows
+```
 
-Снимок после перестройки дедупликации 29 июля 2026 года:
+Если несколько канонических вакансий намеренно имеют один `source_url`,
+исключение должно быть явно зафиксировано в manifest; молчаливое ослабление
+проверки запрещено.
 
-| Метрика | Значение |
-|---|---:|
-| Канонические активные вакансии | 10 363 |
-| Со skills | 9 198 / 88,76% |
-| С пригодной `salary_usd_year` | 0 / 0,00% |
-| С `VECTOR(1024)` | 1 / 0,01% |
-| Медианная свежесть | 61,20 дня |
-| Residual-дубли | 0 / 0,00% |
+### FTS smoke
 
-Диагностически 934 канонические записи (9,01%) содержат хотя бы одну сырую
-границу зарплаты, но у всех периодичность пока `unknown`, поэтому они честно не
-засчитываются в usable salary coverage.
+Минимальные запросы:
+
+```sql
+SELECT job.id, job.title
+FROM jobs_fts AS fts
+JOIN jobs AS job ON job.id = fts.rowid
+WHERE jobs_fts MATCH 'python'
+ORDER BY bm25(jobs_fts, 8.0, 6.0, 3.0, 2.0, 1.0, 1.0)
+LIMIT 20;
+
+SELECT job.id, job.title
+FROM jobs_fts AS fts
+JOIN jobs AS job ON job.id = fts.rowid
+WHERE jobs_fts MATCH '"machine learning"'
+LIMIT 20;
+```
+
+Результат должен быть непустым и детерминированным при одинаковом catalog.
+
+## 5. Search performance
+
+Тестовая среда записывает:
+
+- Windows version;
+- CPU;
+- RAM;
+- SSD/HDD;
+- cold/warm;
+- catalog SHA-256;
+- query corpus version.
+
+Corpus:
+
+- 20 RU запросов;
+- 20 EN запросов;
+- 10 смешанных RU/EN;
+- 10 quoted phrases;
+- 10 skill aliases;
+- 10 filter-heavy запросов;
+- 10 zero-result/typo запросов.
+
+Для каждого запроса выполняются пять прогревочных и 30 измеряемых запусков.
+
+Gates:
+
+| Метрика | Цель | Обязательный предел |
+|---|---:|---:|
+| Warm search p95 | <150 мс | <300 мс |
+| Cold first query | <300 мс | <500 мс |
+| Feed scroll | 60 fps | без длительных кадров >100 мс |
+| Repeated startup | <1,5 с | <2,5 с |
+| Steady-state RAM | <200 МБ | <250 МБ |
+
+First-run распаковка измеряется отдельно и не входит в repeated startup.
+
+## 6. Match acceptance
+
+Вес:
+
+```text
+skills   0.40
+role     0.20
+seniority 0.15
+location 0.15
+salary   0.10
+```
+
+Проверки:
+
+- score конечный и в диапазоне 0–100;
+- одинаковый profile/job даёт byte-equivalent component JSON;
+- неизвестный компонент исключается, остальные веса нормализуются до 1;
+- score не меняется из-за сети, AI provider или истории чата;
+- strengths/gaps ссылаются только на фактические profile/job fields.
+
+Термин «probability» отсутствует в публичной match-схеме.
+
+## 7. Emmy reliability
+
+На fixture providers:
+
+| Сценарий | Ожидание |
+|---|---|
+| primary success | один provider call, валидный `EmmyResponse` |
+| timeout | fallback на следующий provider |
+| 429 | учесть `Retry-After`, поставить cooldown, fallback |
+| invalid schema | не показывать сырой ответ, fallback |
+| all unavailable | typed unavailable + mascot `offline` |
+| prompt injection in job | нет нового tool/system behavior |
+| fifth tool step | loop прекращается на лимите 4 |
+| shortlist mutation | требуется UI confirmation |
+
+Отдельно проверяется, что demo/BYOK-ключ не появляется:
+
+- в IPC payload;
+- JavaScript bundle;
+- application logs;
+- error message;
+- crash report fixture.
+
+## 8. Release acceptance
+
+На чистых Windows 10 и 11 x64:
+
+- installer устанавливается и удаляется;
+- portable ZIP запускается;
+- Node, Python, Rust и Docker отсутствуют;
+- catalog checksum проходит;
+- offline search работает;
+- user data переживает restart;
+- повреждённый catalog не открывается молча;
+- updater отвергает неверную подпись;
+- отсутствие сети не вызывает crash;
+- SmartScreen limitation описано в release notes.
+
+## 9. Исторические метрики
+
+Показатели ingestion до freeze сохраняются только как provenance. Они не
+являются активным gate и не дают разрешения на новые сборы.
+
+Зафиксированные provenance-значения находятся в этом документе,
+`MVP_SCOPE.md` и `config/catalog-manifest.json`; отдельный session checkpoint
+удалён вместе с legacy-кодом.

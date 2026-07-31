@@ -37,6 +37,7 @@ test-results/
 # Rust / Tauri
 target/
 apps/desktop/src-tauri/gen/
+apps/desktop/src-tauri/resources/*.sqlite.zst
 
 # Editors and OS
 .idea/
@@ -52,3 +53,5 @@ Thumbs.db
 *.pid
 *.tmp
 *.bak
+.artifacts/
+.test-tmp/

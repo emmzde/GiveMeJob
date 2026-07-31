@@ -1,0 +1,78 @@
+name: Windows build
+
+on:
+  workflow_dispatch:
+    inputs:
+      catalog_url:
+        description: URL of the catalog-v1.sqlite.zst release asset
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: NSIS and portable ZIP
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -C apps/desktop typecheck
+      - run: pnpm -C apps/desktop lint
+      - run: pnpm -C apps/desktop test
+
+      - name: Download and verify frozen catalog
+        shell: pwsh
+        env:
+          CATALOG_URL: ${{ inputs.catalog_url }}
+        run: |
+          $destination = "apps/desktop/src-tauri/resources/catalog-v1.sqlite.zst"
+          Invoke-WebRequest -Uri $env:CATALOG_URL -OutFile $destination
+          $manifest = Get-Content config/catalog-manifest.json -Raw | ConvertFrom-Json
+          $actual = (Get-FileHash $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $manifest.archive_sha256) {
+            throw "Catalog archive SHA-256 mismatch"
+          }
+
+      - name: Rust checks
+        working-directory: apps/desktop/src-tauri
+        run: |
+          cargo fmt --check
+          cargo test
+          cargo clippy --all-targets -- -D warnings
+
+      - name: Build NSIS installer
+        run: pnpm -C apps/desktop tauri build --bundles nsis
+
+      - name: Create portable ZIP
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force portable/resources | Out-Null
+          Copy-Item apps/desktop/src-tauri/target/release/givemejob-desktop.exe portable/GiveMeJob.exe
+          Copy-Item apps/desktop/src-tauri/resources/catalog-v1.sqlite.zst portable/resources/
+          Compress-Archive -Path portable/* -DestinationPath GiveMeJob-portable-x64.zip
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: GiveMeJob-Windows
+          if-no-files-found: error
+          path: |
+            apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
+            GiveMeJob-portable-x64.zip

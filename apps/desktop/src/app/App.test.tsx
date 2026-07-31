@@ -5,17 +5,17 @@ import { App } from "@/app/App";
 import { defaultLocale, t } from "@/lib/i18n";
 
 describe("App", () => {
-  it("shows the Phase 0 foundation status", () => {
+  it("shows the offline catalog shell", () => {
     render(<App />);
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "Всё готово, чтобы начать собирать живые вакансии.",
+      "Поиск по локальному каталогу",
     );
-    expect(screen.getByText("Фаза 0")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Основная навигация" })).toBeInTheDocument();
   });
 
   it("renders through the configured Russian i18n layer", () => {
     expect(defaultLocale).toBe("ru");
-    expect(t("continueToData")).toBe("Перейти к данным");
+    expect(t("offlineReady")).toBe("Работает без сети");
   });
 });

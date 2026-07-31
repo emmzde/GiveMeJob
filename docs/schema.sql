@@ -1,160 +1,263 @@
--- GiveMeJob! — схема БД (PostgreSQL 17 + pgvector)
--- Профиль пользователя может жить локально в SQLite с той же логической схемой.
+-- GiveMeJob! — целевая документированная схема Windows MVP.
+-- Обновлено: 2026-07-31.
+--
+-- Это два независимых SQLite-файла:
+--   1. catalog-v1.sqlite — versioned, read-only после сборки;
+--   2. user.sqlite       — локальные пользовательские данные.
+--
+-- Исходный PostgreSQL volume хранится отдельно от репозитория только как
+-- архив frozen dataset. Legacy schema/Alembic в кодовой базе удалены.
 
-CREATE EXTENSION IF NOT EXISTS vector;
+PRAGMA foreign_keys = ON;
 
--- ============================================================
--- Ядро: компании и вакансии
--- ============================================================
+-- ============================================================================
+-- catalog-v1.sqlite
+-- ============================================================================
 
-CREATE TABLE companies (
-  id            BIGSERIAL PRIMARY KEY,
-  name          TEXT NOT NULL,
-  slug          TEXT UNIQUE,
-  website       TEXT,
-  logo_url      TEXT,
-  size_bucket   TEXT,          -- startup / smb / enterprise
-  industry      TEXT
-);
-
-CREATE TABLE job_groups (      -- дедуплицированная сущность "одна вакансия"
-  id            BIGSERIAL PRIMARY KEY,
-  canonical_job BIGINT,
-  simhash       BIGINT,
-  blocking_key  TEXT NOT NULL,
-  created_at    TIMESTAMPTZ DEFAULT now()
-);
+CREATE TABLE catalog_meta (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+) STRICT;
 
 CREATE TABLE jobs (
-  id               BIGSERIAL PRIMARY KEY,
-  group_id         BIGINT REFERENCES job_groups(id),
-  company_id       BIGINT REFERENCES companies(id),
-  title            TEXT NOT NULL,
-  title_normalized TEXT,
-  description_md   TEXT,
-  seniority        TEXT,        -- intern/junior/middle/senior/lead/staff/principal
-  employment_type  TEXT,        -- full_time/part_time/contract/internship
-  remote_type      TEXT,        -- onsite/hybrid/remote
-  country          TEXT,
-  city             TEXT,
-  timezone_hint    TEXT,
-  salary_min       NUMERIC,
-  salary_max       NUMERIC,
-  salary_currency  TEXT,
-  salary_period    TEXT,
-  salary_usd_year  NUMERIC,     -- нормализовано для сравнения
-  visa_sponsorship BOOLEAN,
-  min_years_exp    SMALLINT,
-  posted_at        TIMESTAMPTZ,
-  expires_at       TIMESTAMPTZ,
-  source           TEXT NOT NULL,
-  source_scope     TEXT NOT NULL,
-  source_job_id    TEXT NOT NULL,
-  source_url       TEXT NOT NULL,
-  apply_url        TEXT,
-  attribution      TEXT NOT NULL,
-  is_active        BOOLEAN NOT NULL DEFAULT true,
-  last_seen_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-  first_seen_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
-  quality_score    REAL,        -- полнота полей, наличие зарплаты, прямой ATS-источник
-  raw              JSONB,
-  embedding        VECTOR(1024),
-  fts              TSVECTOR GENERATED ALWAYS AS (
-                     to_tsvector('simple', coalesce(title,'') || ' ' || coalesce(description_md,''))
-                   ) STORED
-);
+  id                  INTEGER PRIMARY KEY,
+  source_job_id       TEXT NOT NULL,
+  title               TEXT NOT NULL,
+  title_normalized    TEXT NOT NULL,
+  company             TEXT NOT NULL,
+  company_normalized  TEXT NOT NULL,
+  description_text    TEXT NOT NULL,
+  seniority           TEXT,
+  employment_type     TEXT,
+  remote_mode         TEXT,
+  country             TEXT,
+  city                TEXT,
+  location_text       TEXT NOT NULL DEFAULT '',
+  salary_min          REAL,
+  salary_max          REAL,
+  salary_currency     TEXT,
+  salary_period       TEXT,
+  salary_usd_year     REAL,
+  posted_at           TEXT,
+  source              TEXT NOT NULL,
+  source_url          TEXT NOT NULL,
+  apply_url           TEXT,
+  attribution         TEXT NOT NULL,
+  skills_text         TEXT NOT NULL DEFAULT '',
+  search_aliases      TEXT NOT NULL DEFAULT '',
+  snapshot_version    TEXT NOT NULL,
 
-CREATE INDEX ON jobs USING hnsw (embedding vector_cosine_ops);
-CREATE INDEX ON jobs USING gin  (fts);
-CREATE INDEX ON jobs (posted_at DESC);
-CREATE UNIQUE INDEX ON jobs (source, source_job_id);
-CREATE INDEX ON jobs (is_active, posted_at DESC);
+  CHECK (trim(title) <> ''),
+  CHECK (trim(company) <> ''),
+  CHECK (trim(source) <> ''),
+  CHECK (trim(source_url) <> ''),
+  CHECK (trim(attribution) <> ''),
+  CHECK (remote_mode IS NULL OR remote_mode IN ('remote', 'hybrid', 'onsite')),
+  CHECK (
+    seniority IS NULL OR seniority IN (
+      'intern', 'junior', 'middle', 'senior', 'lead', 'staff', 'principal',
+      'manager', 'director', 'executive'
+    )
+  )
+) STRICT;
 
--- ============================================================
--- Таксономия навыков (ESCO / O*NET + свои алиасы)
--- ============================================================
+CREATE UNIQUE INDEX jobs_source_identity_idx
+  ON jobs (source, source_job_id);
+
+CREATE UNIQUE INDEX jobs_source_url_idx
+  ON jobs (source_url);
+
+CREATE INDEX jobs_posted_at_idx
+  ON jobs (posted_at DESC, id);
+
+CREATE INDEX jobs_location_idx
+  ON jobs (country, city, remote_mode, id);
+
+CREATE INDEX jobs_seniority_idx
+  ON jobs (seniority, id);
+
+CREATE INDEX jobs_salary_idx
+  ON jobs (salary_usd_year, id);
 
 CREATE TABLE skills (
-  id       BIGSERIAL PRIMARY KEY,
-  name     TEXT UNIQUE,
-  aliases  TEXT[],
-  category TEXT,
-  esco_uri TEXT UNIQUE
-);
+  id             INTEGER PRIMARY KEY,
+  canonical_name TEXT NOT NULL UNIQUE,
+  esco_uri       TEXT UNIQUE,
+  aliases_json   TEXT NOT NULL DEFAULT '[]',
+
+  CHECK (trim(canonical_name) <> ''),
+  CHECK (json_valid(aliases_json))
+) STRICT;
 
 CREATE TABLE job_skills (
-  job_id      BIGINT REFERENCES jobs(id) ON DELETE CASCADE,
-  skill_id    BIGINT REFERENCES skills(id),
-  requirement TEXT,             -- must_have / nice_to_have
+  job_id   INTEGER NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+  skill_id INTEGER NOT NULL REFERENCES skills(id),
   PRIMARY KEY (job_id, skill_id)
+) STRICT, WITHOUT ROWID;
+
+CREATE INDEX job_skills_skill_idx
+  ON job_skills (skill_id, job_id);
+
+-- External-content FTS. Catalog immutable: runtime triggers не нужны.
+CREATE VIRTUAL TABLE jobs_fts USING fts5(
+  title,
+  skills_text,
+  company,
+  location_text,
+  description_text,
+  search_aliases,
+  content = 'jobs',
+  content_rowid = 'id',
+  tokenize = 'unicode61 remove_diacritics 2',
+  prefix = '2 3 4'
 );
 
-CREATE TABLE ingestion_checkpoints (
-  connector      TEXT NOT NULL,
-  source_scope   TEXT NOT NULL,
-  cursor         TEXT,
-  processed      BIGINT NOT NULL DEFAULT 0,
-  total_hint     BIGINT,
-  started_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-  completed_at   TIMESTAMPTZ,
-  PRIMARY KEY (connector, source_scope)
-);
+-- Выполняется export builder после INSERT в jobs:
+--
+-- INSERT INTO jobs_fts(
+--   rowid,
+--   title,
+--   skills_text,
+--   company,
+--   location_text,
+--   description_text,
+--   search_aliases
+-- )
+-- SELECT
+--   id,
+--   title,
+--   skills_text,
+--   company,
+--   location_text,
+--   description_text,
+--   search_aliases
+-- FROM jobs
+-- ORDER BY id;
+--
+-- INSERT INTO jobs_fts(jobs_fts) VALUES ('optimize');
+-- ANALYZE;
+-- VACUUM;
 
--- ============================================================
--- Пользователь
--- ============================================================
+-- catalog_meta обязательные ключи:
+--
+-- catalog_version
+-- schema_version
+-- source_frozen_at
+-- created_at
+-- canonical_jobs
+-- jobs_with_skills
+-- jobs_with_salary
+-- source_commit_sha
+-- logical_checksum
 
-CREATE TABLE profiles (
-  id             BIGSERIAL PRIMARY KEY,
-  user_id        BIGINT,
-  version        INT,           -- ключ инвалидации кэша оценок
-  years_total    REAL,
-  seniority      TEXT,
-  countries_ok   TEXT[],
-  work_auth      JSONB,
-  languages      JSONB,
-  preferences    JSONB,         -- зарплата, remote, домены, no-go
-  resume_md      TEXT,
-  embedding      VECTOR(1024)
-);
+-- ============================================================================
+-- user.sqlite
+-- ============================================================================
 
-CREATE TABLE profile_skills (
-  profile_id BIGINT,
-  skill_id   BIGINT,
-  years      REAL,
-  level      SMALLINT,          -- 1..5
-  evidence   TEXT,              -- где применял
-  PRIMARY KEY (profile_id, skill_id)
-);
+PRAGMA foreign_keys = ON;
 
--- ============================================================
--- Оценки и калибровка
--- ============================================================
+CREATE TABLE user_meta (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+) STRICT;
 
-CREATE TABLE match_scores (
-  profile_id      BIGINT,
-  job_id          BIGINT,
-  profile_version INT,
-  fit_score       REAL,
-  probability     REAL,
-  prob_low        REAL,
-  prob_high       REAL,
-  components      JSONB,
-  llm_adjustment  REAL,
-  explanation     JSONB,
-  model_used      TEXT,
-  computed_at     TIMESTAMPTZ DEFAULT now(),
-  PRIMARY KEY (profile_id, job_id, profile_version)
-);
+CREATE TABLE profile (
+  id                    INTEGER PRIMARY KEY CHECK (id = 1),
+  preferred_roles_json  TEXT NOT NULL DEFAULT '[]',
+  seniority             TEXT,
+  skills_json           TEXT NOT NULL DEFAULT '[]',
+  country               TEXT,
+  city                  TEXT,
+  remote_modes_json     TEXT NOT NULL DEFAULT '[]',
+  salary_min_usd_year   REAL,
+  version               INTEGER NOT NULL DEFAULT 1,
+  created_at            TEXT NOT NULL,
+  updated_at            TEXT NOT NULL,
 
-CREATE TABLE applications (     -- источник истины для калибровки
-  id                    BIGSERIAL PRIMARY KEY,
-  profile_id            BIGINT,
-  job_id                BIGINT,
-  status                TEXT,   -- saved/applied/viewed/screen/interview/offer/rejected/ghosted
-  predicted_probability REAL,   -- что мы предсказали в момент отправки
-  timeline              JSONB,
-  updated_at            TIMESTAMPTZ
-);
+  CHECK (json_valid(preferred_roles_json)),
+  CHECK (json_valid(skills_json)),
+  CHECK (json_valid(remote_modes_json)),
+  CHECK (
+    seniority IS NULL OR seniority IN (
+      'intern', 'junior', 'middle', 'senior', 'lead', 'staff', 'principal',
+      'manager', 'director', 'executive'
+    )
+  )
+) STRICT;
+
+CREATE TABLE shortlist (
+  job_id            INTEGER PRIMARY KEY,
+  catalog_version   TEXT NOT NULL,
+  saved_at          TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE recent_searches (
+  id          INTEGER PRIMARY KEY,
+  query_json  TEXT NOT NULL,
+  searched_at TEXT NOT NULL,
+
+  CHECK (json_valid(query_json))
+) STRICT;
+
+CREATE INDEX recent_searches_time_idx
+  ON recent_searches (searched_at DESC);
+
+CREATE TABLE settings (
+  key        TEXT PRIMARY KEY,
+  value_json TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+
+  CHECK (json_valid(value_json))
+) STRICT;
+
+CREATE TABLE conversations (
+  id         TEXT PRIMARY KEY,
+  title      TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE chat_messages (
+  id               TEXT PRIMARY KEY,
+  conversation_id  TEXT NOT NULL
+                     REFERENCES conversations(id) ON DELETE CASCADE,
+  role             TEXT NOT NULL,
+  content_json     TEXT NOT NULL,
+  created_at       TEXT NOT NULL,
+
+  CHECK (role IN ('user', 'assistant', 'tool')),
+  CHECK (json_valid(content_json))
+) STRICT;
+
+CREATE INDEX chat_messages_conversation_idx
+  ON chat_messages (conversation_id, created_at);
+
+CREATE TABLE provider_health (
+  provider          TEXT NOT NULL,
+  model             TEXT NOT NULL,
+  ewma_latency_ms   REAL,
+  success_count     INTEGER NOT NULL DEFAULT 0,
+  error_count       INTEGER NOT NULL DEFAULT 0,
+  last_status       TEXT,
+  cooldown_until    TEXT,
+  quota_window_json TEXT NOT NULL DEFAULT '{}',
+  updated_at        TEXT NOT NULL,
+  PRIMARY KEY (provider, model),
+
+  CHECK (json_valid(quota_window_json))
+) STRICT, WITHOUT ROWID;
+
+CREATE TABLE match_cache (
+  job_id           INTEGER NOT NULL,
+  profile_version  INTEGER NOT NULL,
+  catalog_version  TEXT NOT NULL,
+  score            REAL NOT NULL,
+  breakdown_json   TEXT NOT NULL,
+  computed_at      TEXT NOT NULL,
+  PRIMARY KEY (job_id, profile_version, catalog_version),
+
+  CHECK (score >= 0 AND score <= 100),
+  CHECK (json_valid(breakdown_json))
+) STRICT, WITHOUT ROWID;
+
+-- BYOK здесь не хранится. Только Windows Credential Manager.

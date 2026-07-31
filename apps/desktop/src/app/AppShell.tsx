@@ -12,7 +12,6 @@ import {
   isCatalogError,
 } from "@/features/catalog/catalogStatus";
 import type { CatalogViewState } from "@/features/catalog/catalogStatus";
-import { t } from "@/lib/i18n";
 
 interface AppShellProps {
   catalog: CatalogViewState;
@@ -53,13 +52,10 @@ export function AppShell({ catalog, children }: AppShellProps) {
     <main className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
       <header className="flex h-14 items-center justify-between border-b border-[var(--border)] px-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
-          <span className="grid size-7 place-items-center rounded-[var(--radius-md)] bg-[var(--text)] text-xs text-[var(--bg)]">
+          <span className="grid size-7 place-items-center rounded-[var(--radius-md)] bg-[var(--accent)] text-xs text-[var(--on-accent)]">
             G
           </span>
           GiveMeJob!
-          <span className="hidden text-xs font-normal text-[var(--text-secondary)] xl:inline">
-            {t("appDescription")}
-          </span>
         </div>
         <span
           aria-atomic="true"

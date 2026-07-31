@@ -1,6 +1,6 @@
 # GiveMeJob! — статус релиза
 
-Дата решения: 31 июля 2026 года.
+Дата решения: 31 июля 2026 года. Последнее обновление: 1 августа 2026 года.
 
 ## Решение
 
@@ -26,9 +26,19 @@ hard gate с worst clean release p95 `273.02 ms`; новые SQLite indexes не
 fast startup, полная install/recovery validation, streaming unpack, progress UI,
 lock, stale-temp cleanup, `.previous` rollback и пользовательский retry.
 Job detail navigation и безопасный original-link flow готовы: detail загружается
-отдельным IPC, description выводится как недоверенный plain text, а Rust открывает
-только HTTPS URL, повторно полученный по `JobId`. Подключение фильтров/сортировок
-в UI, виртуализация и полный end-to-end M2 benchmark ещё не готовы.
+отдельным IPC, description остаётся недоверенным plain text и безопасно
+структурируется в абзацы/list/NOTE, а Rust открывает только HTTPS URL, повторно
+полученный по `JobId`. Filter/sort UI, active chips, validated minimum salary,
+source multi-select, local skill/location autocomplete, cursor pagination,
+selected feed state и виртуализация после 50 загруженных jobs готовы. Сортировка
+не дублируется в filters/chips, а reset сохраняет search text и sort.
+
+M2 пока не закрыт: отсутствует воспроизводимая запись feed-scroll, cold-query,
+repeated-startup и steady-state RAM metrics, а также финальный ручной
+keyboard-only/light-dark/reduced-motion audit. Exact per-option result counts
+для remote/seniority/employment не изображаются: текущий IPC возвращает count
+только для source и autocomplete. Shortlist/save относится к M3, hide/apply
+automation не входит в текущий продуктовый контракт.
 `match`-sort относится к M3 и также не реализован. M3, M4 и
 release-hardening M5 не завершены.
 
@@ -52,9 +62,9 @@ NSIS, portable ZIP, `.env`, PostgreSQL volume и `.artifacts/` в Git не
 
 Release разрешён только после выполнения всех пунктов:
 
-1. M2: UI wiring filters/sorts, cursor, virtualized feed,
-   detail/original-link flow и hard gate warm search p95 строго <300 мс;
-   строго <150 мс остаётся целевым уровнем.
+1. M2: завершённый UI audit и воспроизводимые feed-scroll/cold-query/startup/RAM
+   measurements; hard gate warm search p95 строго <300 мс, а строго <150 мс
+   остаётся целевым уровнем.
 2. M3: `user.sqlite`, профиль, shortlist и детерминированный match-score.
 3. M4: Emmy, Rust `LLMRouter`, ровно пять tools, BYOK и graceful offline.
 4. M5: clean-Windows install test, NSIS, portable ZIP и signed updater.

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { Button } from "@/components/ui/button";
 
 describe("Button", () => {
-  it.each(["default", "ghost", "outline"] as const)(
+  it.each(["default", "accent", "ghost", "outline"] as const)(
     "keeps a two-pixel focus ring for the %s variant",
     (variant) => {
       render(<Button variant={variant}>{variant}</Button>);

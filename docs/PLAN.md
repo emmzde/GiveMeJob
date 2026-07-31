@@ -416,6 +416,11 @@ optional; следующие страницы не повторяют count, а 
 Лента виртуализирована. Менять sort/filter можно без блокирующей модалки;
 предыдущие результаты остаются до готовности новых.
 
+В текущем M2 UI сортировка существует только в toolbar выдачи и не
+дублируется chip-ом. «Сбросить все» очищает фильтры, но сохраняет search text и
+выбранную сортировку. Следующая cursor page загружается явно и добавляется к
+ленте; после 50 загруженных вакансий используется TanStack Virtual.
+
 ### 3.4 Производительность
 
 - warm search p95: целевой уровень строго <150 мс;
@@ -502,6 +507,14 @@ Score всегда воспроизводим. Он не меняется из-�
 
 Emmy открывается дополнительной панелью поверх правой части. При узкой ширине
 job detail и Emmy становятся mutually exclusive panels.
+
+Реализованный M2 shell позволяет независимо скрыть filters и job detail;
+на узком окне они становятся overlay panels. Выбранная вакансия имеет
+`aria-current`, акцентный фон и левую границу. В feed используются monogram
+компании, стабильные колонки location/salary и явное состояние неизвестной
+зарплаты. Description остаётся недоверенным plain text, но безопасно
+разбивается React-компонентом на абзацы, маркированные списки и NOTE-блок без
+HTML/Markdown rendering.
 
 Экраны:
 
@@ -731,10 +744,14 @@ Authenticode отсутствует в v1; SmartScreen warning документ�
 - [x] Cursor/keyset pagination.
 - [x] Search correctness: Unicode/phrases/aliases/ranking/typo golden fixtures.
 - [x] Three-column UI shell.
-- [ ] Filter/sort UI wiring.
-- [ ] Virtualized feed.
+- [x] Filter/sort UI wiring и exact IPC payload tests.
+- [x] Cursor pagination и virtualized feed после 50 загруженных jobs.
 - [x] Job detail и original link.
-- [ ] Themes, keyboard, error states.
+- [x] System light/dark tokens и responsive panels.
+- [x] Keyboard/focus для M2 filters, autocomplete, sort, feed и original link.
+- [x] Catalog/search/detail loading, empty и error states.
+- [ ] Воспроизводимый UI acceptance: keyboard-only/light-dark/reduced-motion
+  audit, feed scroll, cold query, repeated startup и steady-state RAM.
 
 Критерий: поиск без сети; hard gate warm p95 строго <300 мс. Значение строго
 <150 мс остаётся целевым уровнем.

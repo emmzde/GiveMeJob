@@ -33,7 +33,7 @@ const emptySearchDraft: SearchDraft = {
   sort: "relevance",
 };
 
-const filterResetDraft: Omit<SearchDraft, "text"> = {
+const emptyFilters: Omit<SearchDraft, "sort" | "text"> = {
   skills: [],
   locations: [],
   remoteModes: [],
@@ -42,7 +42,6 @@ const filterResetDraft: Omit<SearchDraft, "text"> = {
   salaryMinUsdYear: undefined,
   salaryKnownOnly: false,
   sources: [],
-  sort: "relevance",
 };
 
 function compareStrings(left: string, right: string): number {
@@ -61,9 +60,9 @@ export function createSearchDraft(overrides: Partial<SearchDraft> = {}): SearchD
   return { ...emptySearchDraft, ...overrides };
 }
 
-/** Clears every filter and restores the default sort while preserving search text. */
+/** Clears filters while preserving search text and the separately controlled sort. */
 export function resetSearchFilters(draft: SearchDraft): SearchDraft {
-  return { text: draft.text, ...filterResetDraft };
+  return { text: draft.text, sort: draft.sort, ...emptyFilters };
 }
 
 export function searchDraftToQuery(draft: SearchDraft): SearchQuery {

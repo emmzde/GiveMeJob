@@ -23,7 +23,7 @@ export function ActiveFilterChips({ draft, onChange }: ActiveFilterChipsProps) {
       {chips.map((chip) => (
         <button
           aria-label={`${t("removeFilter")}: ${chip.label}`}
-          className="inline-flex min-h-7 items-center gap-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-2 text-xs hover:bg-[var(--bg-hover)]"
+          className="inline-flex min-h-8 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-2.5 text-xs hover:bg-[var(--bg-hover)]"
           key={chip.id}
           onClick={() => onChange(chip.remove(draft))}
           type="button"
@@ -33,7 +33,7 @@ export function ActiveFilterChips({ draft, onChange }: ActiveFilterChipsProps) {
         </button>
       ))}
       <button
-        className="min-h-7 px-2 text-xs text-[var(--text-secondary)] underline-offset-2 hover:underline"
+        className="min-h-8 px-2 text-xs text-[var(--text-secondary)] underline-offset-2 hover:underline"
         onClick={() => onChange(resetSearchFilters(draft))}
         title={t("clearAllFiltersHint")}
         type="button"

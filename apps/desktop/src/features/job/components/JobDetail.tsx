@@ -1,17 +1,41 @@
-import { Bot, ExternalLink } from "lucide-react";
+import {
+  Bot,
+  BriefcaseBusiness,
+  ChartNoAxesColumnIncreasing,
+  ChevronDown,
+  CircleDollarSign,
+  ExternalLink,
+  MapPin,
+  Wifi,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAppUiStore } from "@/app/store/appUiStore";
 import { Button } from "@/components/ui/button";
+import {
+  employmentTypeLabels,
+  formatSourceLabel,
+  remoteModeLabels,
+  seniorityLabels,
+} from "@/features/feed/searchLabels";
+import {
+  formatSalaryRange,
+  normalizeJobTitle,
+  normalizeSkillLabel,
+} from "@/features/feed/jobPresentation";
+import { JobDescription } from "@/features/job/components/JobDescription";
 import { useJobDetail } from "@/features/job/hooks/useJobDetail";
 import { openOriginalJob } from "@/lib/catalog";
 import type { JobId, JobSummary } from "@/lib/catalog";
 import { t } from "@/lib/i18n";
 
 interface JobDetailProps {
+  dataVisible: boolean;
   selectedJob: JobSummary | null;
   isInitialSearchLoading: boolean;
   hasSearchError: boolean;
+  onClose(): void;
 }
 
 function JobDetailSkeleton() {
@@ -25,9 +49,11 @@ function JobDetailSkeleton() {
 }
 
 export function JobDetail({
+  dataVisible,
   selectedJob,
   isInitialSearchLoading,
   hasSearchError,
+  onClose,
 }: JobDetailProps) {
   const selectedId = useAppUiStore((state) => state.selectedId);
   const detail = useJobDetail(selectedId);
@@ -66,67 +92,105 @@ export function JobDetail({
   }, [detail.data, openSelectedOriginal]);
 
   const isLoading = isInitialSearchLoading || (selectedId !== null && detail.isPending);
+  const salary = detail.data ? formatSalaryRange(detail.data) : null;
 
   return (
-    <aside className="min-w-0 overflow-y-auto p-5">
+    <aside
+      className="detail-panel scroll-region h-[calc(100vh-3.5rem)] min-w-0 overflow-y-auto p-5 pr-6"
+      data-visible={dataVisible ? "true" : "false"}
+    >
       {isLoading ? <JobDetailSkeleton /> : null}
       {!isLoading && detail.data ? (
         <article>
-          <p className="text-xs text-[var(--text-secondary)]">{detail.data.company}</p>
-          <h2 className="mt-2 text-xl font-semibold tracking-[-0.02em]">
-            {detail.data.title}
-          </h2>
-          <div className="mt-4 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
-            {detail.data.locationText ? <span>{detail.data.locationText}</span> : null}
-            {detail.data.remoteMode ? (
-              <span>· {detail.data.remoteMode.replaceAll("_", " ")}</span>
-            ) : null}
-            {detail.data.seniority ? <span>· {detail.data.seniority}</span> : null}
-            {detail.data.employmentType ? (
-              <span>· {detail.data.employmentType.replaceAll("_", " ")}</span>
-            ) : null}
-          </div>
-          <div className="mt-6">
-            <Button
-              aria-describedby="original-link-shortcut"
-              disabled={isOpeningOriginal}
-              onClick={() => void openSelectedOriginal()}
-              type="button"
-            >
-              <ExternalLink aria-hidden="true" className="size-4" />
-              {isOpeningOriginal ? t("openingOriginal") : t("openOriginal")}
-            </Button>
-            <span className="sr-only" id="original-link-shortcut">
-              {t("originalLinkShortcut")}
-            </span>
-            {originalLinkError ? (
-              <p
-                aria-live="assertive"
-                className="mt-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-sm"
-                role="alert"
+          <header className="border-b border-[var(--border)] pb-5">
+            <div className="flex items-start gap-3">
+              <div
+                aria-hidden="true"
+                className="grid size-11 shrink-0 place-items-center rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-secondary)] text-base font-semibold"
+                data-testid="company-monogram"
               >
-                {originalLinkError}
-              </p>
-            ) : null}
-          </div>
-          <dl className="mt-8 space-y-3 border-t border-[var(--border)] pt-5 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-[var(--text-secondary)]">{t("source")}</dt>
-              <dd>{detail.data.source}</dd>
+                {detail.data.company.slice(0, 1).toLocaleUpperCase("ru-RU")}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-[var(--text)]">
+                  {detail.data.company}
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold leading-tight tracking-[-0.025em]">
+                  {normalizeJobTitle(detail.data.title)}
+                </h2>
+              </div>
+              <Button
+                aria-label={t("closeDetails")}
+                className="ml-auto size-9 shrink-0 px-0"
+                onClick={onClose}
+                type="button"
+                variant="ghost"
+              >
+                <X aria-hidden="true" className="size-4" />
+              </Button>
             </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-[var(--text-secondary)]">{t("attribution")}</dt>
-              <dd>{detail.data.attribution}</dd>
+            <div className="mt-4 flex flex-wrap gap-1.5 text-xs font-medium text-[var(--text-secondary)]">
+              {detail.data.locationText ? (
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1">
+                  <MapPin aria-hidden="true" className="size-3" />
+                  {detail.data.locationText}
+                </span>
+              ) : null}
+              {detail.data.remoteMode ? (
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--accent)] bg-[var(--accent-muted)] px-2 py-1 text-[var(--accent)]">
+                  <Wifi aria-hidden="true" className="size-3" />
+                  {remoteModeLabels[detail.data.remoteMode]}
+                </span>
+              ) : null}
+              {detail.data.seniority ? (
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1">
+                  <ChartNoAxesColumnIncreasing aria-hidden="true" className="size-3" />
+                  {seniorityLabels[detail.data.seniority]}
+                </span>
+              ) : null}
+              {detail.data.employmentType ? (
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1">
+                  <BriefcaseBusiness aria-hidden="true" className="size-3" />
+                  {employmentTypeLabels[detail.data.employmentType]}
+                </span>
+              ) : null}
+              {salary ? (
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1">
+                  <CircleDollarSign aria-hidden="true" className="size-3" />
+                  {salary}
+                </span>
+              ) : null}
             </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-[var(--text-secondary)]">{t("snapshotVersion")}</dt>
-              <dd>{detail.data.snapshotVersion}</dd>
+            <div className="mt-4">
+              <Button
+                aria-describedby="original-link-shortcut"
+                className="min-h-10 text-sm"
+                disabled={isOpeningOriginal}
+                onClick={() => void openSelectedOriginal()}
+                type="button"
+                variant="accent"
+              >
+                <ExternalLink aria-hidden="true" className="size-3.5" />
+                {isOpeningOriginal ? t("openingOriginal") : t("openOriginal")}
+              </Button>
+              <span className="sr-only" id="original-link-shortcut">
+                {t("originalLinkShortcut")}
+              </span>
+              {originalLinkError ? (
+                <p
+                  aria-live="assertive"
+                  className="mt-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-sm"
+                  role="alert"
+                >
+                  {originalLinkError}
+                </p>
+              ) : null}
             </div>
-          </dl>
+          </header>
 
           {detail.data.skills.length > 0 ? (
-            <section className="mt-8" aria-labelledby="job-skills-heading">
-              <h3 className="text-sm font-medium" id="job-skills-heading">
+            <section className="mt-6" aria-labelledby="job-skills-heading">
+              <h3 className="text-base font-semibold" id="job-skills-heading">
                 {t("skills")}
               </h3>
               <ul className="mt-3 flex flex-wrap gap-2">
@@ -135,7 +199,7 @@ export function JobDetail({
                     className="rounded-[var(--radius-md)] border border-[var(--border)] px-2.5 py-1 text-xs text-[var(--text-secondary)]"
                     key={skill}
                   >
-                    {skill}
+                    {normalizeSkillLabel(skill)}
                   </li>
                 ))}
               </ul>
@@ -144,20 +208,43 @@ export function JobDetail({
 
           <section
             aria-labelledby="job-description-heading"
-            className="mt-8 border-t border-[var(--border)] pt-5"
+            className="mt-7 border-t border-[var(--border)] pt-5"
           >
-            <h3 className="text-sm font-medium" id="job-description-heading">
+            <h3 className="text-base font-semibold" id="job-description-heading">
               {t("description")}
             </h3>
-            <p
-              className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-secondary)]"
-              data-testid="job-description"
-            >
-              {detail.data.description}
-            </p>
+            <JobDescription description={detail.data.description} />
           </section>
 
-          <div className="mt-8 rounded-[var(--radius-lg)] border border-[var(--border)] p-4">
+          <details className="group mt-7 border-t border-[var(--border)] pt-4 text-xs text-[var(--text-secondary)]">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-[var(--radius-sm)] py-1 font-medium hover:text-[var(--text)]">
+              <ChevronDown
+                aria-hidden="true"
+                className="size-3.5 transition-transform group-open:rotate-180"
+              />
+              {t("technicalDetails")}
+            </summary>
+            <dl className="mt-2 space-y-2 rounded-[var(--radius-md)] bg-[var(--bg-secondary)] p-3">
+              <div className="flex justify-between gap-4">
+                <dt>{t("source")}</dt>
+                <dd className="text-right text-[var(--text)]">
+                  {formatSourceLabel(detail.data.source)}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt>{t("attribution")}</dt>
+                <dd className="text-right text-[var(--text)]">{detail.data.attribution}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt>{t("snapshotVersion")}</dt>
+                <dd className="text-right text-[var(--text)]">
+                  {detail.data.snapshotVersion}
+                </dd>
+              </div>
+            </dl>
+          </details>
+
+          <div className="mt-7 rounded-[var(--radius-lg)] border border-[var(--border)] p-4">
             <p className="flex items-center gap-2 text-sm font-medium">
               <Bot aria-hidden="true" className="size-4" />
               Emmy
@@ -170,10 +257,20 @@ export function JobDetail({
       ) : null}
       {!isLoading && detail.isError && selectedJob ? (
         <article>
-          <p className="text-xs text-[var(--text-secondary)]">{selectedJob.company}</p>
-          <h2 className="mt-2 text-xl font-semibold tracking-[-0.02em]">
-            {selectedJob.title}
-          </h2>
+          <div className="flex items-start gap-3">
+            <div
+              aria-hidden="true"
+              className="grid size-11 shrink-0 place-items-center rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-secondary)] text-base font-semibold"
+            >
+              {selectedJob.company.slice(0, 1).toLocaleUpperCase("ru-RU")}
+            </div>
+            <div>
+              <p className="text-sm font-medium">{selectedJob.company}</p>
+              <h2 className="mt-1 text-2xl font-semibold tracking-[-0.025em]">
+                {normalizeJobTitle(selectedJob.title)}
+              </h2>
+            </div>
+          </div>
           <p
             aria-live="assertive"
             className="mt-5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-sm"

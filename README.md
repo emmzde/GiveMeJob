@@ -25,7 +25,12 @@ GiveMeJob! — open-source portfolio pet-project: локальное Windows-п�
 - versioned manifest, SHA-256 и Zstandard archive;
 - строгий локальный Rust IPC для статуса, FTS5-поиска, detail и facets;
 - backend-фильтры, сортировки relevance/newest/salary и cursor/keyset;
-- React shell с лентой, карточкой, фильтрами-заготовками и offline state;
+- React shell с доступными фильтрами, сортировкой рядом с выдачей, active
+  chips, cursor pagination, виртуализированной лентой и отдельной карточкой;
+- локальные skill/location autocomplete с keyboard navigation и популярными
+  значениями до ввода;
+- выбранное состояние вакансии, адаптивные панели, структурированное
+  plain-text описание и безопасный переход на оригинал;
 - Windows-only Tauri configuration с NSIS и portable ZIP workflow.
 
 Пользовательский runtime не требует Docker, Python, PostgreSQL или сервера.
@@ -80,8 +85,10 @@ uv run pytest -q
 ```
 
 `pnpm quality` последовательно запускает существующие frontend, Rust и Python
-gates. Exact-SHA baseline M2 сохранён в
-[`docs/evidence/M2_BASELINE_74A8588.md`](docs/evidence/M2_BASELINE_74A8588.md).
+gates. Current exact-SHA catalog baseline сохранён в
+[`docs/evidence/M2_CATALOG_BASELINE_B30162A.md`](docs/evidence/M2_CATALOG_BASELINE_B30162A.md),
+а состояние filter/feed/detail UI — в
+[`docs/evidence/M2_FILTER_UI_2026-08-01.md`](docs/evidence/M2_FILTER_UI_2026-08-01.md).
 
 Однократный export из сохранённого frozen volume:
 

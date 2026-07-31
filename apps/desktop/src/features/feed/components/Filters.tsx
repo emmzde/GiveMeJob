@@ -14,7 +14,6 @@ import {
   formatSourceLabel,
   locationKindLabels,
   remoteModeLabels,
-  searchSortLabels,
   seniorityLabels,
 } from "@/features/feed/searchLabels";
 import {
@@ -23,7 +22,6 @@ import {
   employmentTypeSchema,
   getFilterOptions,
   remoteModeSchema,
-  searchSortSchema,
   senioritySchema,
 } from "@/lib/catalog";
 import type {
@@ -37,6 +35,7 @@ interface FiltersProps {
   disabled: boolean;
   draft: SearchDraft;
   onChange(draft: SearchDraft): void;
+  visible: boolean;
 }
 
 interface CheckboxOption<T extends string> {
@@ -66,17 +65,17 @@ function CheckboxList<T extends string>({
   values,
 }: CheckboxListProps<T>) {
   return (
-    <div className="max-h-48 space-y-0.5 overflow-y-auto pr-1">
+    <div className="scroll-region max-h-48 space-y-0.5 overflow-y-auto pr-1">
       {options.map((option) => {
         const checked = values.includes(option.value);
         return (
           <label
-            className="flex min-h-8 cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-1.5 py-1 text-xs hover:bg-[var(--bg-hover)]"
+            className="flex min-h-10 cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-1.5 py-1 text-xs hover:bg-[var(--bg-hover)]"
             key={option.value}
           >
             <input
               checked={checked}
-              className="size-3.5 accent-[var(--text)]"
+              className="size-4 accent-[var(--accent)]"
               disabled={disabled}
               onChange={() =>
                 onChange(
@@ -168,7 +167,7 @@ function SalaryMinimumInput({ disabled, onCommit, value }: SalaryMinimumInputPro
   );
 }
 
-export function Filters({ disabled, draft, onChange }: FiltersProps) {
+export function Filters({ disabled, draft, onChange, visible }: FiltersProps) {
   const screen = useAppUiStore((state) => state.screen);
   const [skillQuery, setSkillQuery] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
@@ -179,13 +178,13 @@ export function Filters({ disabled, draft, onChange }: FiltersProps) {
     retry: false,
   });
   const skillSuggestions = useQuery({
-    enabled: !disabled && skillQuery.trim().length > 0,
+    enabled: !disabled,
     queryFn: () => autocompleteSkills(skillQuery, 20),
     queryKey: ["catalog", "autocomplete", "skills", skillQuery],
     retry: false,
   });
   const locationSuggestions = useQuery({
-    enabled: !disabled && locationQuery.trim().length > 0,
+    enabled: !disabled,
     queryFn: () => autocompleteLocations(locationQuery, 20),
     queryKey: ["catalog", "autocomplete", "locations", locationQuery],
     retry: false,
@@ -229,9 +228,21 @@ export function Filters({ disabled, draft, onChange }: FiltersProps) {
       secondaryLabel: locationKindLabels[suggestion.kind],
       value: suggestion.canonicalValue,
     }));
+  const activeFilterCount =
+    draft.remoteModes.length +
+    draft.skills.length +
+    draft.locations.length +
+    draft.seniorities.length +
+    draft.employmentTypes.length +
+    draft.sources.length +
+    (draft.salaryMinUsdYear === undefined ? 0 : 1) +
+    (draft.salaryKnownOnly ? 1 : 0);
 
   return (
-    <aside className="h-[calc(100vh-3.5rem)] overflow-y-auto border-r border-[var(--border)] bg-[var(--bg-secondary)] p-3">
+    <aside
+      className="filter-panel scroll-region h-[calc(100vh-3.5rem)] overflow-y-auto border-r border-[var(--border)] bg-[var(--bg-secondary)] p-3"
+      data-visible={visible ? "true" : "false"}
+    >
       <nav aria-label="Основная навигация" className="space-y-1">
         <div
           aria-current={screen === "search" ? "page" : undefined}
@@ -255,32 +266,24 @@ export function Filters({ disabled, draft, onChange }: FiltersProps) {
         ))}
       </nav>
 
-      <div className="mt-8 border-t border-[var(--border)] pt-4">
-        <p className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+      <div className="mt-6 border-t border-[var(--border)] pt-3">
+        <p className="flex min-h-9 items-center gap-2 px-1 text-xs font-semibold text-[var(--text)]">
           <SlidersHorizontal aria-hidden="true" className="size-4" />
           {t("filters")}
+          {activeFilterCount > 0 ? (
+            <span
+              aria-label={`${t("activeFiltersCount")}: ${activeFilterCount}`}
+              className="ml-auto rounded-full bg-[var(--accent-muted)] px-2 py-0.5 text-[10px] text-[var(--accent)]"
+            >
+              {activeFilterCount}
+            </span>
+          ) : null}
         </p>
 
-        <div className="mt-4 space-y-5">
-          <FilterSection title={t("sort")}>
-            <select
-              aria-label={t("sort")}
-              className="h-8 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-raised)] px-2 text-xs"
-              disabled={disabled}
-              onChange={(event) =>
-                onChange({ ...draft, sort: searchSortSchema.parse(event.target.value) })
-              }
-              value={draft.sort}
-            >
-              {searchSortSchema.options.map((sort) => (
-                <option key={sort} value={sort}>
-                  {searchSortLabels[sort]}
-                </option>
-              ))}
-            </select>
-          </FilterSection>
-
+        <div className="mt-2 space-y-1">
           <FilterSection
+            activeCount={draft.remoteModes.length}
+            defaultOpen
             description={t("multipleChoiceHint")}
             title={t("workMode")}
           >
@@ -292,7 +295,7 @@ export function Filters({ disabled, draft, onChange }: FiltersProps) {
             />
           </FilterSection>
 
-          <FilterSection title={t("skillsFilter")}>
+          <FilterSection activeCount={draft.skills.length} defaultOpen title={t("skillsFilter")}>
             <FilterAutocomplete
               disabled={disabled}
               isLoading={skillSuggestions.isFetching}
@@ -308,7 +311,7 @@ export function Filters({ disabled, draft, onChange }: FiltersProps) {
             />
           </FilterSection>
 
-          <FilterSection title={t("locationsFilter")}>
+          <FilterSection activeCount={draft.locations.length} defaultOpen title={t("locationsFilter")}>
             <FilterAutocomplete
               disabled={disabled}
               isLoading={locationSuggestions.isFetching}
@@ -324,7 +327,7 @@ export function Filters({ disabled, draft, onChange }: FiltersProps) {
             />
           </FilterSection>
 
-          <FilterSection title={t("seniority")}>
+          <FilterSection activeCount={draft.seniorities.length} title={t("seniority")}>
             <CheckboxList<Seniority>
               disabled={disabled}
               onChange={(seniorities) => onChange({ ...draft, seniorities })}
@@ -333,7 +336,7 @@ export function Filters({ disabled, draft, onChange }: FiltersProps) {
             />
           </FilterSection>
 
-          <FilterSection title={t("employment")}>
+          <FilterSection activeCount={draft.employmentTypes.length} title={t("employment")}>
             <CheckboxList<EmploymentType>
               disabled={disabled}
               onChange={(employmentTypes) => onChange({ ...draft, employmentTypes })}
@@ -342,7 +345,10 @@ export function Filters({ disabled, draft, onChange }: FiltersProps) {
             />
           </FilterSection>
 
-          <FilterSection title={t("salary")}>
+          <FilterSection
+            activeCount={(draft.salaryMinUsdYear === undefined ? 0 : 1) + (draft.salaryKnownOnly ? 1 : 0)}
+            title={t("salary")}
+          >
             <div className="space-y-2">
               <SalaryMinimumInput
                 disabled={disabled}
@@ -352,10 +358,10 @@ export function Filters({ disabled, draft, onChange }: FiltersProps) {
                 }
                 value={draft.salaryMinUsdYear}
               />
-              <label className="flex cursor-pointer items-start gap-2 rounded-[var(--radius-sm)] px-1 py-1 text-xs hover:bg-[var(--bg-hover)]">
+              <label className="flex min-h-10 cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-1 py-1 text-xs hover:bg-[var(--bg-hover)]">
                 <input
                   checked={draft.salaryKnownOnly}
-                  className="mt-0.5 size-3.5 accent-[var(--text)]"
+                  className="size-4 accent-[var(--accent)]"
                   disabled={disabled}
                   onChange={(event) =>
                     onChange({ ...draft, salaryKnownOnly: event.target.checked })
@@ -367,7 +373,7 @@ export function Filters({ disabled, draft, onChange }: FiltersProps) {
             </div>
           </FilterSection>
 
-          <FilterSection title={t("sources")}>
+          <FilterSection activeCount={draft.sources.length} title={t("sources")}>
             {disabled ? (
               <p className="text-xs text-[var(--text-secondary)]" role="status">
                 {t("sourceOptionsUnavailable")}

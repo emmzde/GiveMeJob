@@ -3,7 +3,6 @@ import {
   employmentTypeLabels,
   formatSourceLabel,
   remoteModeLabels,
-  searchSortLabels,
   seniorityLabels,
 } from "@/features/feed/searchLabels";
 import { t } from "@/lib/i18n";
@@ -91,13 +90,6 @@ export function getActiveFilterChips(draft: SearchDraft): ActiveFilterChip[] {
         ...current,
         sources: current.sources.filter((value) => value !== source),
       }),
-    });
-  }
-  if (draft.sort !== "relevance") {
-    chips.push({
-      id: "sort",
-      label: `${t("sort")}: ${searchSortLabels[draft.sort]}`,
-      remove: (current) => ({ ...current, sort: "relevance" }),
     });
   }
   return chips;

@@ -1,6 +1,6 @@
 # GiveMeJob! — метрики snapshot и Windows MVP
 
-Последнее обновление: 31 июля 2026 года.
+Последнее обновление: 1 августа 2026 года.
 
 Этот документ задаёт воспроизводимые acceptance-проверки. Старые
 production-пороги freshness, salary coverage и embedding coverage отменены.
@@ -334,6 +334,21 @@ Filter/location/salary corpus benchmark от 31 июля 2026 года:
   не улучшающий обязательный FTS pipeline; schema и artifact не менялись.
 
 Полная запись: [`evidence/M2_FILTERS_SQL_PERFORMANCE_2026-07-31.md`](evidence/M2_FILTERS_SQL_PERFORMANCE_2026-07-31.md).
+
+Автоматическая проверка M2 filter/feed/detail UI от 1 августа 2026 года:
+
+- TypeScript typecheck, ESLint и production web build — pass;
+- Vitest — 81 passed;
+- Rust tests — 71 passed, 2 intentionally ignored heavy gates;
+- exact payload tests покрывают каждый filter/sort control, combined
+  filter/sort/reset и следующую cursor page;
+- component tests подтверждают keyboard autocomplete/feed navigation и
+  virtualization при количестве больше 50.
+
+Это подтверждает реализацию UI-контракта, но не заменяет измерения feed scroll,
+cold first query, repeated startup и steady-state RAM. До записи этих значений
+в воспроизводимой Windows-среде M2 остаётся открытым. Подробная запись:
+[`evidence/M2_FILTER_UI_2026-08-01.md`](evidence/M2_FILTER_UI_2026-08-01.md).
 
 First-run распаковка измеряется отдельно и не входит в repeated startup.
 

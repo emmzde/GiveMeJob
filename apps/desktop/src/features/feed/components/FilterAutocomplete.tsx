@@ -1,6 +1,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Search } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 
 import { t } from "@/lib/i18n";
@@ -61,6 +61,12 @@ export function SuggestionList({
     initialRect: { height: 220, width: 260 },
     overscan: 3,
   });
+
+  useEffect(() => {
+    if (suggestions.length > VIRTUALIZATION_THRESHOLD && activeIndex >= 0) {
+      virtualizer.scrollToIndex(activeIndex, { align: "auto" });
+    }
+  }, [activeIndex, suggestions.length, virtualizer]);
 
   function renderOption(suggestion: FilterSuggestion, index: number) {
     return (
@@ -132,7 +138,7 @@ export function FilterAutocomplete({
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const trimmedQuery = query.trim();
-  const showPopup = isOpen && trimmedQuery.length > 0;
+  const showPopup = isOpen;
   const boundedActiveIndex = activeIndex < suggestions.length ? activeIndex : -1;
 
   function select(suggestion: FilterSuggestion): void {
@@ -179,7 +185,7 @@ export function FilterAutocomplete({
 
   return (
     <div className="relative">
-      <label className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-raised)] px-2">
+      <label className="flex min-h-9 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-raised)] px-2">
         <Search aria-hidden="true" className="size-3.5 shrink-0 text-[var(--text-tertiary)]" />
         <span className="sr-only">{label}</span>
         <input
@@ -191,7 +197,7 @@ export function FilterAutocomplete({
           aria-autocomplete="list"
           aria-controls={showPopup ? listboxId : undefined}
           aria-expanded={showPopup}
-          className="h-8 min-w-0 flex-1 bg-transparent text-xs placeholder:text-[var(--text-tertiary)]"
+          className="h-9 min-w-0 flex-1 bg-transparent text-xs placeholder:text-[var(--text-tertiary)]"
           disabled={disabled}
           maxLength={100}
           onBlur={() => setIsOpen(false)}
@@ -218,12 +224,19 @@ export function FilterAutocomplete({
               {t("suggestionsEmpty")}
             </p>
           ) : (
-            <SuggestionList
-              activeIndex={boundedActiveIndex}
-              id={listboxId}
-              onSelect={select}
-              suggestions={suggestions}
-            />
+            <>
+              {trimmedQuery.length === 0 ? (
+                <p className="border-b border-[var(--border)] px-2 py-1.5 text-[10px] font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+                  {t("popularSuggestions")}
+                </p>
+              ) : null}
+              <SuggestionList
+                activeIndex={boundedActiveIndex}
+                id={listboxId}
+                onSelect={select}
+                suggestions={suggestions}
+              />
+            </>
           )}
         </div>
       ) : null}

@@ -5,7 +5,10 @@
 D0 и M1 завершены. В `config/catalog-manifest.json` зафиксирован проверенный
 snapshot из 78 719 вакансий. Текущий этап — M2: offline search и desktop shell.
 Backend-фильтры, search correctness, сортировки relevance/newest/salary и
-cursor/keyset готовы; UI wiring и относящийся к M3 match-sort ещё не готовы.
+cursor/keyset готовы. Filter/sort UI, active chips, local autocomplete,
+cursor pagination, виртуализированная лента и job detail подключены к строгому
+IPC-контракту. M2 остаётся в работе до воспроизводимых UI/performance замеров;
+относящийся к M3 match-sort не реализован.
 GitHub Release отложен до M5; актуальный gate описан в
 `docs/RELEASE_STATUS.md`.
 
@@ -131,7 +134,8 @@ Artifact находится в `.artifacts/` и не коммитится. Postg
 
 ## Порядок этапов
 
-1. M2 — полноценные фильтры, сортировки, виртуализация и search benchmark.
+1. M2 — завершить keyboard/light-dark/reduced-motion acceptance и измерить
+   feed scroll, cold query, repeated startup и steady-state RAM.
 2. M3 — профиль, shortlist и детерминированный match-score.
 3. M4 — Emmy, Rust `LLMRouter`, пять разрешённых tools и BYOK.
 4. M5 — NSIS, portable ZIP, updater и public release.

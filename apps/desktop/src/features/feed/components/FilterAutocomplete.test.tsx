@@ -6,6 +6,7 @@ import {
   SuggestionList,
 } from "@/features/feed/components/FilterAutocomplete";
 import type { FilterSuggestion } from "@/features/feed/components/FilterAutocomplete";
+import { t } from "@/lib/i18n";
 
 const suggestions: FilterSuggestion[] = [
   { count: 100, label: "Rust", value: "Rust" },
@@ -13,6 +14,25 @@ const suggestions: FilterSuggestion[] = [
 ];
 
 describe("FilterAutocomplete", () => {
+  it("shows popular IPC suggestions on focus before any text is entered", () => {
+    render(
+      <FilterAutocomplete
+        isLoading={false}
+        label="Навыки"
+        onQueryChange={() => undefined}
+        onSelect={() => undefined}
+        placeholder="Навык"
+        query=""
+        suggestions={suggestions}
+      />,
+    );
+
+    fireEvent.focus(screen.getByRole("combobox", { name: "Навыки" }));
+
+    expect(screen.getByText(t("popularSuggestions"))).toBeInTheDocument();
+    expect(screen.getAllByRole("option")).toHaveLength(2);
+  });
+
   it("supports Arrow keys and Enter while keeping focus in the combobox", () => {
     const onSelect = vi.fn();
     render(

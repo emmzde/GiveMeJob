@@ -13,7 +13,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "@/app/App";
 import { createAppQueryClient } from "@/app/queryClient";
 import { resetAppUiStore } from "@/app/store/appUiStore";
-import { createSearchQuery, jobIdSchema } from "@/lib/catalog";
+import {
+  createSearchQuery,
+  jobIdSchema,
+  searchCursorSchema,
+} from "@/lib/catalog";
 import type {
   CatalogStatus,
   FilterOptions,
@@ -447,9 +451,7 @@ describe("App", () => {
     render(<App />);
     await screen.findByRole("heading", { level: 2, name: sampleJob.title });
 
-    fireEvent.change(screen.getByRole("combobox", { name: t("sort") }), {
-      target: { value: "salary" },
-    });
+    fireEvent.click(screen.getByRole("radio", { name: t("sortSalary") }));
 
     await expectLatestSearchPayload({ sort: "salary" });
   });
@@ -558,9 +560,10 @@ describe("App", () => {
     });
     fireEvent.click(screen.getByRole("checkbox", { name: t("remoteModeHybrid") }));
     fireEvent.click(screen.getByRole("checkbox", { name: t("employmentContract") }));
-    fireEvent.change(screen.getByRole("combobox", { name: t("sort") }), {
-      target: { value: "newest" },
+    await waitFor(() => {
+      expect(screen.getByRole("radio", { name: t("sortNewest") })).not.toBeDisabled();
     });
+    fireEvent.click(screen.getByRole("radio", { name: t("sortNewest") }));
 
     await expectLatestSearchPayload({
       text: "rust platform",
@@ -570,7 +573,7 @@ describe("App", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: t("clearAllFilters") }));
 
-    await expectLatestSearchPayload({ text: "rust platform" });
+    await expectLatestSearchPayload({ text: "rust platform", sort: "newest" });
     expect(screen.getByRole("textbox", { name: t("searchPlaceholder") })).toHaveValue(
       "rust platform",
     );
@@ -582,6 +585,12 @@ describe("App", () => {
     await screen.findByRole("heading", { level: 2, name: sampleJob.title });
 
     expect(catalogMocks.getLocalJob).toHaveBeenCalledWith(sampleJob.id);
+    const selectedFeedItem = screen.getByRole("button", {
+      name: /Senior Rust Engineer/,
+    });
+    expect(selectedFeedItem).toHaveAttribute("aria-current", "true");
+    expect(selectedFeedItem).toHaveAttribute("data-selected", "true");
+    expect(screen.getByTestId("company-monogram")).toHaveTextContent("L");
     expect(screen.queryByText(t("shortlist"))).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: `${t("profile")} — ${t("later")}` }),
@@ -589,8 +598,27 @@ describe("App", () => {
     expect(
       screen.getByRole("button", { name: `${t("emmy")} — ${t("later")}` }),
     ).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: t("openOriginal") }));
+    const originalButton = screen.getByRole("button", { name: t("openOriginal") });
+    expect(originalButton).toHaveClass("bg-[var(--accent)]", "text-[var(--on-accent)]");
+    fireEvent.click(originalButton);
     expect(catalogMocks.openOriginalJob).toHaveBeenCalledWith(sampleJob.id);
+  });
+
+  it("keeps technical provenance collapsed until the user requests it", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+
+    const summary = screen.getByText(t("technicalDetails"));
+    const disclosure = summary.closest("details");
+    expect(disclosure).not.toBeNull();
+    expect(disclosure).not.toHaveAttribute("open");
+
+    fireEvent.click(summary);
+
+    expect(disclosure).toHaveAttribute("open");
+    const provenanceValues = within(disclosure!).getAllByText("Greenhouse");
+    expect(provenanceValues).toHaveLength(2);
+    for (const value of provenanceValues) expect(value).toBeVisible();
   });
 
   it("renders untrusted descriptions as inert text without active links", async () => {
@@ -626,7 +654,7 @@ describe("App", () => {
 
   it("renders through the configured Russian i18n layer", () => {
     expect(defaultLocale).toBe("ru");
-    expect(t("offlineReady")).toBe("Работает без сети");
+    expect(t("offlineReady")).toBe("Офлайн");
   });
 
   it("settles the loading announcement after a successful search", async () => {
@@ -645,5 +673,26 @@ describe("App", () => {
     render(<App />);
 
     expect(await screen.findByText(`1 ${t("resultsFound")}`)).toBeInTheDocument();
+  });
+
+  it("loads the next cursor page with the exact IPC payload", async () => {
+    const cursor = searchCursorSchema.parse("next-page");
+    const secondJob: JobSummary = {
+      ...sampleJob,
+      id: jobIdSchema.parse("2"),
+      title: "Second local job",
+    };
+    catalogMocks.searchLocalJobs
+      .mockResolvedValueOnce({ items: [sampleJob], nextCursor: cursor, total: 2 })
+      .mockResolvedValueOnce({ items: [secondJob], nextCursor: null, total: 2 });
+
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: t("loadMore") }));
+
+    expect(await screen.findByText(secondJob.title)).toBeInTheDocument();
+    expect(catalogMocks.searchLocalJobs.mock.calls[1]?.[0]).toEqual({
+      ...createSearchQuery(),
+      cursor,
+    });
   });
 });

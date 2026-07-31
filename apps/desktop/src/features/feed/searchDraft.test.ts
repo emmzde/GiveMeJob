@@ -32,7 +32,7 @@ describe("search draft mapper", () => {
     expect(draft).toEqual(snapshot);
   });
 
-  it("resets filters and sort while preserving the unsubmitted search text", () => {
+  it("resets filters while preserving the unsubmitted search text and separate sort", () => {
     const draft = createSearchDraft({
       text: "rust platform",
       skills: ["Rust"],
@@ -46,6 +46,8 @@ describe("search draft mapper", () => {
       sort: "salary",
     });
 
-    expect(resetSearchFilters(draft)).toEqual(createSearchDraft({ text: "rust platform" }));
+    expect(resetSearchFilters(draft)).toEqual(
+      createSearchDraft({ text: "rust platform", sort: "salary" }),
+    );
   });
 });

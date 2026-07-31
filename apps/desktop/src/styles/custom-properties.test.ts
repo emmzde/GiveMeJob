@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import tokenCss from "../../../../docs/design-tokens.css?raw";
+import indexCss from "@/styles/index.css?raw";
 
 const frontendSources = import.meta.glob<string>("../**/*.{css,ts,tsx}", {
   eager: true,
@@ -25,5 +26,11 @@ describe("CSS custom properties", () => {
     }
 
     expect(undefinedReferences).toEqual([]);
+  });
+
+  it("styles native scrollbars with semantic theme tokens", () => {
+    expect(indexCss).toContain("*::-webkit-scrollbar-thumb");
+    expect(indexCss).toContain("scrollbar-color: var(--text-tertiary) transparent");
+    expect(indexCss).toContain("background: var(--text-secondary)");
   });
 });

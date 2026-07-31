@@ -7,7 +7,7 @@ import { createSearchDraft } from "@/features/feed/searchDraft";
 import { t } from "@/lib/i18n";
 
 describe("ActiveFilterChips", () => {
-  it("builds one removable chip per active value and one for non-default sort", () => {
+  it("builds one removable chip per active filter value without duplicating sort", () => {
     const draft = createSearchDraft({
       remoteModes: ["remote", "hybrid"],
       salaryKnownOnly: true,
@@ -18,7 +18,6 @@ describe("ActiveFilterChips", () => {
       "remote:remote",
       "remote:hybrid",
       "salary:known",
-      "sort",
     ]);
   });
 
@@ -39,7 +38,7 @@ describe("ActiveFilterChips", () => {
     );
   });
 
-  it("clears filters and sort but preserves text", () => {
+  it("clears filters while preserving text and the separate sort control", () => {
     const onChange = vi.fn();
     const draft = createSearchDraft({
       text: "rust",
@@ -50,6 +49,8 @@ describe("ActiveFilterChips", () => {
 
     fireEvent.click(screen.getByRole("button", { name: t("clearAllFilters") }));
 
-    expect(onChange).toHaveBeenCalledWith(createSearchDraft({ text: "rust" }));
+    expect(onChange).toHaveBeenCalledWith(
+      createSearchDraft({ text: "rust", sort: "salary" }),
+    );
   });
 });

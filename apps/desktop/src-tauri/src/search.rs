@@ -343,7 +343,7 @@ pub(crate) fn search_catalog(
     };
     let order_by = match request.sort {
         SearchSort::Relevance if fts_query.is_some() => {
-            "ORDER BY bm25(jobs_fts, 8.0, 6.0, 3.0, 2.0, 1.0, 1.0), job.posted_at DESC, job.id"
+            "ORDER BY bm25(jobs_fts, 8.0, 6.0, 3.0, 2.0, 1.0, 1.0), job.id"
         }
         SearchSort::Relevance | SearchSort::Newest => "ORDER BY job.posted_at DESC, job.id",
         SearchSort::Salary => {
@@ -705,6 +705,13 @@ mod tests {
             .collect();
         assert_eq!(newest_ids, vec!["4", "3", "2", "1"]);
 
+        let empty_relevance_ids: Vec<String> = search_catalog(&connection, &search_query())
+            .expect("empty relevance search should succeed")
+            .into_iter()
+            .map(|job| job.id)
+            .collect();
+        assert_eq!(empty_relevance_ids, newest_ids);
+
         let mut salary = search_query();
         salary.sort = SearchSort::Salary;
         let salary_ids: Vec<String> = search_catalog(&connection, &salary)
@@ -713,6 +720,28 @@ mod tests {
             .map(|job| job.id)
             .collect();
         assert_eq!(salary_ids, vec!["1", "2", "4", "3"]);
+
+        connection
+            .execute(
+                "UPDATE jobs
+                 SET title = 'Tie', skills_text = 'Tie', company = 'Tie',
+                     location_text = 'Tie', description_text = 'Tie',
+                     search_aliases = 'Tie'
+                 WHERE id IN (3, 4)",
+                [],
+            )
+            .expect("tie-break fixture should update");
+        connection
+            .execute("INSERT INTO jobs_fts(jobs_fts) VALUES ('rebuild')", [])
+            .expect("FTS fixture should rebuild");
+        let mut tied_relevance = search_query();
+        tied_relevance.text = "Tie".to_owned();
+        let tied_ids: Vec<String> = search_catalog(&connection, &tied_relevance)
+            .expect("tied relevance search should succeed")
+            .into_iter()
+            .map(|job| job.id)
+            .collect();
+        assert_eq!(tied_ids, vec!["3", "4"]);
     }
 
     #[test]

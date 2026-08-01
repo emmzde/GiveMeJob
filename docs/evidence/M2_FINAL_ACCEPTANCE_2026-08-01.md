@@ -7,6 +7,8 @@
 ## Provenance
 
 - source commit: `7d75041963896c464c074b3732cd144488daa7af`;
+- M2 implementation/evidence commit:
+  `dbc1ca76f256b917056283faa0bf8c05633fc033`;
 - worktree во время измерений: dirty; clean-commit claim не делается;
 - catalog version: `1`, 78 719 jobs;
 - catalog SHA-256:
@@ -15,7 +17,7 @@
   `db206119a36ef47b32e72bcced9455b3d2bf1587d9f2075e65b24fe9b1e153fd`;
 - final machine-readable decision:
   [`m2/final-acceptance-v1-windows-2026-08-01.json`](m2/final-acceptance-v1-windows-2026-08-01.json),
-  SHA-256 `ce3fab808c08b03cdba8986133d3d16a21dd4e70c91c8a435c2c743fe3e8a61f`.
+  SHA-256 `71e888c15497847a22d2f962e3102c6a23739ea961e5971e76847b998dd2dd1d`.
 
 Environment: Windows `10.0.26200` build `26200`, AMD64, 13th Gen Intel Core
 i5-13420H, 16 961 822 720 bytes RAM, SKHynix HFS001TEJ4X112N NVMe SSD,

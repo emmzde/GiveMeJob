@@ -5,6 +5,7 @@
   "decision": "complete",
   "source": {
     "commit": "7d75041963896c464c074b3732cd144488daa7af",
+    "closureCommit": "dbc1ca76f256b917056283faa0bf8c05633fc033",
     "worktreeDirty": true,
     "note": "The measured implementation and evidence files were present in the explicitly recorded dirty worktree; no clean-commit claim is made."
   },

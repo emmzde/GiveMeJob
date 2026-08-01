@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import axe from "axe-core";
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,10 +10,13 @@ import { createAppQueryClient } from "@/app/queryClient";
 import { resetAppUiStore, useAppUiStore } from "@/app/store/appUiStore";
 import type { CatalogViewState } from "@/features/catalog/catalogStatus";
 import { CommandPalette } from "@/features/commands/CommandPalette";
+import { EmmyPanel } from "@/features/emmy/EmmyPanel";
 import { Feed } from "@/features/feed/components/Feed";
 import { Filters } from "@/features/feed/components/Filters";
 import { createSearchDraft } from "@/features/feed/searchDraft";
 import { JobDetail } from "@/features/job/components/JobDetail";
+import { ProfileView } from "@/features/profile/ProfileView";
+import { ShortlistView } from "@/features/shortlist/ShortlistView";
 import { jobIdSchema } from "@/lib/catalog";
 import type { FilterOptions, JobDetail as JobDetailData, JobSummary } from "@/lib/catalog";
 
@@ -23,6 +26,10 @@ const catalogMocks = vi.hoisted(() => ({
   getFilterOptions: vi.fn(),
   getLocalJob: vi.fn(),
   openOriginalJob: vi.fn(),
+}));
+const profileMocks = vi.hoisted(() => ({
+  getProfile: vi.fn(),
+  saveProfile: vi.fn(),
 }));
 
 vi.mock("@/lib/catalog", async (importOriginal) => {
@@ -35,6 +42,11 @@ vi.mock("@/lib/catalog", async (importOriginal) => {
     getLocalJob: catalogMocks.getLocalJob,
     openOriginalJob: catalogMocks.openOriginalJob,
   };
+});
+
+vi.mock("@/lib/profile", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/profile")>();
+  return { ...actual, getProfile: profileMocks.getProfile, saveProfile: profileMocks.saveProfile };
 });
 
 const job: JobSummary = {
@@ -127,7 +139,7 @@ async function expectNoViolations(surface: string, root: Element): Promise<void>
   ).toEqual([]);
 }
 
-describe("M2 axe smoke", () => {
+describe("desktop axe smoke", () => {
   beforeEach(() => {
     resetAppUiStore();
     catalogMocks.autocompleteLocations.mockResolvedValue([]);
@@ -135,6 +147,9 @@ describe("M2 axe smoke", () => {
     catalogMocks.getFilterOptions.mockResolvedValue(options);
     catalogMocks.getLocalJob.mockResolvedValue(detail);
     catalogMocks.openOriginalJob.mockResolvedValue(null);
+    profileMocks.getProfile.mockReset();
+    profileMocks.saveProfile.mockReset();
+    profileMocks.getProfile.mockResolvedValue(null);
   });
 
   it("has no detectable shell violations", async () => {
@@ -163,7 +178,7 @@ describe("M2 axe smoke", () => {
 
   it("has no detectable feed violations", async () => {
     useAppUiStore.getState().selectJob(job.id);
-    const view = render(
+    const view = renderWithQuery(
       <Feed
         canLoadNextPage={false}
         errorMessage={null}
@@ -224,6 +239,27 @@ describe("M2 axe smoke", () => {
     );
     const dialog = await screen.findByRole("dialog");
     await expectNoViolations("command dialog", dialog);
+    view.unmount();
+  });
+
+  it("has no detectable Emmy offline-panel violations", async () => {
+    const view = render(<EmmyPanel onClose={() => undefined} />);
+    const panel = screen.getByRole("complementary", { name: "Панель Emmy" });
+    await expectNoViolations("Emmy offline panel", panel);
+    view.unmount();
+  });
+
+  it("has no detectable profile-form violations", async () => {
+    const view = renderWithQuery(<ProfileView />);
+    fireEvent.click(await screen.findByRole("button", { name: "Создать профиль" }));
+    await expectNoViolations("profile form", view.container);
+    view.unmount();
+  });
+
+  it("has no detectable shortlist empty-state violations", async () => {
+    const view = renderWithQuery(<ShortlistView catalogVersion="1" />);
+    await screen.findByRole("heading", { level: 2 });
+    await expectNoViolations("shortlist empty state", view.container);
     view.unmount();
   });
 });

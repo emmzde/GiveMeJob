@@ -1,5 +1,4 @@
 import {
-  Bot,
   BriefcaseBusiness,
   ChartNoAxesColumnIncreasing,
   ChevronDown,
@@ -26,10 +25,13 @@ import {
 } from "@/features/feed/jobPresentation";
 import { JobDescription } from "@/features/job/components/JobDescription";
 import { useJobDetail } from "@/features/job/hooks/useJobDetail";
+import { MatchBreakdownCard } from "@/features/match/MatchBreakdownCard";
+import { useJobMatch } from "@/features/match/hooks";
+import { ShortlistButton } from "@/features/shortlist/ShortlistButton";
 import { openOriginalJob } from "@/lib/catalog";
 import type { JobId, JobSummary } from "@/lib/catalog";
 import { isEditableTarget } from "@/lib/keyboard";
-import { t } from "@/lib/i18n";
+import { getLocaleTag, t } from "@/lib/i18n";
 
 interface JobDetailProps {
   dataVisible: boolean;
@@ -57,7 +59,10 @@ export function JobDetail({
   onClose,
 }: JobDetailProps) {
   const selectedId = useAppUiStore((state) => state.selectedId);
+  const screen = useAppUiStore((state) => state.screen);
+  const setScreen = useAppUiStore((state) => state.setScreen);
   const detail = useJobDetail(selectedId);
+  const match = useJobMatch(selectedId);
   const [isOpeningOriginal, setIsOpeningOriginal] = useState(false);
   const [originalLinkError, setOriginalLinkError] = useState<string | null>(null);
   const openingOriginalFor = useRef<JobId | null>(null);
@@ -83,6 +88,7 @@ export function JobDetail({
   useEffect(() => {
     function handleOriginalShortcut(event: KeyboardEvent) {
       if (
+        screen === "search" &&
         event.ctrlKey &&
         !event.altKey &&
         !event.metaKey &&
@@ -97,14 +103,14 @@ export function JobDetail({
 
     window.addEventListener("keydown", handleOriginalShortcut);
     return () => window.removeEventListener("keydown", handleOriginalShortcut);
-  }, [detail.data, openSelectedOriginal]);
+  }, [detail.data, openSelectedOriginal, screen]);
 
   const isLoading = isInitialSearchLoading || (selectedId !== null && detail.isPending);
   const salary = detail.data ? formatSalaryRange(detail.data) : null;
 
   return (
     <aside
-      className="detail-panel scroll-region h-[calc(100vh-3.5rem)] min-w-0 overflow-y-auto p-5 pr-6"
+      className="detail-panel scroll-region min-h-0 min-w-0 overflow-y-auto p-5 pr-6"
       data-visible={dataVisible ? "true" : "false"}
     >
       {isLoading ? <JobDetailSkeleton /> : null}
@@ -117,25 +123,28 @@ export function JobDetail({
                 className="grid size-11 shrink-0 place-items-center rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-secondary)] text-base font-semibold"
                 data-testid="company-monogram"
               >
-                {detail.data.company.slice(0, 1).toLocaleUpperCase("ru-RU")}
+                {detail.data.company.slice(0, 1).toLocaleUpperCase(getLocaleTag())}
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-[var(--text)]">
                   {detail.data.company}
                 </p>
-                <h2 className="mt-1 text-2xl font-semibold leading-tight tracking-[-0.025em]">
+                <h2 className="mt-1 text-xl font-semibold leading-tight tracking-[-0.025em]">
                   {normalizeJobTitle(detail.data.title)}
                 </h2>
               </div>
-              <Button
-                aria-label={t("closeDetails")}
-                className="ml-auto size-9 shrink-0 px-0"
-                onClick={onClose}
-                type="button"
-                variant="ghost"
-              >
-                <X aria-hidden="true" className="size-4" />
-              </Button>
+              <div className="ml-auto flex shrink-0 items-center gap-1">
+                <ShortlistButton compact jobId={detail.data.id} />
+                <Button
+                  aria-label={t("closeDetails")}
+                  className="size-9 shrink-0 px-0"
+                  onClick={onClose}
+                  type="button"
+                  variant="ghost"
+                >
+                  <X aria-hidden="true" className="size-4" />
+                </Button>
+              </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-1.5 text-xs font-medium text-[var(--text-secondary)]">
               {detail.data.locationText ? (
@@ -196,6 +205,22 @@ export function JobDetail({
             </div>
           </header>
 
+          {!match.hasProfile ? (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2.5 text-xs text-[var(--text-secondary)]">
+              <span>{t("matchUnavailable")}</span>
+              <Button aria-label={t("openProfileForMatch")} onClick={() => setScreen("profile")} type="button" variant="outline">
+                {t("openProfileForMatch")}
+              </Button>
+            </div>
+          ) : null}
+          {match.hasProfile && match.isPending ? (
+            <div aria-label={t("matchLoading")} className="mt-6 h-28 animate-pulse rounded-[var(--radius-md)] bg-[var(--surface-1)]" role="status" />
+          ) : null}
+          {match.hasProfile && match.isError ? (
+            <p className="alert-card mt-5" role="alert">{t("matchError")}</p>
+          ) : null}
+          {match.data ? <MatchBreakdownCard breakdown={match.data} /> : null}
+
           {detail.data.skills.length > 0 ? (
             <section className="mt-6" aria-labelledby="job-skills-heading">
               <h3 className="text-base font-semibold" id="job-skills-heading">
@@ -251,16 +276,6 @@ export function JobDetail({
               </div>
             </dl>
           </details>
-
-          <div className="mt-7 rounded-[var(--radius-lg)] border border-[var(--border)] p-4">
-            <p className="flex items-center gap-2 text-sm font-medium">
-              <Bot aria-hidden="true" className="size-4" />
-              Emmy
-            </p>
-            <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-              {t("emmyHint")}
-            </p>
-          </div>
         </article>
       ) : null}
       {!isLoading && detail.isError && selectedJob ? (
@@ -270,11 +285,11 @@ export function JobDetail({
               aria-hidden="true"
               className="grid size-11 shrink-0 place-items-center rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-secondary)] text-base font-semibold"
             >
-              {selectedJob.company.slice(0, 1).toLocaleUpperCase("ru-RU")}
+              {selectedJob.company.slice(0, 1).toLocaleUpperCase(getLocaleTag())}
             </div>
             <div>
               <p className="text-sm font-medium">{selectedJob.company}</p>
-              <h2 className="mt-1 text-2xl font-semibold tracking-[-0.025em]">
+              <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em]">
                 {normalizeJobTitle(selectedJob.title)}
               </h2>
             </div>

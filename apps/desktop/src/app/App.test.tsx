@@ -28,6 +28,7 @@ import type {
   SearchQuery,
 } from "@/lib/catalog";
 import { defaultLocale, t } from "@/lib/i18n";
+import type { UserProfile } from "@/lib/profile";
 
 const catalogMocks = vi.hoisted(() => ({
   autocompleteLocations: vi.fn(),
@@ -39,6 +40,20 @@ const catalogMocks = vi.hoisted(() => ({
   recoverLocalCatalog: vi.fn(),
   searchLocalJobs: vi.fn(),
   watchCatalogStatus: vi.fn(),
+}));
+
+const profileMocks = vi.hoisted(() => ({
+  getProfile: vi.fn(),
+  saveProfile: vi.fn(),
+}));
+const shortlistMocks = vi.hoisted(() => ({
+  isShortlisted: vi.fn(),
+  listShortlist: vi.fn(),
+  setShortlist: vi.fn(),
+}));
+const matchMocks = vi.hoisted(() => ({
+  getMatchBreakdown: vi.fn(),
+  getMatchBreakdowns: vi.fn(),
 }));
 
 vi.mock("@/lib/catalog", async (importOriginal) => {
@@ -54,6 +69,34 @@ vi.mock("@/lib/catalog", async (importOriginal) => {
     recoverLocalCatalog: catalogMocks.recoverLocalCatalog,
     searchLocalJobs: catalogMocks.searchLocalJobs,
     watchCatalogStatus: catalogMocks.watchCatalogStatus,
+  };
+});
+
+vi.mock("@/lib/profile", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/profile")>();
+  return {
+    ...actual,
+    getProfile: profileMocks.getProfile,
+    saveProfile: profileMocks.saveProfile,
+  };
+});
+
+vi.mock("@/lib/shortlist", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/shortlist")>();
+  return {
+    ...actual,
+    isShortlisted: shortlistMocks.isShortlisted,
+    listShortlist: shortlistMocks.listShortlist,
+    setShortlist: shortlistMocks.setShortlist,
+  };
+});
+
+vi.mock("@/lib/match", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/match")>();
+  return {
+    ...actual,
+    getMatchBreakdown: matchMocks.getMatchBreakdown,
+    getMatchBreakdowns: matchMocks.getMatchBreakdowns,
   };
 });
 
@@ -124,6 +167,36 @@ const sampleDetail: JobDetail = {
   snapshotVersion: "1",
 };
 
+const savedProfile: UserProfile = {
+  preferredRoles: ["Rust Engineer"],
+  seniority: "senior",
+  skills: ["Rust (programming language)"],
+  country: "Azerbaijan",
+  city: "Baku",
+  remoteModes: ["remote"],
+  salaryMinUsdYear: 100_000,
+  version: 1,
+  createdAt: "2026-08-01T10:00:00.000Z",
+  updatedAt: "2026-08-01T10:00:00.000Z",
+};
+
+const sampleMatch = {
+  score: 88,
+  components: {
+    skills: 100,
+    role: 100,
+    seniority: 100,
+    location: 75,
+    salary: 60,
+  },
+  strengths: [
+    { component: "skills" as const, code: "skills_overlap" as const, values: ["Rust"] },
+  ],
+  gaps: [
+    { component: "salary" as const, code: "salary_below" as const, values: ["90000", "100000"] },
+  ],
+};
+
 function render(ui: ReactElement) {
   return testingLibraryRender(
     <QueryClientProvider client={createAppQueryClient()}>
@@ -160,6 +233,13 @@ describe("App", () => {
     catalogMocks.recoverLocalCatalog.mockReset();
     catalogMocks.searchLocalJobs.mockReset();
     catalogMocks.watchCatalogStatus.mockReset();
+    profileMocks.getProfile.mockReset();
+    profileMocks.saveProfile.mockReset();
+    shortlistMocks.isShortlisted.mockReset();
+    shortlistMocks.listShortlist.mockReset();
+    shortlistMocks.setShortlist.mockReset();
+    matchMocks.getMatchBreakdown.mockReset();
+    matchMocks.getMatchBreakdowns.mockReset();
     catalogMocks.autocompleteLocations.mockResolvedValue([]);
     catalogMocks.autocompleteSkills.mockResolvedValue([]);
     catalogMocks.getCatalogStatus.mockResolvedValue(readyStatus);
@@ -173,6 +253,177 @@ describe("App", () => {
       total: 1,
     });
     catalogMocks.watchCatalogStatus.mockResolvedValue(() => undefined);
+    profileMocks.getProfile.mockResolvedValue(null);
+    profileMocks.saveProfile.mockResolvedValue(savedProfile);
+    shortlistMocks.isShortlisted.mockResolvedValue(false);
+    shortlistMocks.listShortlist.mockResolvedValue([]);
+    shortlistMocks.setShortlist.mockImplementation(async ({ jobId, saved }) => ({
+      jobId,
+      saved,
+      catalogVersion: "1",
+      savedAt: saved ? "2026-08-01T12:00:00.000Z" : null,
+    }));
+    matchMocks.getMatchBreakdown.mockResolvedValue(null);
+    matchMocks.getMatchBreakdowns.mockResolvedValue([]);
+  });
+
+  it("opens Emmy as an honest offline panel without simulated chat", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+
+    fireEvent.click(screen.getByRole("button", { name: t("emmy") }));
+
+    const panel = await screen.findByRole("complementary", { name: t("emmyPanelLabel") });
+    expect(within(panel).getByText(t("emmyOfflineTitle"))).toBeInTheDocument();
+    expect(within(panel).getByRole("textbox", { name: t("emmyUnavailable") })).toBeDisabled();
+    expect(within(panel).queryByText(/searching|thinking/i)).not.toBeInTheDocument();
+  });
+
+  it("creates a real local profile with canonical catalog skills", async () => {
+    catalogMocks.autocompleteSkills.mockResolvedValue([
+      { label: "Rust", canonicalName: "Rust (programming language)", count: 1_240 },
+    ]);
+    render(<App />);
+    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    fireEvent.click(screen.getByRole("button", { name: t("profile") }));
+
+    expect(await screen.findByRole("heading", { level: 1, name: t("profileTitle") })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: t("createProfile") }));
+    fireEvent.change(screen.getByRole("textbox", { name: t("preferredRoles") }), { target: { value: "Rust Engineer" } });
+    fireEvent.click(screen.getByRole("button", { name: t("addRole") }));
+
+    const skillInput = screen.getByRole("combobox", { name: t("skills") });
+    fireEvent.change(skillInput, { target: { value: "Rust" } });
+    await screen.findByRole("option", { name: /Rust/ });
+    fireEvent.keyDown(skillInput, { key: "ArrowDown" });
+    fireEvent.keyDown(skillInput, { key: "Enter" });
+
+    fireEvent.change(screen.getByRole("combobox", { name: t("seniority") }), { target: { value: "senior" } });
+    fireEvent.change(screen.getByRole("textbox", { name: t("country") }), { target: { value: "Azerbaijan" } });
+    fireEvent.change(screen.getByRole("textbox", { name: t("city") }), { target: { value: "Baku" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: t("remoteModeRemote") }));
+    fireEvent.change(screen.getByRole("textbox", { name: t("minimumSalary") }), { target: { value: "100000" } });
+    fireEvent.click(screen.getByRole("button", { name: t("saveProfile") }));
+
+    await waitFor(() => {
+      expect(profileMocks.saveProfile.mock.calls[0]?.[0]).toEqual({
+        preferredRoles: ["Rust Engineer"],
+        seniority: "senior",
+        skills: ["Rust (programming language)"],
+        country: "Azerbaijan",
+        city: "Baku",
+        remoteModes: ["remote"],
+        salaryMinUsdYear: 100_000,
+      });
+    });
+    expect(await screen.findByText("Rust Engineer")).toBeInTheDocument();
+    expect(screen.getByText("Rust (programming language)")).toBeInTheDocument();
+  });
+
+  it("preserves an unsaved profile draft while switching screens", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    fireEvent.click(screen.getByRole("button", { name: t("profile") }));
+    fireEvent.click(await screen.findByRole("button", { name: t("createProfile") }));
+    const country = screen.getByRole("textbox", { name: t("country") });
+    fireEvent.change(country, { target: { value: "Azerbaijan" } });
+
+    fireEvent.click(screen.getByRole("button", { name: t("jobs") }));
+    fireEvent.click(screen.getByRole("button", { name: t("profile") }));
+
+    expect(screen.getByRole("textbox", { name: t("country") })).toHaveValue("Azerbaijan");
+  });
+
+  it("shows a field error and focuses the first invalid profile field", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    fireEvent.click(screen.getByRole("button", { name: t("profile") }));
+    fireEvent.click(await screen.findByRole("button", { name: t("createProfile") }));
+    const salary = screen.getByRole("textbox", { name: t("minimumSalary") });
+    fireEvent.change(salary, { target: { value: "not-a-number" } });
+    fireEvent.click(screen.getByRole("button", { name: t("saveProfile") }));
+
+    expect(await screen.findByText(t("profileSalaryError"))).toHaveAttribute("role", "alert");
+    await waitFor(() => expect(salary).toHaveFocus());
+    expect(salary).toHaveAttribute("aria-invalid", "true");
+    expect(profileMocks.saveProfile).not.toHaveBeenCalled();
+  });
+
+  it("retries a failed profile load without restarting the application", async () => {
+    profileMocks.getProfile.mockRejectedValue(new Error("user.sqlite unavailable"));
+    render(<App />);
+    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    fireEvent.click(screen.getByRole("button", { name: t("profile") }));
+
+    expect(await screen.findByText(t("profileLoadError"))).toBeInTheDocument();
+    profileMocks.getProfile.mockResolvedValue(null);
+    fireEvent.click(screen.getByRole("button", { name: t("profileRetry") }));
+    expect(await screen.findByRole("button", { name: t("createProfile") })).toBeInTheDocument();
+    expect(profileMocks.getProfile.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("saves a vacancy, opens the shortlist, and removes it with the S shortcut", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+
+    fireEvent.click(screen.getAllByRole("button", { name: t("saveToShortlist") })[0]!);
+    await waitFor(() => {
+      expect(shortlistMocks.setShortlist).toHaveBeenLastCalledWith({
+        jobId: sampleJob.id,
+        saved: true,
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: t("shortlist") }));
+    expect(await screen.findByRole("heading", { level: 1, name: t("shortlistTitle") })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Senior Rust Engineer/ })).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "s" });
+    await waitFor(() => {
+      expect(shortlistMocks.setShortlist).toHaveBeenLastCalledWith({
+        jobId: sampleJob.id,
+        saved: false,
+      });
+    });
+    expect(await screen.findByText(t("shortlistEmpty"))).toBeInTheDocument();
+  });
+
+  it("shows the deterministic match score on the card and in job details", async () => {
+    profileMocks.getProfile.mockResolvedValue(savedProfile);
+    matchMocks.getMatchBreakdowns.mockResolvedValue([
+      { jobId: sampleJob.id, breakdown: sampleMatch },
+    ]);
+    matchMocks.getMatchBreakdown.mockResolvedValue(sampleMatch);
+
+    render(<App />);
+
+    const breakdownHeading = await screen.findByRole("heading", {
+      level: 3,
+      name: t("matchBreakdown"),
+    });
+    const breakdown = breakdownHeading.closest("section");
+    expect(breakdown).not.toBeNull();
+    expect(within(breakdown!).getByText(`88% ${t("matchLabel")}`)).toBeInTheDocument();
+    expect(screen.getAllByText(/88%/).length).toBeGreaterThan(1);
+    expect(matchMocks.getMatchBreakdowns).toHaveBeenCalledWith([sampleJob.id]);
+    expect(matchMocks.getMatchBreakdown).toHaveBeenCalledWith(sampleJob.id);
+  });
+
+  it("keeps search-only shortcuts inactive on the profile screen", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    const selectedBeforeNavigation = useAppUiStore.getState().selectedId;
+
+    fireEvent.click(screen.getByRole("button", { name: t("profile") }));
+    const createButton = await screen.findByRole("button", { name: t("createProfile") });
+    createButton.focus();
+    fireEvent.keyDown(window, { key: "/" });
+    fireEvent.keyDown(window, { key: "j" });
+    fireEvent.keyDown(window, { ctrlKey: true, key: "Enter" });
+
+    expect(createButton).toHaveFocus();
+    expect(useAppUiStore.getState().selectedId).toBe(selectedBeforeNavigation);
+    expect(catalogMocks.openOriginalJob).not.toHaveBeenCalled();
   });
 
   it("shows the shell and an initial skeleton while the search is pending", () => {
@@ -196,7 +447,8 @@ describe("App", () => {
 
     render(<App />);
 
-    expect(await screen.findByText(t("catalogError"))).toHaveAttribute("role", "alert");
+    expect((await screen.findByText(t("catalogError"))).closest('[role="alert"]')).not.toBeNull();
+    expect(screen.getByText(t("statusLocalError"))).toBeInTheDocument();
     expect(catalogMocks.searchLocalJobs).not.toHaveBeenCalled();
   });
 
@@ -586,19 +838,15 @@ describe("App", () => {
     await screen.findByRole("heading", { level: 2, name: sampleJob.title });
 
     expect(catalogMocks.getLocalJob).toHaveBeenCalledWith(sampleJob.id);
-    const selectedFeedItem = screen.getByRole("option", {
+    const selectedFeedItem = screen.getByRole("button", {
       name: /Senior Rust Engineer/,
     });
     expect(selectedFeedItem).toHaveAttribute("aria-current", "true");
     expect(selectedFeedItem).toHaveAttribute("data-selected", "true");
     expect(screen.getByTestId("company-monogram")).toHaveTextContent("L");
-    expect(screen.queryByText(t("shortlist"))).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: `${t("profile")} — ${t("later")}` }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole("button", { name: `${t("emmy")} — ${t("later")}` }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: t("shortlist") })).toBeEnabled();
+    expect(screen.getByRole("button", { name: t("profile") })).toBeEnabled();
+    expect(screen.getByRole("button", { name: t("emmy") })).toBeEnabled();
     const originalButton = screen.getByRole("button", { name: t("openOriginal") });
     expect(originalButton).toHaveClass("bg-[var(--accent)]", "text-[var(--on-accent)]");
     fireEvent.click(originalButton);
@@ -810,14 +1058,14 @@ describe("App", () => {
     );
 
     render(<App />);
-    fireEvent.click(await screen.findByRole("option", { name: /Selected second job/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Selected second job/ }));
     expect(useAppUiStore.getState().selectedId).toBe(secondJob.id);
 
     fireEvent.click(screen.getByRole("button", { name: t("search") }));
     await waitFor(() => expect(catalogMocks.searchLocalJobs).toHaveBeenCalledTimes(2));
     expect(useAppUiStore.getState().selectedId).toBe(secondJob.id);
-    expect(screen.getByRole("option", { name: /Selected second job/ })).toHaveAttribute(
-      "aria-selected",
+    expect(screen.getByRole("button", { name: /Selected second job/ })).toHaveAttribute(
+      "aria-current",
       "true",
     );
 

@@ -7,7 +7,7 @@ import {
   MapPin,
   Wifi,
 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import { useAppUiStore } from "@/app/store/appUiStore";
 import {
@@ -19,9 +19,12 @@ import {
   remoteModeLabels,
   seniorityLabels,
 } from "@/features/feed/searchLabels";
+import { MatchBadge } from "@/features/match/MatchBadge";
+import { useJobMatches } from "@/features/match/hooks";
+import { ShortlistButton } from "@/features/shortlist/ShortlistButton";
 import type { JobSummary, SearchCursor } from "@/lib/catalog";
 import { isEditableTarget } from "@/lib/keyboard";
-import { t } from "@/lib/i18n";
+import { getLocaleTag, t } from "@/lib/i18n";
 
 interface FeedProps {
   jobs: readonly JobSummary[];
@@ -85,6 +88,9 @@ export function Feed({
 }: FeedProps) {
   const selectedId = useAppUiStore((state) => state.selectedId);
   const selectJob = useAppUiStore((state) => state.selectJob);
+  const screen = useAppUiStore((state) => state.screen);
+  const jobIds = useMemo(() => jobs.map((job) => job.id), [jobs]);
+  const matches = useJobMatches(jobIds);
   const scrollRef = useRef<HTMLDivElement>(null);
   const requestedCursor = useRef<SearchCursor | null>(null);
   const skeletonCount = isFetchingNextPage ? nextPageSkeletonRows : 0;
@@ -147,6 +153,7 @@ export function Feed({
   useEffect(() => {
     function handleNavigation(event: KeyboardEvent): void {
       if (
+        screen !== "search" ||
         event.ctrlKey ||
         event.altKey ||
         event.metaKey ||
@@ -181,51 +188,60 @@ export function Feed({
 
     window.addEventListener("keydown", handleNavigation);
     return () => window.removeEventListener("keydown", handleNavigation);
-  }, [jobs, selectJob, selectedId, shouldVirtualize, virtualizer]);
+  }, [jobs, screen, selectJob, selectedId, shouldVirtualize, virtualizer]);
 
   function renderJob(job: JobSummary, index: number) {
     const salary = formatSalaryRange(job);
     const postedDate = formatPostedDate(job.postedAt);
     const isSelected = selectedId === job.id;
     return (
-      <button
-        aria-current={isSelected ? "true" : undefined}
+      <div
         aria-posinset={index + 1}
-        aria-selected={isSelected}
         aria-setsize={jobs.length}
-        className={`block min-h-[112px] w-full border-l-[3px] px-4 py-3 text-left focus-visible:outline-2 focus-visible:outline-offset-[-2px] ${
-          isSelected
-            ? "border-l-[var(--accent)] bg-[var(--accent-muted)]"
-            : "border-l-transparent hover:bg-[var(--bg-hover)]"
-        }`}
-        data-job-id={job.id}
-        data-selected={isSelected ? "true" : "false"}
-        onClick={() => selectJob(job.id)}
-        role="option"
-        tabIndex={selectedId === job.id || (selectedId === null && index === 0) ? 0 : -1}
-        type="button"
+        className="relative min-h-[112px] border-b border-[var(--border)]"
+        role="listitem"
       >
-        <span className="flex items-start gap-3">
+        <button
+          aria-current={isSelected ? "true" : undefined}
+          className={`block min-h-[112px] w-full border px-4 py-3 pr-12 text-left focus-visible:outline-2 focus-visible:outline-offset-[-2px] ${
+            isSelected
+              ? "border-[var(--accent-border)] bg-[var(--accent-muted)]"
+              : "border-transparent hover:bg-[var(--bg-hover)]"
+          }`}
+          data-job-id={job.id}
+          data-selected={isSelected ? "true" : "false"}
+          onClick={() => selectJob(job.id)}
+          tabIndex={selectedId === job.id || (selectedId === null && index === 0) ? 0 : -1}
+          type="button"
+        >
+          <span className="flex items-start gap-3">
           <span
             aria-hidden="true"
             className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-raised)] text-xs font-semibold text-[var(--text-secondary)]"
           >
-            {job.company.slice(0, 1).toLocaleUpperCase("ru-RU") || (
+            {job.company.slice(0, 1).toLocaleUpperCase(getLocaleTag()) || (
               <Building2 className="size-4" />
             )}
           </span>
-          <span className="min-w-0 flex-1">
-            <span
-              className={`block break-words text-sm leading-5 ${isSelected ? "font-semibold" : "font-medium"}`}
-            >
-              {normalizeJobTitle(job.title)}
-            </span>
-            <span className="mt-0.5 block truncate text-xs font-medium text-[var(--text-secondary)]">
-              {job.company}
+            <span className="min-w-0 flex-1">
+              <span className="flex min-w-0 flex-wrap items-start gap-2">
+                <span
+                  className={`min-w-0 flex-1 break-words text-sm leading-5 ${isSelected ? "font-semibold" : "font-medium"}`}
+                >
+                  {normalizeJobTitle(job.title)}
+                </span>
+                <MatchBadge
+                  breakdown={matches.byJobId.get(job.id)}
+                  hasProfile={matches.hasProfile}
+                  isLoading={matches.isPending}
+                />
+              </span>
+              <span className="mt-0.5 block truncate text-xs font-medium text-[var(--text-secondary)]">
+                {job.company}
+              </span>
             </span>
           </span>
-        </span>
-        <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 pl-12 text-xs text-[var(--text-secondary)]">
+          <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 pl-12 text-xs text-[var(--text-secondary)]">
           <span className="inline-flex min-w-0 items-center gap-1">
             <MapPin aria-hidden="true" className="size-4 shrink-0" />
             <span className="max-w-48 truncate">{job.locationText || "—"}</span>
@@ -252,8 +268,12 @@ export function Feed({
               {t("posted")} {postedDate}
             </span>
           ) : null}
+          </span>
+        </button>
+        <span className="absolute right-2 top-2">
+          <ShortlistButton compact jobId={job.id} />
         </span>
-      </button>
+      </div>
     );
   }
 
@@ -282,17 +302,18 @@ export function Feed({
             aria-label={t("jobsList")}
             className="relative w-full"
             data-virtualized="true"
-            role="listbox"
+            role="list"
             style={{ height: virtualizer.getTotalSize() }}
           >
             {virtualRows.map((row) => {
               const job = jobs[row.index];
               return (
                 <div
-                  className="absolute left-0 top-0 w-full border-b border-[var(--border)]"
+                  className="absolute left-0 top-0 w-full"
                   data-index={row.index}
                   key={row.key}
                   ref={virtualizer.measureElement}
+                  role="presentation"
                   style={{ transform: `translateY(${row.start}px)` }}
                 >
                   {job ? (
@@ -307,11 +328,9 @@ export function Feed({
             })}
           </div>
         ) : (
-          <div aria-label={t("jobsList")} role="listbox">
+          <div aria-label={t("jobsList")} role="list">
             {jobs.map((job, index) => (
-              <div className="border-b border-[var(--border)]" key={job.id}>
-                {renderJob(job, index)}
-              </div>
+              <div key={job.id} role="presentation">{renderJob(job, index)}</div>
             ))}
             {Array.from({ length: skeletonCount }, (_, index) => (
               <div

@@ -11,6 +11,7 @@ pub(crate) enum IpcError {
     NotFound,
     OpenFailed,
     RecoveryFailed,
+    UserDataUnavailable,
     Internal,
 }
 
@@ -25,6 +26,7 @@ enum IpcErrorCode {
     NotFound,
     OpenFailed,
     RecoveryFailed,
+    UserDataUnavailable,
     Internal,
 }
 
@@ -49,6 +51,7 @@ impl<'de> Deserialize<'de> for IpcError {
             IpcErrorCode::NotFound => Self::NotFound,
             IpcErrorCode::OpenFailed => Self::OpenFailed,
             IpcErrorCode::RecoveryFailed => Self::RecoveryFailed,
+            IpcErrorCode::UserDataUnavailable => Self::UserDataUnavailable,
             IpcErrorCode::Internal => Self::Internal,
         })
     }
@@ -65,6 +68,7 @@ impl IpcError {
             Self::NotFound => "The requested vacancy was not found.",
             Self::OpenFailed => "The local catalog could not be opened.",
             Self::RecoveryFailed => "The previous local catalog could not be restored.",
+            Self::UserDataUnavailable => "The local user data could not be opened.",
             Self::Internal => "The local operation failed.",
         }
     }

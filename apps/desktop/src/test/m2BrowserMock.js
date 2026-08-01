@@ -42,6 +42,24 @@ const jobs = Array.from({ length: 240 }, (_, index) => ({
   source: index % 2 === 0 ? "greenhouse" : "lever",
   attribution: index % 2 === 0 ? "Greenhouse" : "Lever",
 }));
+let profile = null;
+let shortlist = [];
+
+function matchFor(jobId) {
+  return {
+    jobId,
+    breakdown: {
+      score: 88,
+      components: { skills: 100, role: 100, seniority: 100, location: 100, salary: 60 },
+      strengths: [
+        { component: "skills", code: "skills_overlap", values: ["Rust", "SQLite"] },
+      ],
+      gaps: [
+        { component: "salary", code: "salary_below", values: ["90000", "100000"] },
+      ],
+    },
+  };
+}
 
 benchmarkWindow.__M2_BROWSER_BENCHMARK__ = {
   openOriginalCalls: 0,
@@ -131,6 +149,37 @@ benchmarkWindow.__TAURI_INTERNALS__ = {
       benchmarkWindow.__M2_BROWSER_BENCHMARK__.openOriginalCalls += 1;
       updateTelemetry();
       return null;
+    }
+    if (command === "get_profile") return profile;
+    if (command === "save_profile") {
+      const request = typeof args.request === "object" && args.request !== null ? args.request : {};
+      const now = new Date().toISOString();
+      profile = {
+        ...request,
+        version: profile === null ? 1 : profile.version + 1,
+        createdAt: profile?.createdAt ?? now,
+        updatedAt: now,
+      };
+      return profile;
+    }
+    if (command === "list_shortlist") return shortlist;
+    if (command === "is_shortlisted") {
+      return shortlist.some((record) => record.jobId === args.jobId);
+    }
+    if (command === "set_shortlist") {
+      const request = typeof args.request === "object" && args.request !== null ? args.request : {};
+      shortlist = shortlist.filter((record) => record.jobId !== request.jobId);
+      const savedAt = request.saved ? new Date().toISOString() : null;
+      if (request.saved) {
+        shortlist.unshift({ jobId: request.jobId, catalogVersion: "1", savedAt });
+      }
+      return { jobId: request.jobId, saved: Boolean(request.saved), catalogVersion: "1", savedAt };
+    }
+    if (command === "get_match_breakdown") {
+      return profile === null ? null : matchFor(args.jobId).breakdown;
+    }
+    if (command === "get_match_breakdowns") {
+      return profile === null ? [] : (args.request?.jobIds ?? []).map(matchFor);
     }
     if (command === "autocomplete_skills" || command === "autocomplete_locations") return [];
     if (command === "recover_catalog") return null;

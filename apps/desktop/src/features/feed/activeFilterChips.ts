@@ -72,7 +72,7 @@ export function getActiveFilterChips(draft: SearchDraft): ActiveFilterChip[] {
     const salary = draft.salaryMinUsdYear;
     chips.push({
       id: "salary:min",
-      label: `от ${formatCount(salary)} USD/год`,
+      label: `${t("salaryFrom")} ${formatCount(salary)} USD${t("salaryPerYear")}`,
       remove: (current) => ({ ...current, salaryMinUsdYear: undefined }),
     });
   }

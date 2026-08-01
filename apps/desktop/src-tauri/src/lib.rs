@@ -5,11 +5,14 @@ use tauri::{Manager, State};
 mod benchmark;
 mod catalog;
 mod ipc;
+mod match_score;
 mod original;
 mod search;
+mod user;
 
 use catalog::{readonly_connection, CatalogHandle, CatalogManager, CatalogStatus};
 use ipc::IpcError;
+use match_score::{compute_match, JobMatch, MatchBatchRequest, MatchBreakdown};
 use original::open_original_with;
 use search::dto::{
     AutocompleteRequest, FilterOptions, JobDetail, JobId, JobSummary, LocationSuggestion,
@@ -19,6 +22,9 @@ use search::{
     autocomplete_locations as search_location_suggestions,
     autocomplete_skills as search_skill_suggestions, get_facets,
     get_filter_options as load_filter_options, get_job_detail, search_catalog,
+};
+use user::{
+    ProfileInput, SetShortlistInput, ShortlistRecord, ShortlistState, UserProfile, UserStore,
 };
 
 async fn run_catalog_query<T, F>(manager: CatalogManager, operation: F) -> Result<T, IpcError>
@@ -148,12 +154,128 @@ async fn autocomplete_locations(
     .await
 }
 
+#[tauri::command]
+async fn get_profile(state: State<'_, UserStore>) -> Result<Option<UserProfile>, IpcError> {
+    let store = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || store.get_profile())
+        .await
+        .map_err(|_| IpcError::Internal)?
+}
+
+#[tauri::command]
+async fn save_profile(
+    request: Value,
+    state: State<'_, UserStore>,
+) -> Result<UserProfile, IpcError> {
+    let input: ProfileInput =
+        serde_json::from_value(request).map_err(|_| IpcError::InvalidQuery)?;
+    let store = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || store.save_profile(input))
+        .await
+        .map_err(|_| IpcError::Internal)?
+}
+
+#[tauri::command]
+async fn list_shortlist(state: State<'_, UserStore>) -> Result<Vec<ShortlistRecord>, IpcError> {
+    let store = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || store.list_shortlist())
+        .await
+        .map_err(|_| IpcError::Internal)?
+}
+
+#[tauri::command]
+async fn is_shortlisted(
+    job_id: Value,
+    catalog_state: State<'_, CatalogManager>,
+    user_state: State<'_, UserStore>,
+) -> Result<bool, IpcError> {
+    let job_id = parse_job_id(job_id)?;
+    let catalog_version = catalog_state.inner().available_catalog()?.catalog_version;
+    let store = user_state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || store.is_shortlisted(&job_id, &catalog_version))
+        .await
+        .map_err(|_| IpcError::Internal)?
+}
+
+#[tauri::command]
+async fn set_shortlist(
+    request: Value,
+    catalog_state: State<'_, CatalogManager>,
+    user_state: State<'_, UserStore>,
+) -> Result<ShortlistState, IpcError> {
+    let input: SetShortlistInput =
+        serde_json::from_value(request).map_err(|_| IpcError::InvalidQuery)?;
+    let catalog = catalog_state.inner().available_catalog()?;
+    let store = user_state.inner().clone();
+    run_catalog_handle_query(catalog, move |connection, catalog_version| {
+        let exists: bool = connection
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM jobs WHERE id = ?1)",
+                [input.job_id.as_i64()?],
+                |row| row.get(0),
+            )
+            .map_err(|_| IpcError::CatalogCorrupt)?;
+        if !exists {
+            return Err(IpcError::NotFound);
+        }
+        store.set_shortlist(input, catalog_version)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn get_match_breakdown(
+    job_id: Value,
+    catalog_state: State<'_, CatalogManager>,
+    user_state: State<'_, UserStore>,
+) -> Result<Option<MatchBreakdown>, IpcError> {
+    let job_id = parse_job_id(job_id)?;
+    let store = user_state.inner().clone();
+    run_catalog_query(catalog_state.inner().clone(), move |connection, _| {
+        let Some(profile) = store.get_profile()? else {
+            return Ok(None);
+        };
+        let job = get_job_detail(connection, &job_id)?;
+        compute_match(&profile, &job).map(Some)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn get_match_breakdowns(
+    request: Value,
+    catalog_state: State<'_, CatalogManager>,
+    user_state: State<'_, UserStore>,
+) -> Result<Vec<JobMatch>, IpcError> {
+    let request: MatchBatchRequest =
+        serde_json::from_value(request).map_err(|_| IpcError::InvalidQuery)?;
+    request.validate()?;
+    let store = user_state.inner().clone();
+    run_catalog_query(catalog_state.inner().clone(), move |connection, _| {
+        let Some(profile) = store.get_profile()? else {
+            return Ok(Vec::new());
+        };
+        request
+            .job_ids
+            .into_iter()
+            .map(|job_id| {
+                let job = get_job_detail(connection, &job_id)?;
+                let breakdown = compute_match(&profile, &job)?;
+                Ok(JobMatch { job_id, breakdown })
+            })
+            .collect()
+    })
+    .await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
             let manager = CatalogManager::from_app(app);
+            let user_store = UserStore::from_app(app);
             app.manage(manager.clone());
+            app.manage(user_store);
             if let Some(window) = app.get_webview_window("main") {
                 window.show()?;
             }
@@ -169,7 +291,14 @@ pub fn run() {
             get_search_facets,
             get_filter_options,
             autocomplete_skills,
-            autocomplete_locations
+            autocomplete_locations,
+            get_profile,
+            save_profile,
+            list_shortlist,
+            is_shortlisted,
+            set_shortlist,
+            get_match_breakdown,
+            get_match_breakdowns
         ])
         .run(tauri::generate_context!())
         .expect("error while running GiveMeJob");

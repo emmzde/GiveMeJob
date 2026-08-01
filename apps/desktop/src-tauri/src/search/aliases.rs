@@ -170,6 +170,10 @@ impl AliasMaps {
         }
     }
 
+    pub(super) fn canonical_role_concepts(&self, text: &str) -> Vec<String> {
+        self.roles.canonical_concepts(text)
+    }
+
     pub(super) fn suggestion(&self, text: &str) -> Option<String> {
         let parsed = parse_concepts(text);
         if parsed.is_empty() {
@@ -229,6 +233,22 @@ impl AliasMaps {
 }
 
 impl AliasIndex {
+    fn canonical_concepts(&self, text: &str) -> Vec<String> {
+        let parsed = parse_concepts(text);
+        let mut concepts = Vec::new();
+        let mut index = 0;
+        while index < parsed.len() && concepts.len() < MAX_CONCEPTS {
+            if let Some((length, matched)) = self.longest_match(&parsed, index) {
+                concepts.push(normalize_lookup(&matched.canonical));
+                index += length;
+            } else {
+                concepts.push(parsed[index].text.clone());
+                index += 1;
+            }
+        }
+        concepts
+    }
+
     fn longest_match<'a>(
         &'a self,
         concepts: &[ParsedConcept],

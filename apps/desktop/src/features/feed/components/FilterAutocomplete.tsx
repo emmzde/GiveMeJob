@@ -1,7 +1,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Search } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, Ref } from "react";
 
 import { formatCount } from "@/features/feed/jobPresentation";
 import { t } from "@/lib/i18n";
@@ -17,7 +17,10 @@ export interface FilterSuggestion {
 }
 
 interface FilterAutocompleteProps {
+  ariaDescribedBy?: string;
+  ariaInvalid?: boolean;
   disabled?: boolean;
+  inputRef?: Ref<HTMLInputElement>;
   isLoading: boolean;
   label: string;
   onQueryChange(query: string): void;
@@ -125,7 +128,10 @@ export function SuggestionList({
 }
 
 export function FilterAutocomplete({
+  ariaDescribedBy,
+  ariaInvalid,
   disabled = false,
+  inputRef,
   isLoading,
   label,
   onQueryChange,
@@ -197,7 +203,9 @@ export function FilterAutocomplete({
           }
           aria-autocomplete="list"
           aria-controls={showPopup ? listboxId : undefined}
+          aria-describedby={ariaDescribedBy}
           aria-expanded={showPopup}
+          aria-invalid={ariaInvalid || undefined}
           className="h-9 min-w-0 flex-1 bg-transparent text-xs placeholder:text-[var(--text-placeholder)]"
           disabled={disabled}
           maxLength={100}
@@ -210,6 +218,7 @@ export function FilterAutocomplete({
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
+          ref={inputRef}
           role="combobox"
           value={query}
         />

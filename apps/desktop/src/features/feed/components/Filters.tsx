@@ -1,10 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { Bot, BriefcaseBusiness, SlidersHorizontal, UserRound } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import { useId, useState } from "react";
 import type { KeyboardEvent } from "react";
 
-import { useAppUiStore } from "@/app/store/appUiStore";
 import { FilterSection } from "@/components/ui/filter-section";
 import { FilterAutocomplete } from "@/features/feed/components/FilterAutocomplete";
 import type { FilterSuggestion } from "@/features/feed/components/FilterAutocomplete";
@@ -53,11 +51,6 @@ interface CheckboxListProps<T extends string> {
 }
 
 const MAX_SALARY_USD_YEAR = 10_000_000;
-
-const futureNavigationItems: ReadonlyArray<{ icon: LucideIcon; label: string }> = [
-  { icon: UserRound, label: t("profile") },
-  { icon: Bot, label: t("emmy") },
-];
 
 function CheckboxList<T extends string>({
   disabled,
@@ -169,7 +162,6 @@ function SalaryMinimumInput({ disabled, onCommit, value }: SalaryMinimumInputPro
 }
 
 export function Filters({ disabled, draft, onChange, visible }: FiltersProps) {
-  const screen = useAppUiStore((state) => state.screen);
   const [skillQuery, setSkillQuery] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
   const filterOptions = useQuery({
@@ -241,34 +233,11 @@ export function Filters({ disabled, draft, onChange, visible }: FiltersProps) {
 
   return (
     <aside
-      className="filter-panel scroll-region h-[calc(100vh-3.5rem)] overflow-y-auto border-r border-[var(--border)] bg-[var(--bg-secondary)] p-3"
+      className="filter-panel scroll-region min-h-0 overflow-y-auto border-r border-[var(--border)] bg-[var(--surface-0)] p-3"
       data-visible={visible ? "true" : "false"}
       id="search-filters"
     >
-      <nav aria-label="Основная навигация" className="space-y-1">
-        <div
-          aria-current={screen === "search" ? "page" : undefined}
-          className="flex w-full items-center gap-2 rounded-[var(--radius-md)] bg-[var(--bg-active)] px-2.5 py-2 text-left text-sm font-medium"
-        >
-          <BriefcaseBusiness aria-hidden="true" className="size-4" />
-          {t("jobs")}
-        </div>
-        {futureNavigationItems.map(({ icon: Icon, label }) => (
-          <button
-            aria-label={`${label} — ${t("later")}`}
-            className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2.5 py-2 text-left text-sm text-[var(--text-secondary)] disabled:opacity-70"
-            disabled
-            key={label}
-            type="button"
-          >
-            <Icon aria-hidden="true" className="size-4" />
-            <span>{label}</span>
-            <span className="ml-auto text-[10px] uppercase tracking-wide">{t("later")}</span>
-          </button>
-        ))}
-      </nav>
-
-      <div className="mt-6 border-t border-[var(--border)] pt-3">
+      <div>
         <p className="flex min-h-9 items-center gap-2 px-1 text-xs font-semibold text-[var(--text)]">
           <SlidersHorizontal aria-hidden="true" className="size-4" />
           {t("filters")}

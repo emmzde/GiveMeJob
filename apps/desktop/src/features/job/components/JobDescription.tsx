@@ -30,7 +30,7 @@ export function JobDescription({ description }: { description: string }) {
         if (block.kind === "note") {
           return (
             <aside
-              className="rounded-r-[var(--radius-md)] border-l-2 border-[var(--accent)] bg-[var(--accent-muted)] px-4 py-3"
+              className="rounded-[var(--radius-md)] border border-[var(--accent-border)] bg-[var(--accent-muted)] px-4 py-3"
               key={index}
             >
               <strong className="block text-xs font-semibold uppercase tracking-wide text-[var(--accent)]">

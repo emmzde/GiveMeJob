@@ -26,6 +26,10 @@ use dto::{
 use facets::list_sources;
 pub(crate) use facets::{autocomplete_locations, autocomplete_skills, get_filter_options};
 use query_builder::{build_query_parts, relevance_projection, WEAK_RESULT_MAX_TOTAL};
+
+pub(crate) fn canonical_role_concepts(text: &str) -> Result<Vec<String>, IpcError> {
+    Ok(embedded_alias_maps()?.canonical_role_concepts(text))
+}
 use validation::validate_and_normalize;
 
 const MAX_FACET_ITEMS: i64 = 100;

@@ -1,3 +1,4 @@
+import { createRef } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -56,6 +57,28 @@ describe("FilterAutocomplete", () => {
 
     expect(onSelect).toHaveBeenCalledWith(suggestions[1]);
     expect(input).toHaveFocus();
+  });
+
+  it("forwards field error metadata and the input ref", () => {
+    const inputRef = createRef<HTMLInputElement>();
+    render(
+      <FilterAutocomplete
+        ariaDescribedBy="skills-error"
+        ariaInvalid
+        inputRef={inputRef}
+        isLoading={false}
+        label="Навыки"
+        onQueryChange={() => undefined}
+        onSelect={() => undefined}
+        placeholder="Навык"
+        query=""
+        suggestions={[]}
+      />,
+    );
+
+    expect(inputRef.current).toBe(screen.getByRole("combobox", { name: "Навыки" }));
+    expect(inputRef.current).toHaveAttribute("aria-describedby", "skills-error");
+    expect(inputRef.current).toHaveAttribute("aria-invalid", "true");
   });
 
   it("virtualizes suggestion collections longer than 50 items", async () => {

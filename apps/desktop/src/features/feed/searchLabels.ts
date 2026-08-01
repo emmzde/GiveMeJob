@@ -5,7 +5,7 @@ import type {
   SearchSort,
   Seniority,
 } from "@/lib/catalog";
-import { t } from "@/lib/i18n";
+import { getLocaleTag, t } from "@/lib/i18n";
 
 export const searchSortLabels: Readonly<Record<SearchSort, string>> = {
   relevance: t("sortRelevance"),
@@ -49,5 +49,5 @@ export const locationKindLabels: Readonly<Record<LocationKind, string>> = {
 };
 
 export function formatSourceLabel(source: string): string {
-  return source.length === 0 ? source : `${source[0]?.toLocaleUpperCase("ru-RU")}${source.slice(1)}`;
+  return source.length === 0 ? source : `${source[0]?.toLocaleUpperCase(getLocaleTag())}${source.slice(1)}`;
 }

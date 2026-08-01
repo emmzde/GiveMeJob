@@ -1,8 +1,10 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetAppUiStore, useAppUiStore } from "@/app/store/appUiStore";
+import { createAppQueryClient } from "@/app/queryClient";
 import { Feed } from "@/features/feed/components/Feed";
 import { jobIdSchema, searchCursorSchema } from "@/lib/catalog";
 import type { JobSummary } from "@/lib/catalog";
@@ -40,7 +42,11 @@ const defaultProps: ComponentProps<typeof Feed> = {
 };
 
 function renderFeed(overrides: Partial<ComponentProps<typeof Feed>>) {
-  return render(<Feed {...defaultProps} {...overrides} />);
+  return render(
+    <QueryClientProvider client={createAppQueryClient()}>
+      <Feed {...defaultProps} {...overrides} />
+    </QueryClientProvider>,
+  );
 }
 
 describe("Feed", () => {
@@ -53,16 +59,13 @@ describe("Feed", () => {
 
     fireEvent.keyDown(window, { key: "j" });
     expect(useAppUiStore.getState().selectedId).toBe(jobs[1]!.id);
-    expect(screen.getByRole("option", { name: /Job 2/ })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    expect(screen.getByRole("option", { name: /Job 2/ })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /Job 2/ })).toHaveAttribute(
       "aria-current",
       "true",
     );
-    expect(screen.getByRole("option", { name: /Job 2/ })).toHaveAttribute("tabindex", "0");
-    expect(screen.getByRole("option", { name: /Job 1/ })).toHaveAttribute("tabindex", "-1");
+    expect(screen.getByRole("button", { name: /Job 2/ })).toHaveAttribute("data-selected", "true");
+    expect(screen.getByRole("button", { name: /Job 2/ })).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("button", { name: /Job 1/ })).toHaveAttribute("tabindex", "-1");
 
     fireEvent.keyDown(window, { key: "k" });
     expect(useAppUiStore.getState().selectedId).toBe(jobs[0]!.id);
@@ -72,10 +75,10 @@ describe("Feed", () => {
     const jobs = [job(0), job(1)];
     useAppUiStore.getState().selectJob(jobs[0]!.id);
     render(
-      <>
+      <QueryClientProvider client={createAppQueryClient()}>
         <input aria-label="Редактор" />
         <Feed {...defaultProps} jobs={jobs} />
-      </>,
+      </QueryClientProvider>,
     );
 
     const editor = screen.getByRole("textbox", { name: "Редактор" });
@@ -115,7 +118,7 @@ describe("Feed", () => {
 
     expect(screen.getByText(t("remoteModeRemote"))).toBeInTheDocument();
     expect(screen.getByText(t("senioritySenior"))).toBeInTheDocument();
-    const jobButton = screen.getByRole("option", { name: /Job 1/ });
+    const jobButton = screen.getByRole("button", { name: /Job 1/ });
     expect(jobButton).toHaveTextContent("120 000–150 000 USD/год");
     expect(jobButton).toHaveTextContent(`${t("posted")} 30 июл. 2026`);
   });
@@ -131,8 +134,8 @@ describe("Feed", () => {
 
     const virtualFeed = document.querySelector('[data-virtualized="true"]');
     expect(virtualFeed).not.toBeNull();
-    await waitFor(() => expect(screen.getAllByRole("option").length).toBeGreaterThan(0));
-    expect(screen.getAllByRole("option").length).toBeLessThan(51);
+    await waitFor(() => expect(document.querySelectorAll("[data-job-id]").length).toBeGreaterThan(0));
+    expect(document.querySelectorAll("[data-job-id]").length).toBeLessThan(51);
     const measuredRow = virtualFeed?.querySelector<HTMLElement>("[data-index]");
     expect(measuredRow).not.toBeNull();
     expect(measuredRow?.style.height).toBe("");
@@ -175,15 +178,17 @@ describe("Feed", () => {
 
     await waitFor(() => expect(onLoadMore).toHaveBeenCalledTimes(1));
     view.rerender(
-      <Feed
-        {...defaultProps}
-        canLoadNextPage
-        isFetching
-        isFetchingNextPage
-        jobs={[job(0), job(1)]}
-        nextCursor={cursor}
-        onLoadMore={onLoadMore}
-      />,
+      <QueryClientProvider client={createAppQueryClient()}>
+        <Feed
+          {...defaultProps}
+          canLoadNextPage
+          isFetching
+          isFetchingNextPage
+          jobs={[job(0), job(1)]}
+          nextCursor={cursor}
+          onLoadMore={onLoadMore}
+        />
+      </QueryClientProvider>,
     );
 
     expect(screen.getAllByTestId("next-page-skeleton")).toHaveLength(3);
@@ -196,7 +201,11 @@ describe("Feed", () => {
     expect(screen.getByText(t("empty"))).toBeInTheDocument();
     expect(screen.getByText(t("emptyHint"))).toBeInTheDocument();
 
-    emptyView.rerender(<Feed {...defaultProps} jobs={[job(0)]} />);
+    emptyView.rerender(
+      <QueryClientProvider client={createAppQueryClient()}>
+        <Feed {...defaultProps} jobs={[job(0)]} />
+      </QueryClientProvider>,
+    );
     expect(screen.getByTestId("end-of-results")).toHaveTextContent(t("endOfResults"));
   });
 });

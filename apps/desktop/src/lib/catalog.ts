@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { tauriAdapter } from "@/lib/tauri/adapter";
 import type { TauriAdapter, Unlisten } from "@/lib/tauri/adapter";
+import { t } from "@/lib/i18n";
 
 const MAX_CURSOR_LENGTH = 2_048;
 const MAX_FILTER_VALUE_LENGTH = 100;
@@ -257,6 +258,7 @@ export const ipcErrorSchema = z.discriminatedUnion(
     z.object({ code: z.literal("not_found") }).strict(),
     z.object({ code: z.literal("open_failed") }).strict(),
     z.object({ code: z.literal("recovery_failed") }).strict(),
+    z.object({ code: z.literal("user_data_unavailable") }).strict(),
     z.object({ code: z.literal("internal") }).strict(),
   ],
 );
@@ -344,7 +346,7 @@ export function createCatalogApi(adapter: TauriAdapter): CatalogApi {
           catalogVersion: null,
           sourceFrozenAt: null,
           totalJobs: 0,
-          message: "Каталог доступен в Windows-приложении.",
+          message: t("catalogWindowsOnly"),
         });
       }
       return invokeValidated("catalog_status", catalogStatusSchema);

@@ -1,16 +1,18 @@
 import type { JobSummary } from "@/lib/catalog";
+import { getLocaleTag, t } from "@/lib/i18n";
 
-const countFormatter = new Intl.NumberFormat("ru-RU");
-const salaryNumberFormatter = new Intl.NumberFormat("ru-RU", {
+const localeTag = getLocaleTag();
+const countFormatter = new Intl.NumberFormat(localeTag);
+const salaryNumberFormatter = new Intl.NumberFormat(localeTag, {
   maximumFractionDigits: 0,
 });
-const snapshotDateFormatter = new Intl.DateTimeFormat("ru-RU", {
+const snapshotDateFormatter = new Intl.DateTimeFormat(localeTag, {
   day: "numeric",
   month: "long",
   timeZone: "UTC",
   year: "numeric",
 });
-const postedDateFormatter = new Intl.DateTimeFormat("ru-RU", {
+const postedDateFormatter = new Intl.DateTimeFormat(localeTag, {
   day: "numeric",
   month: "short",
   timeZone: "UTC",
@@ -18,11 +20,11 @@ const postedDateFormatter = new Intl.DateTimeFormat("ru-RU", {
 });
 
 const salaryPeriodLabels: Readonly<Record<string, string>> = {
-  day: "/день",
-  hour: "/час",
-  month: "/месяц",
-  week: "/неделю",
-  year: "/год",
+  day: t("salaryPerDay"),
+  hour: t("salaryPerHour"),
+  month: t("salaryPerMonth"),
+  week: t("salaryPerWeek"),
+  year: t("salaryPerYear"),
 };
 
 const shortTechnologyLabels: Readonly<Record<string, string>> = {
@@ -43,20 +45,27 @@ export function formatCount(value: number): string {
   return countFormatter.format(value);
 }
 
+function formatDate(formatter: Intl.DateTimeFormat, date: Date): string {
+  return formatter
+    .formatToParts(date)
+    .filter(({ type }) => type === "day" || type === "month" || type === "year")
+    .map(({ value }) => value.trim())
+    .filter(Boolean)
+    .join(" ");
+}
+
 export function formatSnapshotDate(value: string | null): string | null {
   if (value === null) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-  return snapshotDateFormatter
-    .format(date)
-    .replace(/\sг\.$/, "");
+  return formatDate(snapshotDateFormatter, date);
 }
 
 export function formatPostedDate(value: string | null): string | null {
   if (value === null) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-  return postedDateFormatter.format(date).replace(/\sг\.$/, "");
+  return formatDate(postedDateFormatter, date);
 }
 
 export function formatSalaryPeriod(value: string | null | undefined): string {
@@ -79,9 +88,9 @@ export function formatSalaryRange(
         ? salaryNumberFormatter.format(minimum)
         : `${salaryNumberFormatter.format(minimum)}–${salaryNumberFormatter.format(maximum)}`;
   } else if (minimum !== null) {
-    amount = `от ${salaryNumberFormatter.format(minimum)}`;
+    amount = `${t("salaryFrom")} ${salaryNumberFormatter.format(minimum)}`;
   } else if (maximum !== null) {
-    amount = `до ${salaryNumberFormatter.format(maximum)}`;
+    amount = `${t("salaryTo")} ${salaryNumberFormatter.format(maximum)}`;
   } else {
     return null;
   }

@@ -1,4 +1,4 @@
-import { Keyboard, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { InfiniteData } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -6,7 +6,6 @@ import type { FormEvent } from "react";
 
 import { useAppUiStore } from "@/app/store/appUiStore";
 import { Button } from "@/components/ui/button";
-import { CommandPalette } from "@/features/commands/CommandPalette";
 import {
   catalogStageLabel,
   isCatalogReady,
@@ -59,17 +58,15 @@ export function SearchScreen({
   );
   const [retainedQuery, setRetainedQuery] = useState<SearchQuery | null>(null);
   const [hasCommittedInteraction, setHasCommittedInteraction] = useState(false);
-  const [filtersVisible, setFiltersVisible] = useState(() =>
-    window.matchMedia("(min-width: 1180px)").matches,
-  );
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const commandTriggerRef = useRef<HTMLButtonElement>(null);
   const queryClient = useQueryClient();
   const selectJob = useAppUiStore((state) => state.selectJob);
   const selectedId = useAppUiStore((state) => state.selectedId);
   const panel = useAppUiStore((state) => state.panel);
+  const screen = useAppUiStore((state) => state.screen);
   const setPanel = useAppUiStore((state) => state.setPanel);
+  const filtersVisible = useAppUiStore((state) => state.filtersVisible);
+  const toggleFilters = useAppUiStore((state) => state.toggleFilters);
   const catalogReady = isCatalogReady(catalog);
   const search = useSearchPage(committedQuery, catalogReady);
   const retainedData =
@@ -97,19 +94,6 @@ export function SearchScreen({
   const focusSearch = useCallback(() => {
     searchInputRef.current?.focus();
   }, []);
-  const toggleFilters = useCallback(() => {
-    setFiltersVisible((current) => !current);
-  }, []);
-
-  useEffect(() => {
-    const media = window.matchMedia("(min-width: 1180px)");
-    const handleLayoutChange = (event: MediaQueryListEvent) => {
-      setFiltersVisible(event.matches);
-    };
-    media.addEventListener("change", handleLayoutChange);
-    return () => media.removeEventListener("change", handleLayoutChange);
-  }, []);
-
   useEffect(() => {
     function handleSearchShortcut(event: KeyboardEvent): void {
       if (
@@ -118,6 +102,7 @@ export function SearchScreen({
         event.altKey ||
         event.metaKey ||
         isEditableTarget(event.target) ||
+        screen !== "search" ||
         !catalogReady
       ) {
         return;
@@ -128,7 +113,7 @@ export function SearchScreen({
 
     window.addEventListener("keydown", handleSearchShortcut);
     return () => window.removeEventListener("keydown", handleSearchShortcut);
-  }, [catalogReady, focusSearch]);
+  }, [catalogReady, focusSearch, screen]);
 
   useEffect(() => {
     if (pages.length === 0 || search.isPlaceholderData || search.isError) return;
@@ -196,24 +181,11 @@ export function SearchScreen({
         visible={filtersVisible}
       />
 
-      <section className="flex h-[calc(100vh-3.5rem)] min-w-0 flex-col border-r border-[var(--border)]">
-        <div className="shrink-0 border-b border-[var(--border)] p-4">
+      <section className="flex min-h-0 min-w-0 flex-col border-r border-[var(--border)]">
+        <div className="shrink-0 border-b border-[var(--border)] p-3">
           <div className="flex items-center justify-between gap-3">
-            <h1 className="text-lg font-semibold">{t("searchTitle")}</h1>
+            <h1 className="text-sm font-semibold">{t("searchTitle")}</h1>
             <div className="flex items-center gap-1">
-              <Button
-                aria-expanded={commandPaletteOpen}
-                aria-haspopup="dialog"
-                aria-label={t("openCommandPalette")}
-                className="h-9 gap-1.5 px-2"
-                onClick={() => setCommandPaletteOpen(true)}
-                ref={commandTriggerRef}
-                type="button"
-                variant="ghost"
-              >
-                <Keyboard aria-hidden="true" className="size-4" />
-                <span className="hidden text-xs sm:inline">Ctrl+K</span>
-              </Button>
               <Button
                 aria-controls="search-filters"
                 aria-expanded={filtersVisible}
@@ -231,7 +203,7 @@ export function SearchScreen({
               </Button>
             </div>
           </div>
-          <form className="mt-3 flex gap-2" onSubmit={submitSearch}>
+          <form className="mt-2.5 flex gap-2" onSubmit={submitSearch}>
             <label className="flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-raised)] px-3">
               <Search aria-hidden="true" className="size-4 text-[var(--text-secondary)]" />
               <span className="sr-only">{t("searchPlaceholder")}</span>
@@ -239,6 +211,7 @@ export function SearchScreen({
                 aria-describedby="search-syntax-hint"
                 className="h-9 min-w-0 flex-1 bg-transparent text-sm placeholder:text-[var(--text-placeholder)]"
                 disabled={!catalogReady}
+                id="catalog-search-input"
                 onChange={(event) => setDraft({ ...draft, text: event.target.value })}
                 placeholder={t("searchPlaceholder")}
                 ref={searchInputRef}
@@ -253,7 +226,7 @@ export function SearchScreen({
               {t("search")}
             </Button>
           </form>
-          <p className="mt-1.5 text-xs leading-4 text-[var(--text-secondary)]" id="search-syntax-hint">
+          <p className="mt-1.5 text-[10px] leading-4 text-[var(--text-tertiary)]" id="search-syntax-hint">
             {t("searchSyntaxHint")}
           </p>
 
@@ -299,12 +272,12 @@ export function SearchScreen({
             </p>
           ) : null}
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-3">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-2.5">
             <div>
               <p
                 aria-atomic="true"
                 aria-live="polite"
-                className="text-sm font-semibold"
+                className="text-xs font-semibold"
                 role="status"
               >
                 {catalogWorking || (search.isPending && jobs.length === 0)
@@ -374,14 +347,6 @@ export function SearchScreen({
         key={selectedId ?? "empty"}
         onClose={() => setPanel(null)}
         selectedJob={selectedJob}
-      />
-      <CommandPalette
-        filtersVisible={filtersVisible}
-        onFocusSearch={focusSearch}
-        onOpenChange={setCommandPaletteOpen}
-        onToggleFilters={toggleFilters}
-        open={commandPaletteOpen}
-        returnFocusRef={commandTriggerRef}
       />
     </div>
   );

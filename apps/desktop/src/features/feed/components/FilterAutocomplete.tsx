@@ -3,6 +3,7 @@ import { Search } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 
+import { formatCount } from "@/features/feed/jobPresentation";
 import { t } from "@/lib/i18n";
 
 const VIRTUALIZATION_THRESHOLD = 50;
@@ -30,9 +31,9 @@ function SuggestionContent({ suggestion }: { suggestion: FilterSuggestion }) {
   return (
     <>
       <span className="min-w-0 truncate">{suggestion.label}</span>
-      <span className="ml-auto shrink-0 text-[10px] text-[var(--text-tertiary)]">
+      <span className="ml-auto shrink-0 text-[10px] text-[var(--text-secondary)]">
         {suggestion.secondaryLabel ? `${suggestion.secondaryLabel} · ` : ""}
-        {suggestion.count.toLocaleString("ru-RU")}
+        {formatCount(suggestion.count)}
       </span>
     </>
   );
@@ -186,7 +187,7 @@ export function FilterAutocomplete({
   return (
     <div className="relative">
       <label className="flex min-h-9 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-raised)] px-2">
-        <Search aria-hidden="true" className="size-3.5 shrink-0 text-[var(--text-tertiary)]" />
+        <Search aria-hidden="true" className="size-4 shrink-0 text-[var(--text-secondary)]" />
         <span className="sr-only">{label}</span>
         <input
           aria-activedescendant={
@@ -197,7 +198,7 @@ export function FilterAutocomplete({
           aria-autocomplete="list"
           aria-controls={showPopup ? listboxId : undefined}
           aria-expanded={showPopup}
-          className="h-9 min-w-0 flex-1 bg-transparent text-xs placeholder:text-[var(--text-tertiary)]"
+          className="h-9 min-w-0 flex-1 bg-transparent text-xs placeholder:text-[var(--text-placeholder)]"
           disabled={disabled}
           maxLength={100}
           onBlur={() => setIsOpen(false)}

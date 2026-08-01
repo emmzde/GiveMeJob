@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-01",
+  "publicationRedactions": [
+    "saved Wi-Fi profile name",
+    "individual job text captured by the UI Automation tree"
+  ],
+  "isolation": "Windows.Devices.Radios.RadioState.Off",
+  "rendererAccessibilityForced": true,
+  "radioState": "Off",
+  "connectionProfilePresent": false,
+  "externalPingExitCode": 1,
+  "accessibleElementCount": 199,
+  "namedElementsBeforeCount": 162,
+  "searchValue": "python",
+  "resultCount": 9306,
+  "pythonNamedElementsCount": 15,
+  "descriptionExposed": true,
+  "originalButtonExposed": true,
+  "searchDetailPassed": true,
+  "screenshotSha256": "a2387d6efcfefc519672dc7bfec908c3b02fcd895121144053cb79859323358c",
+  "passed": true,
+  "wlanConnectCode": 0,
+  "restoredProfile": "<redacted-saved-wifi-profile>",
+  "restoredIPv4": "Internet",
+  "networkRestored": true
+}

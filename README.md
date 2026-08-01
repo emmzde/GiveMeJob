@@ -10,7 +10,8 @@ GiveMeJob! — open-source portfolio pet-project: локальное Windows-п�
 
 - D0 (документационный pivot) — завершён;
 - M1 (verified snapshot) — завершён;
-- M2 (offline search и desktop shell) — в работе;
+- M2 (offline search и desktop shell) — завершён;
+- M3 (profile, match и shortlist) — текущий этап;
 - опубликованных GitHub Releases пока нет.
 
 Локальные NSIS и portable artifacts успешно собираются, но это инженерная
@@ -31,6 +32,8 @@ GiveMeJob! — open-source portfolio pet-project: локальное Windows-п�
   значениями до ввода;
 - выбранное состояние вакансии, адаптивные панели, структурированное
   plain-text описание и безопасный переход на оригинал;
+- session-only system/light/dark theme, WCAG AA tokens, roving keyboard feed и
+  доступная `Ctrl+K` command palette;
 - Windows-only Tauri configuration с NSIS и portable ZIP workflow.
 
 Пользовательский runtime не требует Docker, Python, PostgreSQL или сервера.
@@ -89,6 +92,11 @@ gates. Current exact-SHA catalog baseline сохранён в
 [`docs/evidence/M2_CATALOG_BASELINE_B30162A.md`](docs/evidence/M2_CATALOG_BASELINE_B30162A.md),
 а состояние filter/feed/detail UI — в
 [`docs/evidence/M2_FILTER_UI_2026-08-01.md`](docs/evidence/M2_FILTER_UI_2026-08-01.md).
+Versioned corpus timings, cursor audit и native package/recovery metrics:
+[`docs/evidence/M2_BENCHMARK_GATE_2026-08-01.md`](docs/evidence/M2_BENCHMARK_GATE_2026-08-01.md).
+Финальная physical-offline, Narrator/keyboard и reduced-motion запись, официально
+закрывающая M2:
+[`docs/evidence/M2_FINAL_ACCEPTANCE_2026-08-01.md`](docs/evidence/M2_FINAL_ACCEPTANCE_2026-08-01.md).
 
 Однократный export из сохранённого frozen volume:
 

@@ -1,11 +1,29 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { readFileSync } from "node:fs";
+import { defineConfig, type Plugin } from "vite";
 
 const host = process.env.TAURI_DEV_HOST;
+const m2BrowserBenchmarkPlugin: Plugin = {
+  name: "givemejob-m2-browser-benchmark",
+  transformIndexHtml() {
+    if (process.env.GIVEMEJOB_M2_BROWSER_BENCHMARK !== "1") return [];
+    return [
+      {
+        tag: "script",
+        attrs: { type: "module" },
+        children: readFileSync(
+          new URL("./src/test/m2BrowserMock.js", import.meta.url),
+          "utf8",
+        ),
+        injectTo: "head-prepend",
+      },
+    ];
+  },
+};
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [m2BrowserBenchmarkPlugin, react(), tailwindcss()],
   clearScreen: false,
   resolve: {
     alias: {

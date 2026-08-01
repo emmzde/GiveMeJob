@@ -12,7 +12,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "@/app/App";
 import { createAppQueryClient } from "@/app/queryClient";
-import { resetAppUiStore } from "@/app/store/appUiStore";
+import { resetAppUiStore, useAppUiStore } from "@/app/store/appUiStore";
+import { formatCount } from "@/features/feed/jobPresentation";
 import {
   createSearchQuery,
   jobIdSchema,
@@ -585,7 +586,7 @@ describe("App", () => {
     await screen.findByRole("heading", { level: 2, name: sampleJob.title });
 
     expect(catalogMocks.getLocalJob).toHaveBeenCalledWith(sampleJob.id);
-    const selectedFeedItem = screen.getByRole("button", {
+    const selectedFeedItem = screen.getByRole("option", {
       name: /Senior Rust Engineer/,
     });
     expect(selectedFeedItem).toHaveAttribute("aria-current", "true");
@@ -652,6 +653,32 @@ describe("App", () => {
     expect(catalogMocks.openOriginalJob).toHaveBeenCalledWith(sampleJob.id);
   });
 
+  it("focuses search with / and ignores the shortcut inside editable controls", async () => {
+    render(<App />);
+    await screen.findByTestId("job-description");
+    const searchInput = screen.getByRole("textbox", { name: t("searchPlaceholder") });
+    const searchButton = screen.getByRole("button", { name: t("search") });
+    searchButton.focus();
+
+    fireEvent.keyDown(window, { key: "/" });
+    expect(searchInput).toHaveFocus();
+
+    const salaryInput = screen.getByRole("textbox", { name: t("salaryMinimum") });
+    salaryInput.focus();
+    fireEvent.keyDown(salaryInput, { key: "/" });
+    expect(salaryInput).toHaveFocus();
+  });
+
+  it("does not open the original for Ctrl+Enter inside an editable control", async () => {
+    render(<App />);
+    await screen.findByTestId("job-description");
+    const searchInput = screen.getByRole("textbox", { name: t("searchPlaceholder") });
+
+    fireEvent.keyDown(searchInput, { ctrlKey: true, key: "Enter" });
+
+    expect(catalogMocks.openOriginalJob).not.toHaveBeenCalled();
+  });
+
   it("renders through the configured Russian i18n layer", () => {
     expect(defaultLocale).toBe("ru");
     expect(t("offlineReady")).toBe("Офлайн");
@@ -675,6 +702,42 @@ describe("App", () => {
     expect(await screen.findByText(`1 ${t("resultsFound")}`)).toBeInTheDocument();
   });
 
+  it("shows the result count separately from the full catalog size", async () => {
+    render(<App />);
+
+    expect(await screen.findByText(`1 ${t("resultsFound")}`)).toBeInTheDocument();
+    const catalogTotal = `${t("catalogTotal")}: ${formatCount(readyStatus.totalJobs)} ${t("jobsFound")}`;
+    expect(
+      screen.getByText((_, element) => element?.textContent === catalogTotal),
+    ).toBeInTheDocument();
+  });
+
+  it("offers a typo suggestion as a button and applies it only after confirmation", async () => {
+    catalogMocks.searchLocalJobs.mockImplementation((query: SearchQuery) =>
+      Promise.resolve(
+        query.text === "python developer"
+          ? { items: [sampleJob], nextCursor: null, total: 1 }
+          : {
+              items: [],
+              nextCursor: null,
+              suggestion: "python developer",
+              total: 0,
+            },
+      ),
+    );
+
+    render(<App />);
+
+    const suggestion = await screen.findByRole("button", { name: "python developer" });
+    expect(catalogMocks.searchLocalJobs).toHaveBeenCalledTimes(1);
+    fireEvent.click(suggestion);
+
+    await expectLatestSearchPayload({ text: "python developer" });
+    expect(screen.getByRole("textbox", { name: t("searchPlaceholder") })).toHaveValue(
+      "python developer",
+    );
+  });
+
   it("loads the next cursor page with the exact IPC payload", async () => {
     const cursor = searchCursorSchema.parse("next-page");
     const secondJob: JobSummary = {
@@ -687,12 +750,81 @@ describe("App", () => {
       .mockResolvedValueOnce({ items: [secondJob], nextCursor: null, total: 2 });
 
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: t("loadMore") }));
 
     expect(await screen.findByText(secondJob.title)).toBeInTheDocument();
     expect(catalogMocks.searchLocalJobs.mock.calls[1]?.[0]).toEqual({
       ...createSearchQuery(),
       cursor,
     });
+  });
+
+  it("does not request the same cursor twice while its page is pending", async () => {
+    const cursor = searchCursorSchema.parse("pending-page");
+    const pendingPage = deferred<JobSearchPage>();
+    catalogMocks.searchLocalJobs
+      .mockResolvedValueOnce({ items: [sampleJob], nextCursor: cursor, total: 2 })
+      .mockReturnValueOnce(pendingPage.promise);
+
+    render(<App />);
+    await waitFor(() => expect(catalogMocks.searchLocalJobs).toHaveBeenCalledTimes(2));
+    const feed = screen.getByRole("region", { name: t("searchResults") });
+    fireEvent.scroll(feed, { target: { scrollTop: 10_000 } });
+    fireEvent.scroll(feed, { target: { scrollTop: 10_000 } });
+
+    expect(catalogMocks.searchLocalJobs).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      pendingPage.resolve({ items: [], nextCursor: null });
+      await pendingPage.promise;
+    });
+  });
+
+  it("deduplicates a job repeated at a cursor boundary", async () => {
+    const cursor = searchCursorSchema.parse("overlap-page");
+    const secondJob: JobSummary = {
+      ...sampleJob,
+      id: jobIdSchema.parse("2"),
+      title: "Unique second job",
+    };
+    catalogMocks.searchLocalJobs
+      .mockResolvedValueOnce({ items: [sampleJob], nextCursor: cursor, total: 2 })
+      .mockResolvedValueOnce({ items: [sampleJob, secondJob], nextCursor: null });
+
+    render(<App />);
+
+    expect(await screen.findByText(secondJob.title)).toBeInTheDocument();
+    expect(document.querySelectorAll(`[data-job-id="${sampleJob.id}"]`)).toHaveLength(1);
+  });
+
+  it("keeps selection during background refetch and falls back when it disappears", async () => {
+    const secondJob: JobSummary = {
+      ...sampleJob,
+      id: jobIdSchema.parse("2"),
+      title: "Selected second job",
+    };
+    const refreshedPage = deferred<JobSearchPage>();
+    catalogMocks.searchLocalJobs
+      .mockResolvedValueOnce({ items: [sampleJob, secondJob], nextCursor: null, total: 2 })
+      .mockReturnValueOnce(refreshedPage.promise);
+    catalogMocks.getLocalJob.mockImplementation((id: JobSummary["id"]) =>
+      Promise.resolve({ ...sampleDetail, ...(id === secondJob.id ? secondJob : sampleJob) }),
+    );
+
+    render(<App />);
+    fireEvent.click(await screen.findByRole("option", { name: /Selected second job/ }));
+    expect(useAppUiStore.getState().selectedId).toBe(secondJob.id);
+
+    fireEvent.click(screen.getByRole("button", { name: t("search") }));
+    await waitFor(() => expect(catalogMocks.searchLocalJobs).toHaveBeenCalledTimes(2));
+    expect(useAppUiStore.getState().selectedId).toBe(secondJob.id);
+    expect(screen.getByRole("option", { name: /Selected second job/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    await act(async () => {
+      refreshedPage.resolve({ items: [sampleJob], nextCursor: null, total: 1 });
+      await refreshedPage.promise;
+    });
+    await waitFor(() => expect(useAppUiStore.getState().selectedId).toBe(sampleJob.id));
   });
 });

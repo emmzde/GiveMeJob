@@ -34,12 +34,24 @@ pub(super) struct RelevanceProjection {
 pub(super) fn build_query_parts(request: &SearchQuery, aliases: &AliasMaps) -> QueryParts {
     let resolved_query = (!request.text.is_empty()).then(|| aliases.resolve(&request.text));
     let fts_query = resolved_query.as_ref().map(build_fts_expression);
+    let has_filters = !request.skills.is_empty()
+        || !request.locations.is_empty()
+        || !request.remote_modes.is_empty()
+        || !request.seniorities.is_empty()
+        || !request.employment_types.is_empty()
+        || request.salary_min_usd_year.is_some()
+        || request.salary_known_only
+        || !request.sources.is_empty();
     let mut predicates = Vec::new();
     let mut parameters = Vec::new();
     let from = if let Some(fts_query) = fts_query.as_ref() {
         predicates.push("jobs_fts MATCH ?".to_owned());
         parameters.push(Value::Text(fts_query.clone()));
-        "FROM jobs_fts JOIN jobs AS job ON job.id = jobs_fts.rowid"
+        if has_filters {
+            "FROM jobs_fts CROSS JOIN jobs AS job ON job.id = jobs_fts.rowid"
+        } else {
+            "FROM jobs_fts JOIN jobs AS job ON job.id = jobs_fts.rowid"
+        }
     } else {
         "FROM jobs AS job"
     };
@@ -343,7 +355,7 @@ mod tests {
         };
         assert_eq!(
             build_fts_expression(&query),
-            "(\"AND\"*) AND (\"OR\"*) AND (\"NEAR\"*) AND (\"rust\"*)"
+            "(\"AND\"*) AND (\"OR\") AND (\"NEAR\"*) AND (\"rust\"*)"
         );
     }
 

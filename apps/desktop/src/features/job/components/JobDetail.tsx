@@ -28,6 +28,7 @@ import { JobDescription } from "@/features/job/components/JobDescription";
 import { useJobDetail } from "@/features/job/hooks/useJobDetail";
 import { openOriginalJob } from "@/lib/catalog";
 import type { JobId, JobSummary } from "@/lib/catalog";
+import { isEditableTarget } from "@/lib/keyboard";
 import { t } from "@/lib/i18n";
 
 interface JobDetailProps {
@@ -81,7 +82,14 @@ export function JobDetail({
 
   useEffect(() => {
     function handleOriginalShortcut(event: KeyboardEvent) {
-      if (event.ctrlKey && event.key === "Enter" && detail.data !== undefined) {
+      if (
+        event.ctrlKey &&
+        !event.altKey &&
+        !event.metaKey &&
+        event.key === "Enter" &&
+        detail.data !== undefined &&
+        !isEditableTarget(event.target)
+      ) {
         event.preventDefault();
         void openSelectedOriginal();
       }
@@ -132,31 +140,31 @@ export function JobDetail({
             <div className="mt-4 flex flex-wrap gap-1.5 text-xs font-medium text-[var(--text-secondary)]">
               {detail.data.locationText ? (
                 <span className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1">
-                  <MapPin aria-hidden="true" className="size-3" />
+                  <MapPin aria-hidden="true" className="size-4" />
                   {detail.data.locationText}
                 </span>
               ) : null}
               {detail.data.remoteMode ? (
                 <span className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--accent)] bg-[var(--accent-muted)] px-2 py-1 text-[var(--accent)]">
-                  <Wifi aria-hidden="true" className="size-3" />
+                  <Wifi aria-hidden="true" className="size-4" />
                   {remoteModeLabels[detail.data.remoteMode]}
                 </span>
               ) : null}
               {detail.data.seniority ? (
                 <span className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1">
-                  <ChartNoAxesColumnIncreasing aria-hidden="true" className="size-3" />
+                  <ChartNoAxesColumnIncreasing aria-hidden="true" className="size-4" />
                   {seniorityLabels[detail.data.seniority]}
                 </span>
               ) : null}
               {detail.data.employmentType ? (
                 <span className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1">
-                  <BriefcaseBusiness aria-hidden="true" className="size-3" />
+                  <BriefcaseBusiness aria-hidden="true" className="size-4" />
                   {employmentTypeLabels[detail.data.employmentType]}
                 </span>
               ) : null}
               {salary ? (
                 <span className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1">
-                  <CircleDollarSign aria-hidden="true" className="size-3" />
+                  <CircleDollarSign aria-hidden="true" className="size-4" />
                   {salary}
                 </span>
               ) : null}
@@ -170,7 +178,7 @@ export function JobDetail({
                 type="button"
                 variant="accent"
               >
-                <ExternalLink aria-hidden="true" className="size-3.5" />
+                <ExternalLink aria-hidden="true" className="size-4" />
                 {isOpeningOriginal ? t("openingOriginal") : t("openOriginal")}
               </Button>
               <span className="sr-only" id="original-link-shortcut">
@@ -220,7 +228,7 @@ export function JobDetail({
             <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-[var(--radius-sm)] py-1 font-medium hover:text-[var(--text)]">
               <ChevronDown
                 aria-hidden="true"
-                className="size-3.5 transition-transform group-open:rotate-180"
+                className="size-4 transition-transform group-open:rotate-180"
               />
               {t("technicalDetails")}
             </summary>

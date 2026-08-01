@@ -16,6 +16,27 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
+Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+  configurable: true,
+  value: () => undefined,
+});
+
+Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+  configurable: true,
+  value: () => undefined,
+});
+
+class TestResizeObserver implements ResizeObserver {
+  disconnect(): void {}
+  observe(): void {}
+  unobserve(): void {}
+}
+
+Object.defineProperty(globalThis, "ResizeObserver", {
+  configurable: true,
+  value: TestResizeObserver,
+});
+
 afterEach(() => {
   cleanup();
 });

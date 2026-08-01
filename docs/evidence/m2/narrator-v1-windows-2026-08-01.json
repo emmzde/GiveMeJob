@@ -1,0 +1,196 @@
+{
+    "schemaVersion":  1,
+    "capturedAt":  "2026-08-01",
+    "narratorPreexisting":  false,
+    "uiaElementCount":  199,
+    "focusableCount":  65,
+    "unnamedFocusable":  [
+
+                         ],
+    "frameworkProviderHostPanes":  [
+                                       {
+                                           "name":  "",
+                                           "controlType":  "Pane",
+                                           "enabled":  true
+                                       }
+                                   ],
+    "candidateControls":  [
+                              {
+                                  "name":  "Тема",
+                                  "controlType":  "ComboBox"
+                              },
+                              {
+                                  "name":  "Профиль — позже",
+                                  "controlType":  "Button"
+                              },
+                              {
+                                  "name":  "Emmy — позже",
+                                  "controlType":  "Button"
+                              },
+                              {
+                                  "name":  "Формат работы",
+                                  "controlType":  "Button"
+                              },
+                              {
+                                  "name":  "Удалённая работа",
+                                  "controlType":  "CheckBox"
+                              },
+                              {
+                                  "name":  "Гибрид",
+                                  "controlType":  "CheckBox"
+                              },
+                              {
+                                  "name":  "В офисе",
+                                  "controlType":  "CheckBox"
+                              },
+                              {
+                                  "name":  "Навыки",
+                                  "controlType":  "Button"
+                              },
+                              {
+                                  "name":  "Навыки",
+                                  "controlType":  "ComboBox"
+                              },
+                              {
+                                  "name":  "Локации",
+                                  "controlType":  "Button"
+                              },
+                              {
+                                  "name":  "Локации",
+                                  "controlType":  "ComboBox"
+                              },
+                              {
+                                  "name":  "Грейд",
+                                  "controlType":  "Button"
+                              },
+                              {
+                                  "name":  "Занятость",
+                                  "controlType":  "Button"
+                              },
+                              {
+                                  "name":  "Зарплата",
+                                  "controlType":  "Button"
+                              },
+                              {
+                                  "name":  "Источники",
+                                  "controlType":  "Button"
+                              },
+                              {
+                                  "name":  "Открыть палитру команд",
+                                  "controlType":  "Button"
+                              },
+                              {
+                                  "name":  "Скрыть фильтры",
+                                  "controlType":  "Button"
+                              },
+                              {
+                                  "name":  "Роль, навык или компания",
+                                  "controlType":  "Edit"
+                              },
+                              {
+                                  "name":  "Найти",
+                                  "controlType":  "Button"
+                              },
+                              {
+                                  "name":  "Закрыть карточку",
+                                  "controlType":  "Button"
+                              },
+                              {
+                                  "name":  "Открыть оригинал",
+                                  "controlType":  "Button"
+                              },
+                              {
+                                  "name":  "Техническая информация",
+                                  "controlType":  "Button"
+                              }
+                          ],
+    "requiredControls":  {
+                             "firstJob":  true,
+                             "original":  true,
+                             "search":  true,
+                             "remote":  true,
+                             "theme":  true
+                         },
+    "nativeFocusJourney":  [
+                               {
+                                   "expectedName":  "Тема",
+                                   "actualName":  "Тема",
+                                   "controlType":  "ComboBox",
+                                   "hasKeyboardFocus":  true
+                               },
+                               {
+                                   "expectedName":  "Удалённая работа",
+                                   "actualName":  "Удалённая работа",
+                                   "controlType":  "CheckBox",
+                                   "hasKeyboardFocus":  true
+                               },
+                               {
+                                   "expectedName":  "Роль, навык или компания",
+                                   "actualName":  "Роль, навык или компания",
+                                   "controlType":  "Edit",
+                                   "hasKeyboardFocus":  true
+                               },
+                               {
+                                   "expectedName":  "Supervisor, Appeals Centene Corporation CA Удалённая работа Руководитель 75 300–135 400 USD/год Опубликовано 29 июл. 2026",
+                                   "actualName":  "Supervisor, Appeals Centene Corporation CA Удалённая работа Руководитель 75 300–135 400 USD/год Опубликовано 29 июл. 2026",
+                                   "controlType":  "ListItem",
+                                   "hasKeyboardFocus":  true
+                               },
+                               {
+                                   "expectedName":  "Открыть оригинал",
+                                   "actualName":  "Открыть оригинал",
+                                   "controlType":  "Button",
+                                   "hasKeyboardFocus":  true
+                               }
+                           ],
+    "keyboardToggle":  {
+                           "afterSpace":  "On",
+                           "afterSecondSpace":  "Off"
+                       },
+    "tabSequence":  [
+                        {
+                            "name":  "Роль, навык или компания",
+                            "controlType":  "Edit",
+                            "hasKeyboardFocus":  true
+                        },
+                        {
+                            "name":  "Найти",
+                            "controlType":  "Button",
+                            "hasKeyboardFocus":  true
+                        },
+                        {
+                            "name":  "По релевантности",
+                            "controlType":  "RadioButton",
+                            "hasKeyboardFocus":  true
+                        },
+                        {
+                            "name":  "Supervisor, Appeals Centene Corporation CA Удалённая работа Руководитель 75 300–135 400 USD/год Опубликовано 29 июл. 2026",
+                            "controlType":  "ListItem",
+                            "hasKeyboardFocus":  true
+                        },
+                        {
+                            "name":  "Закрыть карточку",
+                            "controlType":  "Button",
+                            "hasKeyboardFocus":  true
+                        },
+                        {
+                            "name":  "Открыть оригинал",
+                            "controlType":  "Button",
+                            "hasKeyboardFocus":  true
+                        },
+                        {
+                            "name":  "Техническая информация",
+                            "controlType":  "Button",
+                            "hasKeyboardFocus":  true
+                        },
+                        {
+                            "name":  "Тема",
+                            "controlType":  "ComboBox",
+                            "hasKeyboardFocus":  true
+                        }
+                    ],
+    "narratorRunningDuringScreenshot":  true,
+    "screenshotSha256":  "3b251a505a404d4dd74260cd148826900f1616bbc4bc897fbbd477118e818872",
+    "passed":  true,
+    "narratorStopped":  true
+}

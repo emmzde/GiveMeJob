@@ -11,13 +11,15 @@
   --bg-active:       rgba(55, 53, 47, 0.10);
   --bg-raised:       #ffffff;
   --text:            #37352f;   /* тёплый почти-чёрный, не #000 */
-  --text-secondary:  rgba(55, 53, 47, 0.72);
-  --text-tertiary:   rgba(55, 53, 47, 0.52);
+  --text-secondary:  #5f5d57;
+  --text-tertiary:   #73716b;
+  --text-placeholder: #73716b;
   --border:          rgba(55, 53, 47, 0.09);
-  --accent:          #2383e2;
-  --accent-muted:    rgba(35, 131, 226, 0.12);
+  --accent:          #0b65b1;
+  --accent-muted:    rgba(11, 101, 177, 0.12);
   --on-accent:       #ffffff;
   --focus:           #2383e2;
+  --overlay:         rgba(25, 25, 25, 0.48);
 
   --shadow-sm: 0 1px 2px rgba(15, 15, 15, 0.05);
   --shadow-md: rgba(15, 15, 15, 0.05) 0 0 0 1px,
@@ -55,13 +57,15 @@
   --bg-active:      rgba(255, 255, 255, 0.10);
   --bg-raised:      #252525;
   --text:           rgba(255, 255, 255, 0.90);
-  --text-secondary: rgba(255, 255, 255, 0.72);
-  --text-tertiary:  rgba(255, 255, 255, 0.52);
+  --text-secondary: #c2c2c2;
+  --text-tertiary:  #a3a3a3;
+  --text-placeholder: #a3a3a3;
   --border:         rgba(255, 255, 255, 0.10);
-  --accent:         #529cca;
-  --accent-muted:   rgba(82, 156, 202, 0.16);
-  --on-accent:      #ffffff;
+  --accent:         #73b4e1;
+  --accent-muted:   rgba(115, 180, 225, 0.16);
+  --on-accent:      #191919;
   --focus:          #529cca;
+  --overlay:        rgba(0, 0, 0, 0.64);
 
   --emmy-fur:        #d8cfc3;
   --emmy-fur-shadow: #a99988;

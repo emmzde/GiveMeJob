@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-01",
+  "sourceCommit": "7d75041963896c464c074b3732cd144488daa7af",
+  "worktreeDirty": true,
+  "environment": {
+    "os": "Windows 10.0.26200 build 26200",
+    "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+    "ramBytes": 16961822720,
+    "architecture": "AMD64",
+    "disk": {
+      "model": "SKHynix_HFS001TEJ4X112N",
+      "mediaType": "SSD",
+      "busType": "NVMe",
+      "sizeBytes": 1024209543168
+    }
+  },
+  "catalog": {
+    "version": "1",
+    "jobs": 78719,
+    "sqliteBytes": 1043488768,
+    "sqliteSha256": "e03b6b3e76be625c432268043cc241eb133e41566c3057dfdb610dbab92ab71e",
+    "archiveBytes": 340085972,
+    "archiveSha256": "f05e661bbe4bfecfe46e4cc947ddc7c0ae0b0a43c43876ad00e3996b68475671"
+  },
+  "artifacts": {
+    "nsis": {
+      "file": "GiveMeJob!_0.1.0_x64-setup.exe",
+      "bytes": 347402315,
+      "sha256": "0f571610c8f65f8af1ea7a0a3caa405974f7cd2745b02aa3548775de363c7b1f"
+    },
+    "portable": {
+      "file": "GiveMeJob-portable-x64.zip",
+      "bytes": 344172821,
+      "sha256": "f683976403f9b14be250c41dc2f57bcf938d6de1ea752a803a3e98b56c9a20ba"
+    }
+  },
+  "nsisFirstRun": {
+    "cleanAppDataPrecondition": true,
+    "installerExitCode": 0,
+    "installMs": 29625.3999,
+    "windowMs": 1266.0526,
+    "catalogReadyMs": 12441.8087,
+    "catalogSealExists": true,
+    "temporaryFiles": 0,
+    "benchmarkExecutableInPayload": false,
+    "applicationExitedUnexpectedly": false
+  },
+  "portableFirstRun": {
+    "cleanAppDataPrecondition": true,
+    "launchedFromExtractedZip": true,
+    "windowMs": 1007.3882,
+    "catalogReadyMs": 12070.2346,
+    "catalogSealExists": true,
+    "temporaryFiles": 0,
+    "applicationExitedUnexpectedly": false
+  },
+  "corruptCatalogRecovery": {
+    "mutation": "SQLite header byte 0: 83 -> 0",
+    "windowMs": 243.7788,
+    "recoveryReadyMs": 12312.9797,
+    "recoveredSha256": "e03b6b3e76be625c432268043cc241eb133e41566c3057dfdb610dbab92ab71e",
+    "shaMatchesManifest": true,
+    "temporaryFiles": 0,
+    "previousFileRemains": false,
+    "applicationExitedUnexpectedly": false
+  },
+  "repeatedStartup": {
+    "definition": "process start to non-zero native MainWindowHandle after catalog seal exists",
+    "samplesMs": [
+      233.9844,
+      34.2714,
+      41.6588,
+      39.0742,
+      39.1848,
+      32.3271,
+      64.0934,
+      76.7052,
+      39.2045,
+      40.9974
+    ],
+    "p50Ms": 39.2045,
+    "p95Ms": 233.9844,
+    "maxMs": 233.9844,
+    "limitMs": 2500,
+    "passed": true
+  },
+  "steadyStateRam": {
+    "settleSeconds": 5,
+    "sampleCount": 15,
+    "intervalSeconds": 1,
+    "processCount": 7,
+    "primaryMetric": "sum of Win32_PerfFormattedData_PerfProc_Process.WorkingSetPrivate for the Tauri and descendant WebView2 process tree",
+    "workingSetPrivateSamplesBytes": [
+      109379584,
+      109379584,
+      109379584,
+      109379584,
+      109379584,
+      109305856,
+      109305856,
+      109305856,
+      109305856,
+      109305856,
+      109305856,
+      109305856,
+      109305856,
+      109305856,
+      109305856
+    ],
+    "p50Bytes": 109305856,
+    "p95Bytes": 109379584,
+    "maxBytes": 109379584,
+    "privateCommittedBytesSamples": [
+      231301120,
+      231301120,
+      231301120,
+      231301120,
+      231301120,
+      231178240,
+      231178240,
+      231178240,
+      231178240,
+      231178240,
+      231178240,
+      231178240,
+      231178240,
+      231178240,
+      231178240
+    ],
+    "sharedInclusiveWorkingSetSamplesBytes": [
+      403447808,
+      403447808,
+      403447808,
+      403447808,
+      403447808,
+      403382272,
+      403382272,
+      403382272,
+      403382272,
+      403382272,
+      403382272,
+      403382272,
+      403382272,
+      403382272,
+      403382272
+    ],
+    "note": "The shared-inclusive value double-counts shared Edge runtime pages across processes and is retained only as diagnostic data.",
+    "limitBytes": 262144000,
+    "passed": true
+  },
+  "feedScroll": {
+    "browserEngine": "Chromium",
+    "longAnimationFrameApiSupported": true,
+    "stressScrollActions": 15,
+    "newLongAnimationFramesOver50Ms": 0,
+    "framesOver100Ms": 0,
+    "renderedFeedOptionsRange": [8, 13],
+    "loadedJobs": 100,
+    "passed": true
+  },
+  "keyboardSmoke": {
+    "slashFocusesSearch": true,
+    "jMovesSelectionFromJob43ToJob44": true,
+    "ctrlKOpensDialog": true,
+    "escapeClosesDialog": true,
+    "passed": true
+  },
+  "originalLink": {
+    "openOriginalCallsBeforeUserAction": 0,
+    "openOriginalCallsAfterButtonClick": 1,
+    "rustHttpsAndJobIdTestsPassed": true,
+    "passed": true
+  },
+  "networkIsolation": {
+    "applicationOfflineStateObserved": true,
+    "physicalOrFirewallIsolationPerformed": false,
+    "status": "blocked",
+    "reason": "The session is not elevated and Windows Sandbox/Hyper-V is unavailable; a reversible per-executable Windows Firewall isolation rule cannot be installed safely from this session."
+  },
+  "screenshots": [
+    {
+      "file": "../screenshots/M2_SCROLL_BROWSER_2026-08-01.png",
+      "sha256": "3789547f43b7bcb5c3a119a9dbb502ea16f64787ab4f68cb47d032fc9df3ab7f"
+    },
+    {
+      "file": "../screenshots/M2_NSIS_FIRST_RUN_2026-08-01.png",
+      "sha256": "acf8f8c1b609474deb9495e8a7769a8f9bd9271760cbcd1306aed1f1209dfea4"
+    },
+    {
+      "file": "../screenshots/M2_PORTABLE_FIRST_RUN_2026-08-01.png",
+      "sha256": "d7e1d64cba9af2e14a33da2e060b9a949b0681f92f26ee99579702b16101814c"
+    }
+  ]
+}

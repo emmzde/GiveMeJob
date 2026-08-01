@@ -1,14 +1,26 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Building2, CircleDollarSign, MapPin } from "lucide-react";
+import {
+  Building2,
+  CalendarDays,
+  ChartNoAxesColumnIncreasing,
+  CircleDollarSign,
+  MapPin,
+  Wifi,
+} from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { useAppUiStore } from "@/app/store/appUiStore";
-import { Button } from "@/components/ui/button";
 import {
+  formatPostedDate,
   formatSalaryRange,
   normalizeJobTitle,
 } from "@/features/feed/jobPresentation";
-import type { JobSummary } from "@/lib/catalog";
+import {
+  remoteModeLabels,
+  seniorityLabels,
+} from "@/features/feed/searchLabels";
+import type { JobSummary, SearchCursor } from "@/lib/catalog";
+import { isEditableTarget } from "@/lib/keyboard";
 import { t } from "@/lib/i18n";
 
 interface FeedProps {
@@ -17,23 +29,45 @@ interface FeedProps {
   isInitialLoading: boolean;
   isFetching: boolean;
   errorMessage: string | null;
-  hasNextPage: boolean;
+  nextCursor: SearchCursor | null;
   isFetchingNextPage: boolean;
+  canLoadNextPage: boolean;
   onLoadMore(): void;
 }
 
-const skeletonRows = [0, 1, 2, 3, 4] as const;
+const initialSkeletonRows = [0, 1, 2, 3, 4] as const;
+const nextPageSkeletonRows = 3;
+const feedOverscan = 4;
+const loadMoreThreshold = 4;
+const virtualizationThreshold = 50;
+
+function SkeletonRow({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={`space-y-2 px-4 ${compact ? "py-3" : "py-4"}`}>
+      <div className="h-4 w-2/3 animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-active)]" />
+      <div className="h-3 w-1/3 animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-active)]" />
+      <div className="h-3 w-1/2 animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-active)]" />
+    </div>
+  );
+}
 
 function JobListSkeleton() {
   return (
     <div aria-hidden="true" data-testid="initial-search-skeleton">
-      {skeletonRows.map((row) => (
-        <div className="space-y-2 border-b border-[var(--border)] px-4 py-4" key={row}>
-          <div className="h-4 w-2/3 animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-active)]" />
-          <div className="h-3 w-1/3 animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-active)]" />
-          <div className="h-3 w-1/2 animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-active)]" />
+      {initialSkeletonRows.map((row) => (
+        <div className="border-b border-[var(--border)]" key={row}>
+          <SkeletonRow />
         </div>
       ))}
+    </div>
+  );
+}
+
+function EmptyFeed() {
+  return (
+    <div className="grid min-h-48 place-content-center px-6 text-center">
+      <p className="text-sm font-medium">{t("empty")}</p>
+      <p className="mt-1 text-xs text-[var(--text-secondary)]">{t("emptyHint")}</p>
     </div>
   );
 }
@@ -44,38 +78,90 @@ export function Feed({
   isInitialLoading,
   isFetching,
   errorMessage,
-  hasNextPage,
+  nextCursor,
   isFetchingNextPage,
+  canLoadNextPage,
   onLoadMore,
 }: FeedProps) {
   const selectedId = useAppUiStore((state) => state.selectedId);
   const selectJob = useAppUiStore((state) => state.selectJob);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const rowCount = jobs.length + (hasNextPage ? 1 : 0);
+  const requestedCursor = useRef<SearchCursor | null>(null);
+  const skeletonCount = isFetchingNextPage ? nextPageSkeletonRows : 0;
+  const rowCount = jobs.length + skeletonCount;
+  const shouldVirtualize = jobs.length > virtualizationThreshold;
   // TanStack Virtual intentionally exposes mutable measurement methods.
   // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: rowCount,
-    estimateSize: () => 94,
+    enabled: shouldVirtualize,
+    estimateSize: () => 128,
+    getItemKey: (index) => jobs[index]?.id ?? `next-page-skeleton-${index - jobs.length}`,
     getScrollElement: () => scrollRef.current,
     initialRect: { height: 640, width: 520 },
-    overscan: 5,
+    overscan: feedOverscan,
   });
+  const virtualRows = virtualizer.getVirtualItems();
+  const lastVirtualIndex = virtualRows.at(-1)?.index;
+
+  useEffect(() => {
+    if (
+      !shouldVirtualize ||
+      !canLoadNextPage ||
+      nextCursor === null ||
+      lastVirtualIndex === undefined ||
+      lastVirtualIndex < jobs.length - loadMoreThreshold ||
+      requestedCursor.current === nextCursor
+    ) {
+      return;
+    }
+
+    requestedCursor.current = nextCursor;
+    onLoadMore();
+  }, [canLoadNextPage, jobs.length, lastVirtualIndex, nextCursor, onLoadMore, shouldVirtualize]);
+
+  useEffect(() => {
+    if (shouldVirtualize || !canLoadNextPage || nextCursor === null) return;
+    const scrollElement = scrollRef.current;
+    if (scrollElement === null) return;
+
+    function loadWhenNearStaticEnd(element: HTMLDivElement): void {
+      const remaining =
+        element.scrollHeight - element.scrollTop - element.clientHeight;
+      if (
+        remaining > 128 * loadMoreThreshold ||
+        requestedCursor.current === nextCursor
+      ) {
+        return;
+      }
+      requestedCursor.current = nextCursor;
+      onLoadMore();
+    }
+
+    const handleScroll = () => loadWhenNearStaticEnd(scrollElement);
+    handleScroll();
+    scrollElement.addEventListener("scroll", handleScroll, { passive: true });
+    return () => scrollElement.removeEventListener("scroll", handleScroll);
+  }, [canLoadNextPage, nextCursor, onLoadMore, shouldVirtualize]);
 
   useEffect(() => {
     function handleNavigation(event: KeyboardEvent): void {
-      const target = event.target;
       if (
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement ||
-        (target instanceof HTMLElement && target.isContentEditable)
+        event.ctrlKey ||
+        event.altKey ||
+        event.metaKey ||
+        isEditableTarget(event.target)
       ) {
         return;
       }
       const isArrow = event.key === "ArrowDown" || event.key === "ArrowUp";
       if (isArrow && !scrollRef.current?.contains(document.activeElement)) return;
-      const delta = event.key === "j" || event.key === "ArrowDown" ? 1 : event.key === "k" || event.key === "ArrowUp" ? -1 : 0;
+      const delta =
+        event.key === "j" || event.key === "ArrowDown"
+          ? 1
+          : event.key === "k" || event.key === "ArrowUp"
+            ? -1
+            : 0;
       if (delta === 0 || jobs.length === 0) return;
       event.preventDefault();
       const currentIndex = jobs.findIndex((job) => job.id === selectedId);
@@ -83,33 +169,40 @@ export function Feed({
       const nextJob = jobs[nextIndex];
       if (!nextJob) return;
       selectJob(nextJob.id);
-      virtualizer.scrollToIndex(nextIndex, { align: "auto" });
+      if (shouldVirtualize) virtualizer.scrollToIndex(nextIndex, { align: "auto" });
       requestAnimationFrame(() => {
-        scrollRef.current
-          ?.querySelector<HTMLButtonElement>(`[data-job-id="${nextJob.id}"]`)
-          ?.focus();
+        const nextRow = scrollRef.current?.querySelector<HTMLButtonElement>(
+          `[data-job-id="${nextJob.id}"]`,
+        );
+        if (!shouldVirtualize) nextRow?.scrollIntoView?.({ block: "nearest" });
+        nextRow?.focus();
       });
     }
 
     window.addEventListener("keydown", handleNavigation);
     return () => window.removeEventListener("keydown", handleNavigation);
-  }, [jobs, selectJob, selectedId, virtualizer]);
+  }, [jobs, selectJob, selectedId, shouldVirtualize, virtualizer]);
 
-  function renderJob(job: JobSummary) {
+  function renderJob(job: JobSummary, index: number) {
     const salary = formatSalaryRange(job);
+    const postedDate = formatPostedDate(job.postedAt);
     const isSelected = selectedId === job.id;
     return (
       <button
         aria-current={isSelected ? "true" : undefined}
-        className={`block min-h-[94px] w-full border-l-[3px] px-4 py-3 text-left focus-visible:outline-2 focus-visible:outline-offset-[-2px] ${
+        aria-posinset={index + 1}
+        aria-selected={isSelected}
+        aria-setsize={jobs.length}
+        className={`block min-h-[112px] w-full border-l-[3px] px-4 py-3 text-left focus-visible:outline-2 focus-visible:outline-offset-[-2px] ${
           isSelected
             ? "border-l-[var(--accent)] bg-[var(--accent-muted)]"
             : "border-l-transparent hover:bg-[var(--bg-hover)]"
         }`}
         data-job-id={job.id}
         data-selected={isSelected ? "true" : "false"}
-        key={job.id}
         onClick={() => selectJob(job.id)}
+        role="option"
+        tabIndex={selectedId === job.id || (selectedId === null && index === 0) ? 0 : -1}
         type="button"
       >
         <span className="flex items-start gap-3">
@@ -117,10 +210,14 @@ export function Feed({
             aria-hidden="true"
             className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-raised)] text-xs font-semibold text-[var(--text-secondary)]"
           >
-            {job.company.slice(0, 1).toLocaleUpperCase("ru-RU") || <Building2 className="size-4" />}
+            {job.company.slice(0, 1).toLocaleUpperCase("ru-RU") || (
+              <Building2 className="size-4" />
+            )}
           </span>
           <span className="min-w-0 flex-1">
-            <span className={`block truncate text-sm ${isSelected ? "font-semibold" : "font-medium"}`}>
+            <span
+              className={`block break-words text-sm leading-5 ${isSelected ? "font-semibold" : "font-medium"}`}
+            >
               {normalizeJobTitle(job.title)}
             </span>
             <span className="mt-0.5 block truncate text-xs font-medium text-[var(--text-secondary)]">
@@ -128,61 +225,120 @@ export function Feed({
             </span>
           </span>
         </span>
-        <span className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3 pl-12 text-xs text-[var(--text-secondary)]">
+        <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 pl-12 text-xs text-[var(--text-secondary)]">
           <span className="inline-flex min-w-0 items-center gap-1">
-            <MapPin aria-hidden="true" className="size-3.5 shrink-0" />
-            <span className="truncate">{job.locationText || "—"}</span>
+            <MapPin aria-hidden="true" className="size-4 shrink-0" />
+            <span className="max-w-48 truncate">{job.locationText || "—"}</span>
           </span>
-          <span className="inline-flex min-w-0 items-center gap-1">
-            <CircleDollarSign aria-hidden="true" className="size-3.5 shrink-0" />
-            <span className="truncate">{salary ?? t("salaryNotSpecified")}</span>
+          {job.remoteMode ? (
+            <span className="inline-flex items-center gap-1">
+              <Wifi aria-hidden="true" className="size-4 shrink-0" />
+              {remoteModeLabels[job.remoteMode]}
+            </span>
+          ) : null}
+          {job.seniority ? (
+            <span className="inline-flex items-center gap-1">
+              <ChartNoAxesColumnIncreasing aria-hidden="true" className="size-4 shrink-0" />
+              {seniorityLabels[job.seniority]}
+            </span>
+          ) : null}
+          <span className="inline-flex items-center gap-1">
+            <CircleDollarSign aria-hidden="true" className="size-4 shrink-0" />
+            {salary ?? t("salaryNotSpecified")}
           </span>
+          {postedDate ? (
+            <span className="inline-flex items-center gap-1">
+              <CalendarDays aria-hidden="true" className="size-4 shrink-0" />
+              {t("posted")} {postedDate}
+            </span>
+          ) : null}
         </span>
       </button>
     );
   }
 
-  function renderLoadMore() {
-    return hasNextPage ? (
-      <div className="flex min-h-[70px] items-center justify-center border-t border-[var(--border)] px-4 py-3">
-        <Button disabled={isFetchingNextPage} onClick={onLoadMore} type="button" variant="outline">
-          {isFetchingNextPage ? t("loadingMore") : t("loadMore")}
-        </Button>
-      </div>
-    ) : null;
-  }
+  const showEndState =
+    isCatalogReady &&
+    jobs.length > 0 &&
+    nextCursor === null &&
+    !isFetching &&
+    errorMessage === null;
 
   return (
     <div
       aria-busy={isFetching}
-      className="scroll-region min-h-0 flex-1 overflow-y-auto"
+      aria-label={t("searchResults")}
+      className="scroll-region min-h-0 flex-1 overflow-y-auto overscroll-contain"
       ref={scrollRef}
+      role="region"
     >
       {isInitialLoading && jobs.length === 0 ? <JobListSkeleton /> : null}
       {isCatalogReady && !isFetching && !errorMessage && jobs.length === 0 ? (
-        <p className="p-6 text-sm text-[var(--text-secondary)]">{t("empty")}</p>
+        <EmptyFeed />
       ) : null}
-      {jobs.length <= 50 ? (
-        <div className="divide-y divide-[var(--border)]">
-          {jobs.map(renderJob)}
-          {renderLoadMore()}
-        </div>
-      ) : (
-        <div className="relative w-full" data-virtualized="true" style={{ height: virtualizer.getTotalSize() }}>
-          {virtualizer.getVirtualItems().map((row) => {
-            const job = jobs[row.index];
-            return (
-              <div
-                className="absolute left-0 top-0 w-full border-b border-[var(--border)]"
-                key={row.key}
-                style={{ height: row.size, transform: `translateY(${row.start}px)` }}
-              >
-                {job ? renderJob(job) : renderLoadMore()}
+      {jobs.length > 0 ? (
+        shouldVirtualize ? (
+          <div
+            aria-label={t("jobsList")}
+            className="relative w-full"
+            data-virtualized="true"
+            role="listbox"
+            style={{ height: virtualizer.getTotalSize() }}
+          >
+            {virtualRows.map((row) => {
+              const job = jobs[row.index];
+              return (
+                <div
+                  className="absolute left-0 top-0 w-full border-b border-[var(--border)]"
+                  data-index={row.index}
+                  key={row.key}
+                  ref={virtualizer.measureElement}
+                  style={{ transform: `translateY(${row.start}px)` }}
+                >
+                  {job ? (
+                    renderJob(job, row.index)
+                  ) : (
+                    <div aria-hidden="true" data-testid="next-page-skeleton">
+                      <SkeletonRow compact />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div aria-label={t("jobsList")} role="listbox">
+            {jobs.map((job, index) => (
+              <div className="border-b border-[var(--border)]" key={job.id}>
+                {renderJob(job, index)}
               </div>
-            );
-          })}
-        </div>
-      )}
+            ))}
+            {Array.from({ length: skeletonCount }, (_, index) => (
+              <div
+                aria-hidden="true"
+                className="border-b border-[var(--border)]"
+                data-testid="next-page-skeleton"
+                key={`fallback-skeleton-${index}`}
+              >
+                <SkeletonRow compact />
+              </div>
+            ))}
+          </div>
+        )
+      ) : null}
+      {isFetchingNextPage ? (
+        <p aria-live="polite" className="sr-only" role="status">
+          {t("nextPageLoading")}
+        </p>
+      ) : null}
+      {showEndState ? (
+        <p
+          className="border-t border-[var(--border)] px-4 py-5 text-center text-xs text-[var(--text-tertiary)]"
+          data-testid="end-of-results"
+        >
+          {t("endOfResults")}
+        </p>
+      ) : null}
     </div>
   );
 }

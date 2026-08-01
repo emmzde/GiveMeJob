@@ -74,7 +74,16 @@ fn push_concept(concepts: &mut Vec<ParsedConcept>, current: &mut String, quoted:
 }
 
 pub(super) fn fts_literal(value: &str, _force_phrase: bool) -> Option<String> {
-    fts_phrase(value).map(|phrase| format!("{phrase}*"))
+    let tokens = fts_tokens(value);
+    let phrase = quoted_tokens(&tokens)?;
+    let use_prefix = tokens
+        .last()
+        .is_some_and(|token| token.chars().count() >= 3);
+    Some(if use_prefix {
+        format!("{phrase}*")
+    } else {
+        phrase
+    })
 }
 
 pub(super) fn fts_exact_literal(value: &str) -> Option<String> {
@@ -82,14 +91,20 @@ pub(super) fn fts_exact_literal(value: &str) -> Option<String> {
 }
 
 fn fts_phrase(value: &str) -> Option<String> {
-    let tokens = value
+    quoted_tokens(&fts_tokens(value))
+}
+
+fn fts_tokens(value: &str) -> Vec<&str> {
+    value
         .split(|character: char| !(character.is_alphanumeric() || character == '_'))
         .filter(|token| !token.is_empty())
-        .collect::<Vec<_>>();
+        .collect()
+}
+
+fn quoted_tokens(tokens: &[&str]) -> Option<String> {
     if tokens.is_empty() {
         return None;
     }
-
     let joined = tokens.join(" ");
     Some(format!("\"{joined}\""))
 }
@@ -155,8 +170,9 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec!["c++", "c#", ".net", "node.js"]
         );
-        assert_eq!(fts_literal("c++", false), Some("\"c\"*".to_owned()));
+        assert_eq!(fts_literal("c++", false), Some("\"c\"".to_owned()));
         assert_eq!(fts_literal("cpp", false), Some("\"cpp\"*".to_owned()));
+        assert_eq!(fts_literal("go", false), Some("\"go\"".to_owned()));
         assert_eq!(
             fts_exact_literal("New York"),
             Some("\"New York\"".to_owned())

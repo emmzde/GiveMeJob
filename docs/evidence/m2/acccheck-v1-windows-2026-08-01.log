@@ -1,0 +1,64 @@
+[Error] ElementHasNoName
+	Routine: VerificationRoutines.CheckName
+	Text: Element has no name
+	What: Name(), Role(Pane), State(Focusable )
+	Where: {X=34,Y=57,Width=0,Height=0}
+
+[Error] ElementsChildHasDifferentParent
+	Routine: VerificationRoutines.CheckParentChild
+	Text: Element's child [IAccessible.ChildId(0).Role(панель).Name()] has different parent [IAccessible.ChildId(0).Role(окно).Name(GiveMeJob!)] than element)
+	What: Name(), Role(Pane), State()
+	Where: {X=34,Y=57,Width=1180,Height=760}
+[Warning] BoundingRectNotHittestable
+	Routine: VerificationRoutines.CheckBoundingRect
+	Text: The reported rectangle does not appear to contain a point where this element can be retrieved with hit testing.
+	What: Name(Формат работы), Role(StaticText), State(OffScreen )
+	Where: {X=49,Y=374,Width=115,Height=21}
+
+[Warning] BoundingRectNotHittestable
+	Routine: VerificationRoutines.CheckBoundingRect
+	Text: The reported rectangle does not appear to contain a point where this element can be retrieved with hit testing.
+	What: Name(Навыки), Role(StaticText), State(OffScreen )
+	Where: {X=49,Y=599,Width=57,Height=21}
+
+[Warning] BoundingRectNotHittestable
+	Routine: VerificationRoutines.CheckBoundingRect
+	Text: The reported rectangle does not appear to contain a point where this element can be retrieved with hit testing.
+	What: Name(Локации), Role(StaticText), State(OffScreen )
+	Where: {X=49,Y=698,Width=65,Height=21}
+
+[Warning] BoundingRectNotHittestable
+	Routine: VerificationRoutines.CheckBoundingRect
+	Text: The reported rectangle does not appear to contain a point where this element can be retrieved with hit testing.
+	What: Name(Сортировка), Role(StaticText), State(OffScreen )
+	Where: {X=299,Y=350,Width=88,Height=21}
+
+[Warning] BoundingRectNotHittestable
+	Routine: VerificationRoutines.CheckBoundingRect
+	Text: The reported rectangle does not appear to contain a point where this element can be retrieved with hit testing.
+	What: Name(По релевантности), Role(RadioButton), State(Focusable Checked )
+	Where: {X=302,Y=352,Width=1,Height=1}
+
+[Warning] BoundingRectNotHittestable
+	Routine: VerificationRoutines.CheckBoundingRect
+	Text: The reported rectangle does not appear to contain a point where this element can be retrieved with hit testing.
+	What: Name(Сначала новые), Role(RadioButton), State(Focusable )
+	Where: {X=425,Y=352,Width=2,Height=1}
+
+[Warning] BoundingRectNotHittestable
+	Routine: VerificationRoutines.CheckBoundingRect
+	Text: The reported rectangle does not appear to contain a point where this element can be retrieved with hit testing.
+	What: Name(По зарплате), Role(RadioButton), State(Focusable )
+	Where: {X=529,Y=352,Width=2,Height=1}
+
+[Warning] BoundingRectNotHittestable
+	Routine: VerificationRoutines.CheckBoundingRect
+	Text: The reported rectangle does not appear to contain a point where this element can be retrieved with hit testing.
+	What: Name(Откроется в системном браузере. Быстрая клавиша: Ctrl+Enter.), Role(StaticText), State(OffScreen )
+	Where: {X=989,Y=277,Width=465,Height=21}
+
+[Warning] BoundingRectNotHittestable
+	Routine: VerificationRoutines.CheckBoundingRect
+	Text: The reported rectangle does not appear to contain a point where this element can be retrieved with hit testing.
+	What: Name(), Role(Pane), State()
+	Where: {X=34,Y=57,Width=1180,Height=760}

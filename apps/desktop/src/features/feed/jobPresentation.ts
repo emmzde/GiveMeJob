@@ -1,5 +1,30 @@
 import type { JobSummary } from "@/lib/catalog";
 
+const countFormatter = new Intl.NumberFormat("ru-RU");
+const salaryNumberFormatter = new Intl.NumberFormat("ru-RU", {
+  maximumFractionDigits: 0,
+});
+const snapshotDateFormatter = new Intl.DateTimeFormat("ru-RU", {
+  day: "numeric",
+  month: "long",
+  timeZone: "UTC",
+  year: "numeric",
+});
+const postedDateFormatter = new Intl.DateTimeFormat("ru-RU", {
+  day: "numeric",
+  month: "short",
+  timeZone: "UTC",
+  year: "numeric",
+});
+
+const salaryPeriodLabels: Readonly<Record<string, string>> = {
+  day: "/день",
+  hour: "/час",
+  month: "/месяц",
+  week: "/неделю",
+  year: "/год",
+};
+
 const shortTechnologyLabels: Readonly<Record<string, string>> = {
   ai: "AI",
   api: "API",
@@ -15,21 +40,28 @@ const shortTechnologyLabels: Readonly<Record<string, string>> = {
 };
 
 export function formatCount(value: number): string {
-  return value.toLocaleString("ru-RU");
+  return countFormatter.format(value);
 }
 
 export function formatSnapshotDate(value: string | null): string | null {
   if (value === null) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-    year: "numeric",
-  })
+  return snapshotDateFormatter
     .format(date)
     .replace(/\sг\.$/, "");
+}
+
+export function formatPostedDate(value: string | null): string | null {
+  if (value === null) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return postedDateFormatter.format(date).replace(/\sг\.$/, "");
+}
+
+export function formatSalaryPeriod(value: string | null | undefined): string {
+  if (!value) return "";
+  return salaryPeriodLabels[value.trim().toLocaleLowerCase("en-US")] ?? "";
 }
 
 export function formatSalaryRange(
@@ -37,17 +69,30 @@ export function formatSalaryRange(
     salaryPeriod?: string | null;
   },
 ): string | null {
-  if (job.salaryMin === null && job.salaryMax === null) return null;
-  const formatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 });
-  const values = [job.salaryMin, job.salaryMax].filter(
-    (value): value is number => value !== null,
-  );
-  const range =
-    values.length === 2 && values[0] === values[1]
-      ? formatter.format(values[0]!)
-      : values.map((value) => formatter.format(value)).join("–");
-  const period = job.salaryPeriod === "year" ? "/год" : "";
-  return `${range} ${job.salaryCurrency ?? ""}${period}`.trim();
+  const minimum = job.salaryMin;
+  const maximum = job.salaryMax;
+  if (minimum === null && maximum === null) return null;
+  let amount: string;
+  if (minimum !== null && maximum !== null) {
+    amount =
+      minimum === maximum
+        ? salaryNumberFormatter.format(minimum)
+        : `${salaryNumberFormatter.format(minimum)}–${salaryNumberFormatter.format(maximum)}`;
+  } else if (minimum !== null) {
+    amount = `от ${salaryNumberFormatter.format(minimum)}`;
+  } else if (maximum !== null) {
+    amount = `до ${salaryNumberFormatter.format(maximum)}`;
+  } else {
+    return null;
+  }
+
+  const currency = job.salaryCurrency?.trim();
+  const normalizedCurrency =
+    currency && /^[a-z]{3}$/iu.test(currency)
+      ? currency.toLocaleUpperCase("en-US")
+      : currency;
+  const period = formatSalaryPeriod(job.salaryPeriod);
+  return `${amount}${normalizedCurrency ? ` ${normalizedCurrency}` : ""}${period}`;
 }
 
 export function normalizeJobTitle(title: string): string {

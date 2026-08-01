@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "stage": "M2",
+  "capturedAt": "2026-08-01",
+  "decision": "complete",
+  "source": {
+    "commit": "7d75041963896c464c074b3732cd144488daa7af",
+    "worktreeDirty": true,
+    "note": "The measured implementation and evidence files were present in the explicitly recorded dirty worktree; no clean-commit claim is made."
+  },
+  "environment": {
+    "os": "Windows 10.0.26200 build 26200",
+    "architecture": "AMD64",
+    "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+    "ramBytes": 16961822720,
+    "disk": {
+      "model": "SKHynix_HFS001TEJ4X112N",
+      "mediaType": "SSD",
+      "busType": "NVMe",
+      "sizeBytes": 1024209543168
+    }
+  },
+  "catalog": {
+    "version": "1",
+    "jobs": 78719,
+    "sqliteBytes": 1043488768,
+    "sqliteSha256": "e03b6b3e76be625c432268043cc241eb133e41566c3057dfdb610dbab92ab71e",
+    "archiveSha256": "f05e661bbe4bfecfe46e4cc947ddc7c0ae0b0a43c43876ad00e3996b68475671"
+  },
+  "benchmark": {
+    "corpusVersion": "m2-search-benchmark-v1",
+    "configSha256": "db206119a36ef47b32e72bcced9455b3d2bf1587d9f2075e65b24fe9b1e153fd",
+    "cases": 90,
+    "warmupsPerCase": 5,
+    "samplesPerCase": 30,
+    "rawTimings": 2700,
+    "aggregateP50Ms": 31.09,
+    "aggregateP95Ms": 150.86,
+    "aggregateMaxMs": 169.94,
+    "worstPerQueryP95Ms": 167.85,
+    "coldFirstQueryMs": 95.7656,
+    "hardGatePassed": true,
+    "targetUnder150MsMet": false
+  },
+  "gates": {
+    "warmP95Under300Ms": true,
+    "coldUnder500Ms": true,
+    "repeatedStartup": {
+      "runs": 10,
+      "p50Ms": 39.2045,
+      "p95Ms": 233.9844,
+      "maxMs": 233.9844,
+      "under2500Ms": true
+    },
+    "steadyStateRam": {
+      "processes": 7,
+      "samples": 15,
+      "privateWorkingSetP95Bytes": 109379584,
+      "privateCommittedBytes": 231301120,
+      "under250MiB": true
+    },
+    "scroll": {
+      "stressScrollActions": 15,
+      "loadedJobs": 100,
+      "renderedFeedOptionsMin": 8,
+      "renderedFeedOptionsMax": 13,
+      "framesOver100Ms": 0,
+      "passed": true
+    },
+    "cursor": {
+      "visited": 78719,
+      "unique": 78719,
+      "pages": 1575,
+      "duplicates": 0,
+      "omissions": 0,
+      "passed": true
+    },
+    "offline": {
+      "isolation": "Windows.Devices.Radios.RadioState.Off",
+      "connectionProfilePresent": false,
+      "externalPingExitCode": 1,
+      "cleanAppDataPrecondition": true,
+      "cleanPortableWindowMs": 212.8476,
+      "cleanPortableCatalogReadyMs": 11111.0129,
+      "catalogSealExists": true,
+      "searchQuery": "python",
+      "searchResultCount": 9306,
+      "searchPassed": true,
+      "detailPassed": true,
+      "radioStayedOffDuringSearch": true,
+      "savedProfileRestored": "<redacted-saved-wifi-profile>",
+      "networkRestored": true,
+      "passed": true
+    },
+    "corruptCatalogRecovery": {
+      "recoveryReadyMs": 12312.9797,
+      "shaMatchesManifest": true,
+      "temporaryFiles": 0,
+      "passed": true
+    },
+    "packageFirstRuns": {
+      "nsis": {
+        "sha256": "0f571610c8f65f8af1ea7a0a3caa405974f7cd2745b02aa3548775de363c7b1f",
+        "windowMs": 1266.0526,
+        "catalogReadyMs": 12441.8087,
+        "passed": true
+      },
+      "portable": {
+        "sha256": "f683976403f9b14be250c41dc2f57bcf938d6de1ea752a803a3e98b56c9a20ba",
+        "windowMs": 1007.3882,
+        "catalogReadyMs": 12070.2346,
+        "passed": true
+      }
+    },
+    "originalLink": {
+      "callsBeforeUserAction": 0,
+      "callsAfterUserClick": 1,
+      "httpsAndJobIdTestsPassed": true,
+      "passed": true
+    },
+    "accessibility": {
+      "uiaElements": 199,
+      "focusableControls": 65,
+      "unnamedApplicationFocusableControls": 0,
+      "frameworkProviderHostPanes": 1,
+      "nativeFocusJourneyControls": 5,
+      "nativeFocusJourneyMismatches": 0,
+      "tabStopsChecked": 8,
+      "unnamedTabStops": 0,
+      "spaceToggleAfterFirstPress": "On",
+      "spaceToggleAfterSecondPress": "Off",
+      "narratorRanDuringDeveloperModeCapture": true,
+      "narratorStoppedAfterCapture": true,
+      "passed": true
+    },
+    "reducedMotion": {
+      "nativeWebViewProcesses": 6,
+      "mediaQueryMatched": true,
+      "maxAnimationMs": 1,
+      "maxTransitionMs": 1,
+      "animationViolations": 0,
+      "transitionViolations": 0,
+      "smoothScrollElements": 0,
+      "passed": true
+    },
+    "quality": {
+      "frontendTypecheck": true,
+      "frontendLint": true,
+      "frontendTestsPassed": 121,
+      "frontendBuild": true,
+      "rustFmt": true,
+      "rustCheck": true,
+      "rustTestsPassed": 77,
+      "rustTestsIgnored": 4,
+      "rustClippy": true,
+      "ruffCheck": true,
+      "ruffFormat": true,
+      "mypy": true,
+      "pytestPassed": 35,
+      "passed": true
+    }
+  },
+  "evidenceSha256": {
+    "benchmark-v1-windows-2026-08-01.json": "8d8a280e7d1413c38b889d20eb8704ca7d3290f1a21ffb2809366e77c72325e8",
+    "native-v1-windows-2026-08-01.json": "d31f794ad9e7c21071317514b673e733015050e05e3b6355fb1f3be2fd4d143e",
+    "offline-first-run-radio-v1-windows-2026-08-01.json": "f40c6b0c08b60bf1dda16a70779b2bd071c7d29615d919f4c199c34313086943",
+    "offline-search-radio-v1-windows-2026-08-01.json": "8fbb0c3c0b321da803f2f30f149dd820916215e9917ef1b8c3e99c01cbe51b6d",
+    "reduced-motion-v1-windows-2026-08-01.json": "ee1af2ee14b76868548165eab72345dec400e9cfc79e879da44d389776eab641",
+    "narrator-v1-windows-2026-08-01.json": "0be7b7a3161e1887a12d939aa1d103af5c5c4a15402236c9a81f18a2f55a63f5",
+    "acccheck-v1-windows-2026-08-01.log": "f945008beb79baffeaa37c0c61fac2795a532f6afab219d138da4c62db8b581e",
+    "M2_NATIVE_FULLY_OFFLINE_2026-08-01.png": "a2387d6efcfefc519672dc7bfec908c3b02fcd895121144053cb79859323358c",
+    "M2_NATIVE_NARRATOR_DEV_MODE_2026-08-01.png": "3b251a505a404d4dd74260cd148826900f1616bbc4bc897fbbd477118e818872"
+  },
+  "allHardGatesPassed": true
+}

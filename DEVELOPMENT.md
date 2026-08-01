@@ -2,13 +2,13 @@
 
 ## Активный этап
 
-D0 и M1 завершены. В `config/catalog-manifest.json` зафиксирован проверенный
-snapshot из 78 719 вакансий. Текущий этап — M2: offline search и desktop shell.
+D0, M1 и M2 завершены. В `config/catalog-manifest.json` зафиксирован проверенный
+snapshot из 78 719 вакансий. Текущий этап — M3: profile, match и shortlist.
 Backend-фильтры, search correctness, сортировки relevance/newest/salary и
 cursor/keyset готовы. Filter/sort UI, active chips, local autocomplete,
 cursor pagination, виртуализированная лента и job detail подключены к строгому
-IPC-контракту. M2 остаётся в работе до воспроизводимых UI/performance замеров;
-относящийся к M3 match-sort не реализован.
+IPC-контракту. Все M2 hard gates и closing evidence пройдены; относящийся к M3
+match-sort ещё не реализован.
 GitHub Release отложен до M5; актуальный gate описан в
 `docs/RELEASE_STATUS.md`.
 
@@ -60,24 +60,33 @@ Rust-проверки:
 
 ```powershell
 cargo fmt --check --manifest-path apps/desktop/src-tauri/Cargo.toml
-cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
-cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml
+cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml `
+  --all-targets --all-features
+cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml `
+  --all-targets --all-features
 cargo clippy --manifest-path apps/desktop/src-tauri/Cargo.toml `
-  --all-targets -- -D warnings
+  --all-targets --all-features -- -D warnings
 ```
 
-Воспроизводимый full-corpus benchmark location/salary запускается отдельно,
-потому что выполняет 5 warm-ups и 30 samples на каждый scenario:
+Versioned M2 corpus benchmark запускается отдельно уже после release build и
+при остановленном UI: он выполняет 5 warm-ups и 30 samples для каждого из 90
+сценариев, измеряет cold first query и обходит все 78 719 ID через cursor.
+Feature нужен только benchmark binary и исключает его из пользовательского
+NSIS/portable payload.
 
 ```powershell
-cargo test --release --manifest-path apps/desktop/src-tauri/Cargo.toml `
-  frozen_artifact_location_and_salary_benchmark -- --ignored --nocapture
+cargo build --release --manifest-path apps/desktop/src-tauri/Cargo.toml `
+  --features m2-benchmark --bin m2_benchmark
+
+apps/desktop/src-tauri/target/release/m2_benchmark.exe `
+  --catalog .artifacts/catalog/catalog-v1.sqlite `
+  --config config/search/benchmark-v1.json `
+  --output .artifacts/m2/benchmark-v1-run.json
 ```
 
-Для него обязателен `.artifacts/catalog/catalog-v1.sqlite` либо явный
-`GIVEMEJOB_CATALOG_PATH`. Зафиксированный результат и решение не добавлять
-новый index находятся в
-`docs/evidence/M2_FILTERS_SQL_PERFORMANCE_2026-07-31.md`.
+Runner требует release mode, проверяет неизменяемый контракт корпуса и создаёт
+output только по новому пути. Зафиксированные raw timings и native gate:
+`docs/evidence/M2_BENCHMARK_GATE_2026-08-01.md`.
 
 ## Catalog exporter
 
@@ -134,9 +143,9 @@ Artifact находится в `.artifacts/` и не коммитится. Postg
 
 ## Порядок этапов
 
-1. M2 — завершить keyboard/light-dark/reduced-motion acceptance и измерить
-   feed scroll, cold query, repeated startup и steady-state RAM.
-2. M3 — профиль, shortlist и детерминированный match-score.
+1. M2 — завершён; closing evidence:
+   `docs/evidence/M2_FINAL_ACCEPTANCE_2026-08-01.md`.
+2. M3 — текущий этап: профиль, shortlist и детерминированный match-score.
 3. M4 — Emmy, Rust `LLMRouter`, пять разрешённых tools и BYOK.
 4. M5 — NSIS, portable ZIP, updater и public release.
 

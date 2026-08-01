@@ -747,14 +747,25 @@ Authenticode отсутствует в v1; SmartScreen warning документ�
 - [x] Filter/sort UI wiring и exact IPC payload tests.
 - [x] Cursor pagination и virtualized feed после 50 загруженных jobs.
 - [x] Job detail и original link.
-- [x] System light/dark tokens и responsive panels.
-- [x] Keyboard/focus для M2 filters, autocomplete, sort, feed и original link.
+- [x] System/light/dark session theme, AA text/placeholder tokens и responsive panels.
+- [x] `/`, roving `j/k`, virtual scroll и `Ctrl+Enter`; editable controls не перехватываются.
+- [x] `cmdk` palette с доступным dialog, focus trap/restore и только M2 actions.
+- [x] Axe smoke для shell, filters, feed, detail, errors и command dialog.
 - [x] Catalog/search/detail loading, empty и error states.
-- [ ] Воспроизводимый UI acceptance: keyboard-only/light-dark/reduced-motion
-  audit, feed scroll, cold query, repeated startup и steady-state RAM.
+- [x] Versioned 90-query release benchmark, cold IPC query, full cursor audit,
+  feed scroll, repeated startup, steady-state RAM, corrupt recovery и реальные
+  NSIS/portable first runs.
+- [x] Полностью изолированная сеть и финальный native
+  screen-reader/reduced-motion audit.
 
 Критерий: поиск без сети; hard gate warm p95 строго <300 мс. Значение строго
 <150 мс остаётся целевым уровнем.
+
+Закрывающая запись:
+[`evidence/M2_FINAL_ACCEPTANCE_2026-08-01.md`](evidence/M2_FINAL_ACCEPTANCE_2026-08-01.md).
+Все hard gates, включая физически отключённое Wi-Fi radio, offline search/detail,
+native Narrator/keyboard smoke и reduced motion, пройдены. M2 завершён;
+текущий этап — M3.
 
 ### M3. Profile, match и shortlist
 

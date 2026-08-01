@@ -31,11 +31,13 @@ export class AppErrorBoundary extends Component<
     if (this.state.hasError) {
       return (
         <main
-          aria-live="assertive"
           className="grid min-h-screen place-items-center bg-[var(--bg)] p-6 text-[var(--text)]"
-          role="alert"
         >
-          <section className="max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-raised)] p-6">
+          <section
+            aria-live="assertive"
+            className="max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-raised)] p-6"
+            role="alert"
+          >
             <h1 className="text-lg font-semibold">{t("unexpectedErrorTitle")}</h1>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
               {t("unexpectedErrorDescription")}

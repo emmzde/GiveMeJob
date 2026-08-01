@@ -744,7 +744,11 @@ fn decompress_catalog(
     let mut decoder = zstd::stream::read::Decoder::new(BufReader::new(input))
         .map_err(|_| CatalogFailure::DecompressionFailed)?;
     let mut digest = Sha256::new();
-    let mut buffer = [0_u8; 1024 * 1024];
+    // Keep the 1 MiB streaming buffer on the heap. Tokio's blocking worker
+    // stack on Windows is small enough that a fixed-size local buffer here
+    // can terminate the release application with STATUS_STACK_OVERFLOW during
+    // a real first-run extraction.
+    let mut buffer = vec![0_u8; 1024 * 1024];
     let mut written = 0_u64;
     let mut last_progress = 26_u8;
     loop {
@@ -1083,7 +1087,9 @@ fn sha256_file(
 ) -> Result<String, CatalogFailure> {
     let mut file = File::open(path).map_err(map_io_failure)?;
     let mut digest = Sha256::new();
-    let mut buffer = [0_u8; 1024 * 1024];
+    // This path also runs on a Tokio blocking worker during catalog install
+    // and recovery, so the large buffer must not live on that worker's stack.
+    let mut buffer = vec![0_u8; 1024 * 1024];
     let mut read_total = 0_u64;
     let mut last_progress = start;
     loop {

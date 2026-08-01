@@ -1,3 +1,4 @@
+import { createRef } from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -15,4 +16,11 @@ describe("Button", () => {
       expect(button).not.toHaveClass("focus-visible:outline-none");
     },
   );
+
+  it("forwards its button ref for dialog focus restoration", () => {
+    const ref = createRef<HTMLButtonElement>();
+    render(<Button ref={ref}>Trigger</Button>);
+
+    expect(ref.current).toBe(screen.getByRole("button", { name: "Trigger" }));
+  });
 });

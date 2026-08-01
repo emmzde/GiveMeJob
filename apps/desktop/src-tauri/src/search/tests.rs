@@ -614,6 +614,27 @@ fn candidate_query_plans_use_existing_location_and_salary_indexes() {
 }
 
 #[test]
+fn text_with_filters_drives_the_plan_from_fts_once() {
+    let connection = fixture_catalog();
+    let mut query = search_query();
+    query.text = "python".to_owned();
+    query.skills = vec!["Python (computer programming)".to_owned()];
+    query.locations = vec!["US".to_owned()];
+    let plan = query_plan(&connection, &query);
+    assert!(
+        plan.first()
+            .is_some_and(|line| line.starts_with("SCAN jobs_fts VIRTUAL TABLE")),
+        "{plan:?}"
+    );
+    assert_eq!(
+        search_catalog(&connection, &query, "catalog-v1")
+            .expect("text and filters search")
+            .total,
+        Some(1)
+    );
+}
+
+#[test]
 fn first_two_pages_use_tie_keys_without_duplicates_or_lookahead_items() {
     let connection = pagination_fixture_catalog();
     let cases = [
@@ -1200,6 +1221,60 @@ fn frozen_artifact_sparse_query_plans_keep_preselectors() {
         query.salary_min_usd_year = Some(threshold);
         let plan = query_plan(&connection, &query).join("\n");
         assert!(plan.contains("jobs_salary_idx"), "{threshold}: {plan}");
+    }
+}
+
+#[test]
+#[ignore = "full-corpus diagnostic for the versioned M2 filter-heavy benchmark case"]
+fn frozen_artifact_filter_heavy_plan_diagnostic() {
+    let connection = artifact_connection().expect("full-corpus artifact is required");
+    let mut query = search_query();
+    query.limit = 40;
+    query.text = "data engineer".to_owned();
+    query.skills = ["Python (computer programming)", "SQL", "Apache Spark"]
+        .map(str::to_owned)
+        .to_vec();
+    query.locations = ["US", "GB"].map(str::to_owned).to_vec();
+    query.remote_modes = vec![RemoteMode::Remote];
+    query.seniorities = vec![Seniority::Senior, Seniority::Staff];
+    query.employment_types = vec![EmploymentType::FullTime];
+    query.salary_min_usd_year = Some(130_000.0);
+    query.salary_known_only = true;
+    query.sources = ["himalayas", "greenhouse"].map(str::to_owned).to_vec();
+    query.sort = SearchSort::Salary;
+    for line in query_plan(&connection, &query) {
+        println!("{line}");
+    }
+    let started = Instant::now();
+    let page = search_catalog(&connection, &query, "1").expect("filter-heavy search");
+    println!(
+        "filter-heavy elapsed_ms={:.2} total={:?}",
+        started.elapsed().as_secs_f64() * 1_000.0,
+        page.total
+    );
+}
+
+#[test]
+#[ignore = "full-corpus diagnostic for the slowest versioned M2 text-only cases"]
+fn frozen_artifact_text_only_benchmark_diagnostic() {
+    let connection = artifact_connection().expect("full-corpus artifact is required");
+    for (name, text) in [
+        ("quoted software engineer", "\"software engineer\""),
+        ("project manager", "project manager"),
+    ] {
+        let mut query = search_query();
+        query.limit = 40;
+        query.text = text.to_owned();
+        for _ in 0..5 {
+            search_catalog(&connection, &query, "1").expect("diagnostic warmup");
+        }
+        let mut samples = Vec::new();
+        for _ in 0..30 {
+            let started = Instant::now();
+            search_catalog(&connection, &query, "1").expect("diagnostic sample");
+            samples.push(started.elapsed().as_secs_f64() * 1_000.0);
+        }
+        println!("{name}: p95={:.2} ms", p95_milliseconds(samples));
     }
 }
 

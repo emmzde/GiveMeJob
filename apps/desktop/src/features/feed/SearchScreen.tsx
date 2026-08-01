@@ -1,11 +1,12 @@
-import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { Keyboard, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { InfiniteData } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
 import { useAppUiStore } from "@/app/store/appUiStore";
 import { Button } from "@/components/ui/button";
+import { CommandPalette } from "@/features/commands/CommandPalette";
 import {
   catalogStageLabel,
   isCatalogReady,
@@ -26,6 +27,7 @@ import {
   searchDraftToQuery,
 } from "@/features/feed/searchDraft";
 import type { SearchDraft } from "@/features/feed/searchDraft";
+import { flattenUniqueJobs } from "@/features/feed/searchPages";
 import { JobDetail } from "@/features/job/components/JobDetail";
 import type {
   CatalogStatus,
@@ -33,6 +35,7 @@ import type {
   SearchCursor,
   SearchQuery,
 } from "@/lib/catalog";
+import { isEditableTarget } from "@/lib/keyboard";
 import { t } from "@/lib/i18n";
 
 interface SearchScreenProps {
@@ -56,7 +59,12 @@ export function SearchScreen({
   );
   const [retainedQuery, setRetainedQuery] = useState<SearchQuery | null>(null);
   const [hasCommittedInteraction, setHasCommittedInteraction] = useState(false);
-  const [filtersVisible, setFiltersVisible] = useState(true);
+  const [filtersVisible, setFiltersVisible] = useState(() =>
+    window.matchMedia("(min-width: 1180px)").matches,
+  );
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const commandTriggerRef = useRef<HTMLButtonElement>(null);
   const queryClient = useQueryClient();
   const selectJob = useAppUiStore((state) => state.selectJob);
   const selectedId = useAppUiStore((state) => state.selectedId);
@@ -73,7 +81,54 @@ export function SearchScreen({
   const searchData = search.data ?? retainedData;
   const pages = useMemo(() => searchData?.pages ?? [], [searchData]);
   const firstPage = pages[0];
-  const jobs = useMemo(() => pages.flatMap((page) => page.items), [pages]);
+  const jobs = useMemo(() => flattenUniqueJobs(pages), [pages]);
+  const nextCursor =
+    search.isPlaceholderData || search.isError
+      ? null
+      : (pages.at(-1)?.nextCursor ?? null);
+  const suggestion =
+    search.isError || search.isPlaceholderData
+      ? null
+      : (firstPage?.suggestion ?? null);
+  const fetchNextPageOnce = search.fetchNextPageOnce;
+  const loadMore = useCallback(() => {
+    void fetchNextPageOnce();
+  }, [fetchNextPageOnce]);
+  const focusSearch = useCallback(() => {
+    searchInputRef.current?.focus();
+  }, []);
+  const toggleFilters = useCallback(() => {
+    setFiltersVisible((current) => !current);
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1180px)");
+    const handleLayoutChange = (event: MediaQueryListEvent) => {
+      setFiltersVisible(event.matches);
+    };
+    media.addEventListener("change", handleLayoutChange);
+    return () => media.removeEventListener("change", handleLayoutChange);
+  }, []);
+
+  useEffect(() => {
+    function handleSearchShortcut(event: KeyboardEvent): void {
+      if (
+        event.key !== "/" ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.metaKey ||
+        isEditableTarget(event.target) ||
+        !catalogReady
+      ) {
+        return;
+      }
+      event.preventDefault();
+      focusSearch();
+    }
+
+    window.addEventListener("keydown", handleSearchShortcut);
+    return () => window.removeEventListener("keydown", handleSearchShortcut);
+  }, [catalogReady, focusSearch]);
 
   useEffect(() => {
     if (pages.length === 0 || search.isPlaceholderData || search.isError) return;
@@ -121,6 +176,13 @@ export function SearchScreen({
     commit(nextDraft, false);
   }
 
+  function applySuggestion(): void {
+    if (suggestion === null) return;
+    const nextDraft = { ...draft, text: suggestion };
+    setDraft(nextDraft);
+    commit(nextDraft, false);
+  }
+
   return (
     <div
       className="search-layout"
@@ -138,20 +200,36 @@ export function SearchScreen({
         <div className="shrink-0 border-b border-[var(--border)] p-4">
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-lg font-semibold">{t("searchTitle")}</h1>
-            <Button
-              aria-expanded={filtersVisible}
-              aria-label={filtersVisible ? t("hideFilters") : t("showFilters")}
-              className="size-9 px-0"
-              onClick={() => setFiltersVisible((current) => !current)}
-              type="button"
-              variant="ghost"
-            >
-              {filtersVisible ? (
-                <PanelLeftClose aria-hidden="true" className="size-4" />
-              ) : (
-                <PanelLeftOpen aria-hidden="true" className="size-4" />
-              )}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                aria-expanded={commandPaletteOpen}
+                aria-haspopup="dialog"
+                aria-label={t("openCommandPalette")}
+                className="h-9 gap-1.5 px-2"
+                onClick={() => setCommandPaletteOpen(true)}
+                ref={commandTriggerRef}
+                type="button"
+                variant="ghost"
+              >
+                <Keyboard aria-hidden="true" className="size-4" />
+                <span className="hidden text-xs sm:inline">Ctrl+K</span>
+              </Button>
+              <Button
+                aria-controls="search-filters"
+                aria-expanded={filtersVisible}
+                aria-label={filtersVisible ? t("hideFilters") : t("showFilters")}
+                className="size-9 px-0"
+                onClick={toggleFilters}
+                type="button"
+                variant="ghost"
+              >
+                {filtersVisible ? (
+                  <PanelLeftClose aria-hidden="true" className="size-4" />
+                ) : (
+                  <PanelLeftOpen aria-hidden="true" className="size-4" />
+                )}
+              </Button>
+            </div>
           </div>
           <form className="mt-3 flex gap-2" onSubmit={submitSearch}>
             <label className="flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-raised)] px-3">
@@ -159,10 +237,11 @@ export function SearchScreen({
               <span className="sr-only">{t("searchPlaceholder")}</span>
               <input
                 aria-describedby="search-syntax-hint"
-                className="h-9 min-w-0 flex-1 bg-transparent text-sm placeholder:text-[var(--text-tertiary)]"
+                className="h-9 min-w-0 flex-1 bg-transparent text-sm placeholder:text-[var(--text-placeholder)]"
                 disabled={!catalogReady}
                 onChange={(event) => setDraft({ ...draft, text: event.target.value })}
                 placeholder={t("searchPlaceholder")}
+                ref={searchInputRef}
                 value={draft.text}
               />
             </label>
@@ -228,12 +307,20 @@ export function SearchScreen({
                 className="text-sm font-semibold"
                 role="status"
               >
-                {catalogWorking
+                {catalogWorking || (search.isPending && jobs.length === 0)
                   ? t("catalogPreparingSearch")
-                  : search.isFetching && !search.isFetchingNextPage
-                    ? t("resultsLoading")
-                    : `${formatCount(firstPage?.total ?? jobs.length)} ${t("resultsFound")}`}
+                  : `${formatCount(firstPage?.total ?? jobs.length)} ${t("resultsFound")}`}
               </p>
+              {search.isFetching && !search.isFetchingNextPage && jobs.length > 0 ? (
+                <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                  {t("resultsLoading")}
+                </p>
+              ) : null}
+              {catalog.status?.state === "ready" ? (
+                <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                  {t("catalogTotal")}: {formatCount(catalog.status.totalJobs)} {t("jobsFound")}
+                </p>
+              ) : null}
               {snapshotDate ? (
                 <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
                   {t("catalogSnapshot")}: {snapshotDate}
@@ -246,17 +333,37 @@ export function SearchScreen({
               value={draft.sort}
             />
           </div>
+          {suggestion ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
+              <span>{t("typoSuggestion")}:</span>
+              <Button
+                className="h-8 px-2.5 text-xs"
+                disabled={!catalogReady || search.isFetching}
+                onClick={applySuggestion}
+                type="button"
+                variant="outline"
+              >
+                {suggestion}
+              </Button>
+            </div>
+          ) : null}
         </div>
 
         <Feed
+          canLoadNextPage={
+            catalogReady &&
+            nextCursor !== null &&
+            !search.isFetching &&
+            !search.isFetchingNextPage
+          }
           errorMessage={searchError}
-          hasNextPage={search.hasNextPage}
           isCatalogReady={catalogReady}
           isFetching={search.isFetching}
           isFetchingNextPage={search.isFetchingNextPage}
           isInitialLoading={isInitialSearchLoading}
           jobs={jobs}
-          onLoadMore={() => void search.fetchNextPage()}
+          nextCursor={nextCursor}
+          onLoadMore={loadMore}
         />
       </section>
 
@@ -267,6 +374,14 @@ export function SearchScreen({
         key={selectedId ?? "empty"}
         onClose={() => setPanel(null)}
         selectedJob={selectedJob}
+      />
+      <CommandPalette
+        filtersVisible={filtersVisible}
+        onFocusSearch={focusSearch}
+        onOpenChange={setCommandPaletteOpen}
+        onToggleFilters={toggleFilters}
+        open={commandPaletteOpen}
+        returnFocusRef={commandTriggerRef}
       />
     </div>
   );

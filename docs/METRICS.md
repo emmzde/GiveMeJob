@@ -346,9 +346,57 @@ Filter/location/salary corpus benchmark от 31 июля 2026 года:
   virtualization при количестве больше 50.
 
 Это подтверждает реализацию UI-контракта, но не заменяет измерения feed scroll,
-cold first query, repeated startup и steady-state RAM. До записи этих значений
-в воспроизводимой Windows-среде M2 остаётся открытым. Подробная запись:
+cold first query, repeated startup и steady-state RAM. На момент этой
+промежуточной проверки M2 оставался открытым. Подробная запись:
 [`evidence/M2_FILTER_UI_2026-08-01.md`](evidence/M2_FILTER_UI_2026-08-01.md).
+
+Дополнительная theme/keyboard/accessibility проверка от 1 августа 2026 года:
+
+- TypeScript typecheck, ESLint и production web build — pass;
+- Vitest — 121 passed;
+- axe smoke — shell, filters, feed, detail, errors и command dialog без
+  выявленных нарушений;
+- вычисляемый contrast gate — secondary и placeholder не ниже `4.5:1` в
+  light/dark на обоих основных backgrounds;
+- Chromium 900×620 — без horizontal overflow, focus trap/restore dialog
+  подтверждён;
+- native screen-reader speech output остаётся человеческим acceptance, поэтому
+  M2 этой записью не закрывается.
+
+Полная запись:
+[`evidence/M2_THEME_KEYBOARD_A11Y_2026-08-01.md`](evidence/M2_THEME_KEYBOARD_A11Y_2026-08-01.md).
+
+Versioned M2 benchmark/native run от 1 августа 2026 года:
+
+- corpus `m2-search-benchmark-v1`: 90 queries, 5 warmups + 30 measured runs;
+- aggregate p50/p95/max: `31.09 / 150.86 / 169.94 ms`;
+- worst per-query p95: `167.85 ms`, cold first IPC query: `95.77 ms`;
+- cursor: `78 719` visited, `78 719` unique, 0 duplicates;
+- repeated startup p95/max: `233.98 ms`;
+- steady-state private working set p95 полного Tauri/WebView2 дерева:
+  `109 379 584` bytes;
+- scroll frames >100 ms: 0;
+- реальные NSIS и portable first runs и corrupt-catalog recovery прошли.
+
+Полная запись и raw timings:
+[`evidence/M2_BENCHMARK_GATE_2026-08-01.md`](evidence/M2_BENCHMARK_GATE_2026-08-01.md).
+
+Закрывающий native acceptance от 1 августа 2026 года:
+
+- Wi-Fi radio физически переведено в `Off`; connection profile отсутствовал,
+  внешний ping завершился с кодом 1;
+- offline `python` search вернул 9 306 результатов, list/detail доступны;
+- 65 focusable UIA controls, 0 безымянных controls приложения, 5 focus checks,
+  8 последовательных Tab stops и Space-toggle прошли;
+- системный Narrator в developer mode выделил поле поиска и его accessible
+  name/description;
+- native WebView2 подтвердил reduced-motion: максимум animation/transition
+  `1 ms`, нарушений 0.
+
+Полная запись и raw evidence:
+[`evidence/M2_FINAL_ACCEPTANCE_2026-08-01.md`](evidence/M2_FINAL_ACCEPTANCE_2026-08-01.md).
+Все hard gates пройдены; M2 завершён. Неблокирующая цель aggregate warm p95
+`<150 ms` пропущена на `0.86 ms` и сохранена как follow-up quality target.
 
 First-run распаковка измеряется отдельно и не входит в repeated startup.
 

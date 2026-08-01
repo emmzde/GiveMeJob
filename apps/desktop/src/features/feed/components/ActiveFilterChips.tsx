@@ -29,7 +29,7 @@ export function ActiveFilterChips({ draft, onChange }: ActiveFilterChipsProps) {
           type="button"
         >
           <span>{chip.label}</span>
-          <X aria-hidden="true" className="size-3" />
+          <X aria-hidden="true" className="size-4" />
         </button>
       ))}
       <button

@@ -1,4 +1,5 @@
 import type { SearchDraft } from "@/features/feed/searchDraft";
+import { formatCount } from "@/features/feed/jobPresentation";
 import {
   employmentTypeLabels,
   formatSourceLabel,
@@ -71,7 +72,7 @@ export function getActiveFilterChips(draft: SearchDraft): ActiveFilterChip[] {
     const salary = draft.salaryMinUsdYear;
     chips.push({
       id: "salary:min",
-      label: `от ${salary.toLocaleString("ru-RU")} USD/год`,
+      label: `от ${formatCount(salary)} USD/год`,
       remove: (current) => ({ ...current, salaryMinUsdYear: undefined }),
     });
   }

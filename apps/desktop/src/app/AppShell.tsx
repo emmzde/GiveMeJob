@@ -3,10 +3,11 @@ import {
   Database,
   WifiOff,
 } from "lucide-react";
-import { useEffect } from "react";
 import type { ReactNode } from "react";
 
 import { useAppUiStore } from "@/app/store/appUiStore";
+import { ThemeControl } from "@/app/ThemeControl";
+import { useDocumentTheme } from "@/app/theme";
 import {
   catalogStateLabel,
   isCatalogError,
@@ -30,21 +31,7 @@ function CatalogStateIcon({ catalog }: { catalog: CatalogViewState }) {
 
 export function AppShell({ catalog, children }: AppShellProps) {
   const theme = useAppUiStore((state) => state.theme);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const applyTheme = () => {
-      const resolvedTheme = theme === "system" ? (media.matches ? "dark" : "light") : theme;
-      if (resolvedTheme === "dark") root.dataset.theme = "dark";
-      else delete root.dataset.theme;
-      root.style.colorScheme = resolvedTheme;
-    };
-
-    applyTheme();
-    if (theme === "system") media.addEventListener("change", applyTheme);
-    return () => media.removeEventListener("change", applyTheme);
-  }, [theme]);
+  useDocumentTheme(theme);
 
   const catalogHasError = isCatalogError(catalog);
 
@@ -57,15 +44,18 @@ export function AppShell({ catalog, children }: AppShellProps) {
           </span>
           GiveMeJob!
         </div>
-        <span
-          aria-atomic="true"
-          aria-live={catalogHasError ? "assertive" : "polite"}
-          className="inline-flex items-center gap-1.5 text-xs text-[var(--text-secondary)]"
-          role={catalogHasError ? "alert" : "status"}
-        >
-          <CatalogStateIcon catalog={catalog} />
-          {catalogStateLabel(catalog)}
-        </span>
+        <div className="flex items-center gap-2">
+          <ThemeControl />
+          <span
+            aria-atomic="true"
+            aria-live={catalogHasError ? "assertive" : "polite"}
+            className="inline-flex items-center gap-1.5 text-xs text-[var(--text-secondary)]"
+            role={catalogHasError ? "alert" : "status"}
+          >
+            <CatalogStateIcon catalog={catalog} />
+            {catalogStateLabel(catalog)}
+          </span>
+        </div>
       </header>
       {children}
     </main>

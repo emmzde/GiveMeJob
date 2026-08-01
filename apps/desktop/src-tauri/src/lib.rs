@@ -1,12 +1,14 @@
 use serde_json::Value;
 use tauri::{Manager, State};
 
+#[cfg(feature = "m2-benchmark")]
+mod benchmark;
 mod catalog;
 mod ipc;
 mod original;
 mod search;
 
-use catalog::{readonly_connection, CatalogManager, CatalogStatus};
+use catalog::{readonly_connection, CatalogHandle, CatalogManager, CatalogStatus};
 use ipc::IpcError;
 use original::open_original_with;
 use search::dto::{
@@ -25,6 +27,14 @@ where
     F: FnOnce(&rusqlite::Connection, &str) -> Result<T, IpcError> + Send + 'static,
 {
     let catalog = manager.available_catalog()?;
+    run_catalog_handle_query(catalog, operation).await
+}
+
+async fn run_catalog_handle_query<T, F>(catalog: CatalogHandle, operation: F) -> Result<T, IpcError>
+where
+    T: Send + 'static,
+    F: FnOnce(&rusqlite::Connection, &str) -> Result<T, IpcError> + Send + 'static,
+{
     tauri::async_runtime::spawn_blocking(move || {
         let connection = readonly_connection(&catalog.path)?;
         operation(&connection, &catalog.catalog_version)
@@ -48,13 +58,26 @@ async fn search_jobs(
     request: Value,
     state: State<'_, CatalogManager>,
 ) -> Result<SearchPage<JobSummary>, IpcError> {
+    let catalog = state.inner().available_catalog()?;
+    execute_search_command(request, catalog).await
+}
+
+async fn execute_search_command(
+    request: Value,
+    catalog: CatalogHandle,
+) -> Result<SearchPage<JobSummary>, IpcError> {
     let request: SearchQuery =
         serde_json::from_value(request).map_err(|_| IpcError::InvalidQuery)?;
     request.validate()?;
-    run_catalog_query(state.inner().clone(), move |connection, catalog_version| {
+    run_catalog_handle_query(catalog, move |connection, catalog_version| {
         search_catalog(connection, &request, catalog_version)
     })
     .await
+}
+
+#[cfg(feature = "m2-benchmark")]
+pub fn run_m2_benchmark_cli() -> Result<bool, String> {
+    benchmark::run_cli()
 }
 
 #[tauri::command]

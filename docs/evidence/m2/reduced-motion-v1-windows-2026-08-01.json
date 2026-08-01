@@ -1,0 +1,25 @@
+{
+    "schemaVersion":  1,
+    "capturedAt":  "2026-08-01",
+    "webViewProcessCount":  6,
+    "publicationRedactions":  [
+                                   "local user profile and ephemeral WebView2 process identifiers"
+                               ],
+    "commandLinesWithReducedMotion":  [
+                                          "msedgewebview2.exe --force-prefers-reduced-motion --force-renderer-accessibility --remote-debugging-port=<redacted-port>"
+                                      ],
+    "runtime":  {
+                    "prefersReducedMotion":  true,
+                    "maxAnimationMs":  1,
+                    "maxTransitionMs":  1,
+                    "animationViolations":  [
+
+                                            ],
+                    "transitionViolations":  [
+
+                                             ],
+                    "smoothScrollElements":  0,
+                    "elementCount":  2033
+                },
+    "passed":  true
+}

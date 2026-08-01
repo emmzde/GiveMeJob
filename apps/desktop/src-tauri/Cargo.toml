@@ -4,6 +4,20 @@ version = "0.1.0"
 description = "GiveMeJob desktop application"
 authors = ["GiveMeJob contributors"]
 edition = "2021"
+default-run = "givemejob-desktop"
+
+[features]
+default = []
+m2-benchmark = []
+
+[[bin]]
+name = "givemejob-desktop"
+path = "src/main.rs"
+
+[[bin]]
+name = "m2_benchmark"
+path = "src/bin/m2_benchmark.rs"
+required-features = ["m2-benchmark"]
 
 [lib]
 name = "givemejob_desktop_lib"

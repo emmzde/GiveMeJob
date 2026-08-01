@@ -8,6 +8,7 @@ import { useAppUiStore } from "@/app/store/appUiStore";
 import { FilterSection } from "@/components/ui/filter-section";
 import { FilterAutocomplete } from "@/features/feed/components/FilterAutocomplete";
 import type { FilterSuggestion } from "@/features/feed/components/FilterAutocomplete";
+import { formatCount } from "@/features/feed/jobPresentation";
 import type { SearchDraft } from "@/features/feed/searchDraft";
 import {
   employmentTypeLabels,
@@ -147,7 +148,7 @@ function SalaryMinimumInput({ disabled, onCommit, value }: SalaryMinimumInputPro
         aria-describedby={error ? errorId : undefined}
         aria-invalid={error ? true : undefined}
         aria-label={t("salaryMinimum")}
-        className="h-8 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-raised)] px-2 text-xs"
+        className="h-8 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-raised)] px-2 text-xs placeholder:text-[var(--text-placeholder)]"
         disabled={disabled}
         inputMode="decimal"
         maxLength={16}
@@ -208,7 +209,7 @@ export function Filters({ disabled, draft, onChange, visible }: FiltersProps) {
   }));
   const sourceOptions = (filterOptions.data?.sources ?? []).map(({ count, source }) => ({
     label: formatSourceLabel(source),
-    meta: count.toLocaleString("ru-RU"),
+    meta: formatCount(count),
     value: source,
   }));
   const availableSkillSuggestions: FilterSuggestion[] = (skillSuggestions.data ?? [])
@@ -242,6 +243,7 @@ export function Filters({ disabled, draft, onChange, visible }: FiltersProps) {
     <aside
       className="filter-panel scroll-region h-[calc(100vh-3.5rem)] overflow-y-auto border-r border-[var(--border)] bg-[var(--bg-secondary)] p-3"
       data-visible={visible ? "true" : "false"}
+      id="search-filters"
     >
       <nav aria-label="Основная навигация" className="space-y-1">
         <div

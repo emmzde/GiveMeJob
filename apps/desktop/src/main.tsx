@@ -5,15 +5,25 @@ import { createRoot } from "react-dom/client";
 import { App } from "@/app/App";
 import { AppErrorBoundary } from "@/app/AppErrorBoundary";
 import { appQueryClient } from "@/app/queryClient";
+import { useAppUiStore } from "@/app/store/appUiStore";
+import { applyDocumentTheme, resolveTheme } from "@/app/theme";
 import "@/styles/index.css";
 
-const root = document.getElementById("root");
+applyDocumentTheme(
+  document.documentElement,
+  resolveTheme(
+    useAppUiStore.getState().theme,
+    window.matchMedia("(prefers-color-scheme: dark)").matches,
+  ),
+);
 
-if (!root) {
+const appRoot = document.getElementById("root");
+
+if (!appRoot) {
   throw new Error("Root element was not found");
 }
 
-createRoot(root).render(
+createRoot(appRoot).render(
   <StrictMode>
     <QueryClientProvider client={appQueryClient}>
       <AppErrorBoundary>

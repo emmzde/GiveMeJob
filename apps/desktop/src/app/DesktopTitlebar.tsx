@@ -15,6 +15,7 @@ import { useAppUiStore } from "@/app/store/appUiStore";
 import { Kbd } from "@/components/ui/kbd";
 import { catalogStateLabel, isCatalogError, isCatalogReady } from "@/features/catalog/catalogStatus";
 import type { CatalogViewState } from "@/features/catalog/catalogStatus";
+import { useEmmyConfiguration } from "@/features/emmy/hooks";
 import { formatCount } from "@/features/feed/jobPresentation";
 import { t } from "@/lib/i18n";
 import { desktopWindow } from "@/lib/tauri/window";
@@ -66,6 +67,12 @@ export function DesktopTitlebar({ catalog, commandTriggerRef }: DesktopTitlebarP
   const setScreen = useAppUiStore((state) => state.setScreen);
   const ready = isCatalogReady(catalog);
   const catalogError = isCatalogError(catalog);
+  const emmy = useEmmyConfiguration();
+  const emmyLabel = emmy.isPending
+    ? t("aiChecking")
+    : emmy.data?.available
+      ? t("aiReady")
+      : t("aiOffline");
 
   return (
     <header
@@ -113,8 +120,8 @@ export function DesktopTitlebar({ catalog, commandTriggerRef }: DesktopTitlebarP
           ) : null}
         </div>
         <div className="hidden h-7 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-2 text-[11px] text-[var(--text-secondary)] xl:flex">
-          <Bot aria-hidden="true" className="size-3 text-[var(--text-tertiary)]" />
-          {t("aiOffline")}
+          <Bot aria-hidden="true" className={emmy.data?.available ? "size-3 text-[var(--positive)]" : "size-3 text-[var(--text-tertiary)]"} />
+          {emmyLabel}
         </div>
         <button
           aria-label={t("settings")}

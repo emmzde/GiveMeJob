@@ -65,6 +65,16 @@ Field-level validation фокусирует первое неверное пол
 save → restart → load для profile и shortlist. Закрывающая запись:
 [`evidence/M3_FINAL_ACCEPTANCE_2026-08-01.md`](evidence/M3_FINAL_ACCEPTANCE_2026-08-01.md).
 
+Core M4 реализован: закрытые Rust/TypeScript contracts, Rust adapters Groq,
+Gemini, OpenRouter и Cerebras, последовательный `LLMRouter`, максимум четыре
+tool-шага, ровно пять локальных tools, confirmation для shortlist, локальная
+timeline/history, реальные job cards/comparison и state-driven SVG Emmy.
+Fake-provider вертикаль и failover проходят; изолированный WinAPI Credential
+Manager write/read/delete roundtrip также пройден. Полный M4 gate остаётся
+открытым до live-provider smoke, UI save → restart → configured → clear для
+BYOK, native all-providers-unavailable smoke и protected release-build с
+отдельными demo credentials.
+
 Exact per-option result counts
 для remote/seniority/employment не изображаются: текущий IPC возвращает count
 только для source и autocomplete. Hide/apply automation не входит в текущий
@@ -82,6 +92,8 @@ Exact per-option result counts
 - offline desktop shell и локальный Rust SQLite IPC;
 - backend-фильтры и сортировки relevance/newest/salary;
 - локальный profile/shortlist и on-demand deterministic match;
+- core Emmy: Rust router/provider adapters/tools/credentials и React
+  timeline/cards/comparison/settings/mascot states;
 - удаление legacy backend/ingestion;
 - актуальная документация, roadmap и Windows CI;
 - remote feature branch; merge в `main` выполняется только через pull request.
@@ -99,7 +111,11 @@ Release разрешён только после выполнения всех �
 2. M3: **завершён** — `user.sqlite`, профиль, shortlist и детерминированный
    on-demand match-score; глобальный match-sort остаётся обязательным post-M4
    follow-up по ADR-018.
-3. M4: Emmy, Rust `LLMRouter`, ровно пять tools, BYOK и graceful offline.
+3. M4: **в работе** — core Emmy, Rust `LLMRouter`, ровно пять tools, BYOK code
+   path и graceful offline реализованы; isolated Credential Manager roundtrip
+   пройден. Открыты live-provider smoke, UI BYOK restart/clear, native offline
+   и protected release-build. Текущая запись:
+   [`evidence/M4_IMPLEMENTATION_PROGRESS_2026-08-01.md`](evidence/M4_IMPLEMENTATION_PROGRESS_2026-08-01.md).
 4. M5: clean-Windows install test, NSIS, portable ZIP и signed updater.
 5. `catalog-v1.sqlite.zst` опубликован отдельным versioned asset, а его
    SHA-256 совпадает с `config/catalog-manifest.json`.

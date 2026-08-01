@@ -1,6 +1,7 @@
-import { Database, MonitorCog } from "lucide-react";
+import { Bot, Database, MonitorCog } from "lucide-react";
 
 import { ThemeControl } from "@/app/ThemeControl";
+import { EmmyProviderSettings } from "@/features/emmy/EmmyProviderSettings";
 import type { CatalogViewState } from "@/features/catalog/catalogStatus";
 import { formatCount, formatSnapshotDate } from "@/features/feed/jobPresentation";
 import { t } from "@/lib/i18n";
@@ -30,6 +31,19 @@ export function SettingsView({ catalog }: { catalog: CatalogViewState }) {
             <SettingRow label={t("catalogVersion")} value={status?.catalogVersion ?? unavailable} />
             <SettingRow label={t("catalogSnapshotDate")} value={status?.sourceFrozenAt ? formatSnapshotDate(status.sourceFrozenAt) : unavailable} />
           </dl>
+        </section>
+
+        <section className="mt-8" aria-labelledby="emmy-settings-heading">
+          <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]" id="emmy-settings-heading">
+            <Bot aria-hidden="true" className="size-4" />
+            {t("emmyCredentials")}
+          </h2>
+          <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+            {t("emmyCredentialsDescription")}
+          </p>
+          <div className="mt-3">
+            <EmmyProviderSettings />
+          </div>
         </section>
       </section>
     </div>

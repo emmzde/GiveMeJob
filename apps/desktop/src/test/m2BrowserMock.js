@@ -44,6 +44,117 @@ const jobs = Array.from({ length: 240 }, (_, index) => ({
 }));
 let profile = null;
 let shortlist = [];
+const emmyConversationId = "e".repeat(32);
+const emmyConfirmationId = "f".repeat(32);
+const emmyConfiguredProviders = new Set(["groq", "gemini", "openrouter", "cerebras"]);
+
+function emmyConfiguration() {
+  return {
+    available: emmyConfiguredProviders.size > 0,
+    providers: ["groq", "gemini", "openrouter", "cerebras"].map((provider) => ({
+      provider,
+      configured: emmyConfiguredProviders.has(provider),
+      byokConfigured: emmyConfiguredProviders.has(provider),
+      demoAvailable: false,
+    })),
+  };
+}
+
+function emmySnapshot(job) {
+  return {
+    summary: job,
+    employmentType: "full_time",
+    salaryUsdYear: job.salaryMin,
+    skills: ["Rust", "SQLite", "TypeScript"],
+    descriptionExcerpt: "Недоверенный фрагмент локальной вакансии для сравнения.",
+  };
+}
+
+const emmyComparison = {
+  rows: [jobs[0], jobs[1]].map((job) => ({
+    job: emmySnapshot(job),
+    matchBreakdown: null,
+  })),
+};
+let emmyMessages = [
+  {
+    id: "1".repeat(32),
+    conversationId: emmyConversationId,
+    role: "user",
+    content: { type: "user", text: "Найди и сравни две вакансии Rust" },
+    createdAt: "2026-08-01T10:00:00Z",
+  },
+  {
+    id: "2".repeat(32),
+    conversationId: emmyConversationId,
+    role: "tool",
+    content: {
+      type: "tool",
+      call: {
+        name: "search_jobs",
+        args: {
+          text: "Rust",
+          skills: [],
+          locations: [],
+          remoteModes: [],
+          seniorities: [],
+          employmentTypes: [],
+          salaryMinUsdYear: null,
+          salaryKnownOnly: false,
+          sources: [],
+          sort: "relevance",
+          limit: 8,
+        },
+      },
+      result: { type: "search_jobs", items: jobs.slice(0, 2), total: 240 },
+    },
+    createdAt: "2026-08-01T10:00:01Z",
+  },
+  {
+    id: "3".repeat(32),
+    conversationId: emmyConversationId,
+    role: "assistant",
+    content: {
+      type: "assistant",
+      text: "Нашла две вакансии в локальном каталоге и сравнила основные условия.",
+      jobCards: jobs.slice(0, 2),
+      quickReplies: ["Покажи совпадение", "Найди только remote"],
+      comparison: emmyComparison,
+    },
+    createdAt: "2026-08-01T10:00:02Z",
+  },
+  {
+    id: emmyConfirmationId,
+    conversationId: emmyConversationId,
+    role: "tool",
+    content: {
+      type: "tool",
+      call: { name: "set_shortlist", args: { jobId: "1", saved: true } },
+      result: {
+        type: "set_shortlist",
+        preview: {
+          confirmationId: emmyConfirmationId,
+          job: jobs[0],
+          saved: true,
+          status: "pending",
+        },
+      },
+    },
+    createdAt: "2026-08-01T10:00:03Z",
+  },
+];
+
+function emmyConversation() {
+  return {
+    conversation: {
+      id: emmyConversationId,
+      title: "Сравнение Rust-вакансий",
+      createdAt: "2026-08-01T10:00:00Z",
+      updatedAt: "2026-08-01T10:00:03Z",
+    },
+    messages: emmyMessages,
+  };
+}
 
 function matchFor(jobId) {
   return {
@@ -180,6 +291,84 @@ benchmarkWindow.__TAURI_INTERNALS__ = {
     }
     if (command === "get_match_breakdowns") {
       return profile === null ? [] : (args.request?.jobIds ?? []).map(matchFor);
+    }
+    if (command === "emmy_configuration") return emmyConfiguration();
+    if (command === "emmy_set_provider_key") {
+      emmyConfiguredProviders.add(args.request?.provider);
+      return emmyConfiguration();
+    }
+    if (command === "emmy_clear_provider_key") {
+      emmyConfiguredProviders.delete(args.request?.provider);
+      return emmyConfiguration();
+    }
+    if (command === "emmy_list_conversations") {
+      return [emmyConversation().conversation];
+    }
+    if (command === "emmy_create_conversation") {
+      emmyMessages = [];
+      return emmyConversation();
+    }
+    if (command === "emmy_load_conversation") return emmyConversation();
+    if (command === "emmy_send_message") {
+      const text = args.request?.text ?? "Найди Rust вакансии";
+      const suffix = String(emmyMessages.length + 4).padStart(32, "0");
+      const userMessage = {
+        id: suffix,
+        conversationId: emmyConversationId,
+        role: "user",
+        content: { type: "user", text },
+        createdAt: new Date().toISOString(),
+      };
+      const assistantMessage = {
+        id: String(emmyMessages.length + 5).padStart(32, "0"),
+        conversationId: emmyConversationId,
+        role: "assistant",
+        content: {
+          type: "assistant",
+          text: "Готово — использовала только локальный каталог.",
+          jobCards: jobs.slice(2, 4),
+          quickReplies: ["Сравни их"],
+          comparison: null,
+        },
+        createdAt: new Date(Date.now() + 1).toISOString(),
+      };
+      emmyMessages.push(userMessage, assistantMessage);
+      return {
+        conversationId: emmyConversationId,
+        messages: [userMessage, assistantMessage],
+        state: "success",
+        provider: "cerebras",
+        error: null,
+      };
+    }
+    if (command === "emmy_confirm_shortlist") {
+      const confirmed = Boolean(args.request?.confirmed);
+      emmyMessages = emmyMessages.map((message) => {
+        if (message.id !== args.request?.confirmationId) return message;
+        return {
+          ...message,
+          content: {
+            ...message.content,
+            result: {
+              ...message.content.result,
+              preview: {
+                ...message.content.result.preview,
+                status: confirmed ? "confirmed" : "cancelled",
+              },
+            },
+          },
+        };
+      });
+      if (confirmed) {
+        shortlist = [{ jobId: "1", catalogVersion: "1", savedAt: new Date().toISOString() }];
+      }
+      return {
+        conversationId: emmyConversationId,
+        messages: emmyMessages.filter((message) => message.id === args.request?.confirmationId),
+        state: "success",
+        provider: null,
+        error: null,
+      };
     }
     if (command === "autocomplete_skills" || command === "autocomplete_locations") return [];
     if (command === "recover_catalog") return null;

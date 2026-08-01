@@ -15,6 +15,7 @@ jobs:
   build:
     name: NSIS and portable ZIP
     runs-on: windows-latest
+    environment: release
     steps:
       - uses: actions/checkout@v6
 
@@ -58,8 +59,27 @@ jobs:
           cargo test
           cargo clippy --all-targets -- -D warnings
 
-      - name: Build NSIS installer
-        run: pnpm -C apps/desktop tauri build --bundles nsis
+      - name: Build NSIS installer with release demo credentials
+        shell: pwsh
+        env:
+          GIVEMEJOB_GROQ_DEMO_KEY: ${{ secrets.GIVEMEJOB_GROQ_DEMO_KEY }}
+          GIVEMEJOB_GEMINI_DEMO_KEY: ${{ secrets.GIVEMEJOB_GEMINI_DEMO_KEY }}
+          GIVEMEJOB_OPENROUTER_DEMO_KEY: ${{ secrets.GIVEMEJOB_OPENROUTER_DEMO_KEY }}
+          GIVEMEJOB_CEREBRAS_DEMO_KEY: ${{ secrets.GIVEMEJOB_CEREBRAS_DEMO_KEY }}
+        run: |
+          $required = @(
+            "GIVEMEJOB_GROQ_DEMO_KEY",
+            "GIVEMEJOB_GEMINI_DEMO_KEY",
+            "GIVEMEJOB_OPENROUTER_DEMO_KEY",
+            "GIVEMEJOB_CEREBRAS_DEMO_KEY"
+          )
+          foreach ($name in $required) {
+            $value = [Environment]::GetEnvironmentVariable($name)
+            if ([string]::IsNullOrWhiteSpace($value)) {
+              throw "Required release secret is not configured: $name"
+            }
+          }
+          pnpm -C apps/desktop tauri build --bundles nsis
 
       - name: Create portable ZIP
         shell: pwsh

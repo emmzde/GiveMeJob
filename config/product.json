@@ -79,12 +79,20 @@
   },
   "ai": {
     "router": "rust-local",
-    "providers": ["groq", "gemini", "openrouter"],
+    "providers": ["groq", "gemini", "openrouter", "cerebras"],
     "structuredOutputOnly": true,
     "builtInDemoKeys": true,
     "demoKeysAreExtractable": true,
     "byok": true,
-    "byokStorage": "windows-credential-manager"
+    "byokStorage": "windows-credential-manager",
+    "implementation": {
+      "core": true,
+      "credentialManagerNativeRoundTrip": true,
+      "liveProviderSmoke": false,
+      "byokRestartSmoke": false,
+      "nativeOfflineSmoke": false,
+      "protectedReleaseBuildSmoke": false
+    }
   },
   "release": {
     "decision": "docs/RELEASE_STATUS.md",

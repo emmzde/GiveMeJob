@@ -1,9 +1,11 @@
 use serde_json::Value;
-use tauri::{Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
+use zeroize::Zeroizing;
 
 #[cfg(feature = "m2-benchmark")]
 mod benchmark;
 mod catalog;
+mod emmy;
 mod ipc;
 mod match_score;
 mod original;
@@ -11,6 +13,12 @@ mod search;
 mod user;
 
 use catalog::{readonly_connection, CatalogHandle, CatalogManager, CatalogStatus};
+use emmy::{
+    confirm_shortlist as confirm_emmy_shortlist, load_conversation as load_emmy_conversation,
+    run_turn as run_emmy_turn, ClearProviderKeyRequest, CredentialManager, EmmyConfiguration,
+    EmmyConfirmationRequest, EmmyConversation, EmmyConversationRequest, EmmyConversationSummary,
+    EmmySendRequest, EmmyTurnResult, LlmError, LlmRouter, SetProviderKeyRequest,
+};
 use ipc::IpcError;
 use match_score::{compute_match, JobMatch, MatchBatchRequest, MatchBreakdown};
 use original::open_original_with;
@@ -26,6 +34,10 @@ use search::{
 use user::{
     ProfileInput, SetShortlistInput, ShortlistRecord, ShortlistState, UserProfile, UserStore,
 };
+
+struct EmmyRouterState {
+    router: Option<LlmRouter>,
+}
 
 async fn run_catalog_query<T, F>(manager: CatalogManager, operation: F) -> Result<T, IpcError>
 where
@@ -268,14 +280,139 @@ async fn get_match_breakdowns(
     .await
 }
 
+#[tauri::command]
+fn emmy_configuration(
+    credentials_state: State<'_, CredentialManager>,
+    router_state: State<'_, EmmyRouterState>,
+) -> Result<EmmyConfiguration, LlmError> {
+    let mut configuration = credentials_state.configuration()?;
+    if router_state.router.is_none() {
+        configuration.available = false;
+    }
+    Ok(configuration)
+}
+
+#[tauri::command]
+fn emmy_set_provider_key(
+    request: Value,
+    credentials_state: State<'_, CredentialManager>,
+    router_state: State<'_, EmmyRouterState>,
+) -> Result<EmmyConfiguration, LlmError> {
+    let request: SetProviderKeyRequest =
+        serde_json::from_value(request).map_err(|_| LlmError::InvalidRequest)?;
+    request.validate()?;
+    let SetProviderKeyRequest { provider, key } = request;
+    let key = Zeroizing::new(key);
+    credentials_state.set_byok(provider, key.trim())?;
+    emmy_configuration(credentials_state, router_state)
+}
+
+#[tauri::command]
+fn emmy_clear_provider_key(
+    request: Value,
+    credentials_state: State<'_, CredentialManager>,
+    router_state: State<'_, EmmyRouterState>,
+) -> Result<EmmyConfiguration, LlmError> {
+    let request: ClearProviderKeyRequest =
+        serde_json::from_value(request).map_err(|_| LlmError::InvalidRequest)?;
+    credentials_state.clear_byok(request.provider)?;
+    emmy_configuration(credentials_state, router_state)
+}
+
+#[tauri::command]
+async fn emmy_list_conversations(
+    state: State<'_, UserStore>,
+) -> Result<Vec<EmmyConversationSummary>, LlmError> {
+    let store = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || store.list_conversations())
+        .await
+        .map_err(|_| LlmError::Local)?
+        .map_err(|_| LlmError::Local)
+}
+
+#[tauri::command]
+async fn emmy_create_conversation(
+    state: State<'_, UserStore>,
+) -> Result<EmmyConversation, LlmError> {
+    let store = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || store.create_conversation())
+        .await
+        .map_err(|_| LlmError::Local)?
+        .map_err(|_| LlmError::Local)
+}
+
+#[tauri::command]
+async fn emmy_load_conversation(
+    request: Value,
+    state: State<'_, UserStore>,
+) -> Result<EmmyConversation, LlmError> {
+    let request: EmmyConversationRequest =
+        serde_json::from_value(request).map_err(|_| LlmError::InvalidRequest)?;
+    load_emmy_conversation(request.conversation_id, state.inner().clone()).await
+}
+
+#[tauri::command]
+async fn emmy_send_message(
+    request: Value,
+    app: AppHandle,
+    catalog_state: State<'_, CatalogManager>,
+    user_state: State<'_, UserStore>,
+    router_state: State<'_, EmmyRouterState>,
+) -> Result<EmmyTurnResult, LlmError> {
+    let request: EmmySendRequest =
+        serde_json::from_value(request).map_err(|_| LlmError::InvalidRequest)?;
+    let catalog = catalog_state
+        .inner()
+        .available_catalog()
+        .map_err(|_| LlmError::Local)?;
+    let router = router_state
+        .inner()
+        .router
+        .as_ref()
+        .ok_or(LlmError::Unavailable)?;
+    run_emmy_turn(
+        request,
+        catalog,
+        user_state.inner().clone(),
+        router,
+        move |event| {
+            let _ = app.emit("emmy://state", event);
+        },
+    )
+    .await
+}
+
+#[tauri::command]
+async fn emmy_confirm_shortlist(
+    request: Value,
+    app: AppHandle,
+    catalog_state: State<'_, CatalogManager>,
+    user_state: State<'_, UserStore>,
+) -> Result<EmmyTurnResult, LlmError> {
+    let request: EmmyConfirmationRequest =
+        serde_json::from_value(request).map_err(|_| LlmError::InvalidRequest)?;
+    let catalog = catalog_state
+        .inner()
+        .available_catalog()
+        .map_err(|_| LlmError::Local)?;
+    confirm_emmy_shortlist(request, catalog, user_state.inner().clone(), move |event| {
+        let _ = app.emit("emmy://state", event);
+    })
+    .await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
             let manager = CatalogManager::from_app(app);
             let user_store = UserStore::from_app(app);
+            let credentials = CredentialManager;
+            let router = LlmRouter::new(std::sync::Arc::new(credentials.clone())).ok();
             app.manage(manager.clone());
             app.manage(user_store);
+            app.manage(credentials);
+            app.manage(EmmyRouterState { router });
             if let Some(window) = app.get_webview_window("main") {
                 window.show()?;
             }
@@ -298,7 +435,15 @@ pub fn run() {
             is_shortlisted,
             set_shortlist,
             get_match_breakdown,
-            get_match_breakdowns
+            get_match_breakdowns,
+            emmy_configuration,
+            emmy_set_provider_key,
+            emmy_clear_provider_key,
+            emmy_list_conversations,
+            emmy_create_conversation,
+            emmy_load_conversation,
+            emmy_send_message,
+            emmy_confirm_shortlist
         ])
         .run(tauri::generate_context!())
         .expect("error while running GiveMeJob");

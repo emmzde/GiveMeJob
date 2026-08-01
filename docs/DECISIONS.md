@@ -126,7 +126,8 @@ Emmy — дружелюбная анимированная SVG-собачка и
 
 - Groq;
 - Gemini;
-- OpenRouter как аварийный fallback.
+- OpenRouter как аварийный fallback;
+- Cerebras как последний последовательный fallback по ADR-019.
 
 Все вызовы идут через Rust `LLMRouter`. Router выбирает модель по capability,
 локальной задержке, ошибкам, 429 и cooldown.
@@ -142,7 +143,8 @@ Emmy — дружелюбная анимированная SVG-собачка и
 - compile-time обфускация является только замедлением простого анализа;
 - компрометация закрывается отзывом ключа и новым release.
 
-BYOK поддерживается как резерв и хранится в Windows Credential Manager.
+BYOK хранится в Windows Credential Manager и всегда имеет приоритет над
+встроенным demo credential того же провайдера.
 
 ## ADR-010. Публичная модель исходников
 
@@ -213,7 +215,7 @@ Development changes попадают в `main` только через pull requ
 
 В SQLite `jobs.id` остаётся `INTEGER`. За границей SQLite job ID представлен
 как branded положительная decimal string без знака и ведущих нулей. Этот
-`JobId` используется в IPC, cursor и будущих Emmy tools, чтобы контракт не
+`JobId` используется в IPC, cursor и Emmy tools, чтобы контракт не
 зависел от JavaScript number precision.
 
 Фильтры объединяются через OR внутри одной категории и через AND между
@@ -337,6 +339,25 @@ v1, но выполняются после core M4 Emmy и до M5 release gate.
 набора результатов, а полный catalog-wide ranking не должен задерживать
 проверку agent loop. Решение не меняет веса формулы, offline-инвариант или
 требование детерминизма и не разрешает переход к M5 без отложенной сортировки.
+
+## ADR-019. Cerebras как четвёртый fallback Emmy
+
+1 августа 2026 года пользователь явно расширил provider pool M4. После Groq,
+Gemini и OpenRouter разрешён четвёртый последовательный fallback Cerebras с
+моделью `gpt-oss-120b`.
+
+Решение не меняет остальные AI-инварианты:
+
+- параллельная гонка моделей запрещена;
+- все ответы остаются structured output и валидируются Rust-схемой;
+- ключ Cerebras подчиняется тем же правилам GitHub Actions Secrets и Windows
+  Credential Manager, что ключи остальных провайдеров;
+- реальные значения ключей не попадают в Git, frontend, документацию, логи,
+  crash reports или test fixtures;
+- Cerebras не получает новых инструментов и не меняет лимит четырёх tool-шагов.
+
+Причина: дополнительный независимый free-tier provider повышает доступность
+Emmy, не создавая обязательного cloud backend и не затрагивая offline core.
 
 ## Машиночитаемый источник
 

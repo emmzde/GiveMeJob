@@ -1,3 +1,4 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::ipc::IpcError;
@@ -17,8 +18,9 @@ where
     Ok(value)
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, JsonSchema)]
 #[serde(transparent)]
+#[schemars(transparent)]
 pub(crate) struct JobId(String);
 
 impl JobId {
@@ -47,7 +49,6 @@ impl JobId {
         self.0.parse::<i64>().map_err(|_| IpcError::InvalidQuery)
     }
 
-    #[cfg(test)]
     pub(crate) fn as_str(&self) -> &str {
         &self.0
     }
@@ -63,7 +64,7 @@ impl<'de> Deserialize<'de> for JobId {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum RemoteMode {
     Remote,
@@ -83,7 +84,7 @@ impl RemoteMode {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum Seniority {
     Intern,
@@ -128,7 +129,7 @@ impl Seniority {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum EmploymentType {
     FullTime,
@@ -164,7 +165,7 @@ impl EmploymentType {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum SearchSort {
     Relevance,
@@ -172,7 +173,7 @@ pub(crate) enum SearchSort {
     Salary,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct SearchQuery {
     pub(crate) text: String,
@@ -189,7 +190,7 @@ pub(crate) struct SearchQuery {
     pub(crate) cursor: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct JobSummary {
     pub(crate) id: JobId,
@@ -207,7 +208,7 @@ pub(crate) struct JobSummary {
     pub(crate) attribution: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct SearchPage<T> {
     pub(crate) items: Vec<T>,
@@ -218,7 +219,7 @@ pub(crate) struct SearchPage<T> {
     pub(crate) suggestion: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct JobDetail {
     pub(crate) id: JobId,

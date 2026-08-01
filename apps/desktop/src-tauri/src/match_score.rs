@@ -1,5 +1,6 @@
 use std::collections::BTreeSet;
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use unicode_normalization::UnicodeNormalization;
 
@@ -35,7 +36,7 @@ impl MatchBatchRequest {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum MatchComponentName {
     Skills,
@@ -45,7 +46,7 @@ pub(crate) enum MatchComponentName {
     Salary,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum MatchReasonCode {
     SkillsOverlap,
@@ -60,7 +61,7 @@ pub(crate) enum MatchReasonCode {
     SalaryBelow,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct MatchReason {
     pub(crate) component: MatchComponentName,
@@ -68,7 +69,7 @@ pub(crate) struct MatchReason {
     pub(crate) values: Vec<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct MatchComponents {
     pub(crate) skills: Option<u8>,
@@ -78,7 +79,7 @@ pub(crate) struct MatchComponents {
     pub(crate) salary: Option<u8>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct MatchBreakdown {
     pub(crate) score: u8,
@@ -87,7 +88,7 @@ pub(crate) struct MatchBreakdown {
     pub(crate) gaps: Vec<MatchReason>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct JobMatch {
     pub(crate) job_id: JobId,

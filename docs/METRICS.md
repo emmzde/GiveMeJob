@@ -445,6 +445,27 @@ salary   0.10
 - error message;
 - crash report fixture.
 
+### Текущая M4 verification — 1 августа 2026 года
+
+Core M4 проверен без сетевых запросов к провайдерам:
+
+| Проверка | Фактический результат |
+|---|---|
+| Rust suite | 115 tests: 111 passed, 4 intentionally ignored live/heavy gates |
+| Frontend suite | 34 files, 159 tests passed |
+| fake-provider vertical | user → `search_jobs` → минимальный tool result → второй model turn |
+| sequential failover | timeout, outer timeout, 429/`Retry-After`, schema error и all-unavailable покрыты |
+| tool boundary | только пять имён; пятый шаг прекращается на лимите 4 |
+| shortlist mutation | preview и отдельное подтверждение покрыты |
+| Windows credentials | изолированный CredWrite/CredRead/CredDelete roundtrip passed |
+| optional AI runtime | ошибка инициализации оставляет каталог и локальные функции доступными |
+
+Полная запись находится в
+[`evidence/M4_IMPLEMENTATION_PROGRESS_2026-08-01.md`](evidence/M4_IMPLEMENTATION_PROGRESS_2026-08-01.md).
+Это не закрывает M4: отдельно остаются live smoke четырёх provider API, UI
+save/restart/clear для BYOK и protected-release build с отдельными free-tier
+credentials, а также native all-providers-unavailable smoke локального продукта.
+
 ## 8. Release acceptance
 
 На чистых Windows 10 и 11 x64:

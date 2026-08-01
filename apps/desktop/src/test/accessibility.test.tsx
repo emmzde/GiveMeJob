@@ -153,7 +153,7 @@ describe("desktop axe smoke", () => {
   });
 
   it("has no detectable shell violations", async () => {
-    const view = render(
+    const view = renderWithQuery(
       <AppShell catalog={readyCatalog}>
         <section aria-label="Контент">Контент</section>
       </AppShell>,
@@ -243,7 +243,7 @@ describe("desktop axe smoke", () => {
   });
 
   it("has no detectable Emmy offline-panel violations", async () => {
-    const view = render(<EmmyPanel onClose={() => undefined} />);
+    const view = renderWithQuery(<EmmyPanel onClose={() => undefined} />);
     const panel = screen.getByRole("complementary", { name: "Панель Emmy" });
     await expectNoViolations("Emmy offline panel", panel);
     view.unmount();

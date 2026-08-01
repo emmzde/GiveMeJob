@@ -182,7 +182,7 @@ Backdrop command palette использует semantic overlay token. Карто
 
 ### Desktop shell and navigation
 
-Titlebar содержит product mark, текущий screen breadcrumb, вход в command palette, локальный catalog status, честный AI-offline status, Settings и native window controls. Navigation sidebar содержит Jobs, Shortlist, Profile, Emmy и Settings. Active row получает neutral active surface и accent icon; все пять пунктов ведут к реально существующему screen или panel.
+Titlebar содержит product mark, текущий screen breadcrumb, вход в command palette, локальный catalog status, честный статус доступности Emmy, Settings и native window controls. Navigation sidebar содержит Jobs, Shortlist, Profile, Emmy и Settings. Active row получает neutral active surface и accent icon; все пять пунктов ведут к реально существующему screen или panel.
 
 Numeric shortcuts работают глобально только без Ctrl/Alt/Meta и вне editable controls: `1` открывает Search, `2` — Shortlist, `3` — Profile, `5` — Settings, `4` переключает панель Emmy. `s` меняет shortlist state выбранной вакансии только на Search/Shortlist.
 
@@ -208,7 +208,7 @@ Buttons имеют базовую высоту `36px`, medium radius и вари
 
 Глобальный `:focus-visible` — контрастный `2px` outline с offset `2px`; сложные composite controls сохраняют эквивалентный видимый focus. Все mouse actions должны иметь keyboard path. Popup autocompletes поддерживают Arrow Up/Down, Home/End, Enter и Escape. Emmy resizer — focusable separator с value semantics и arrow resizing.
 
-Default semantic motion — `140ms` для background, border, color и opacity с `--ease`. Motion подтверждает state, не украшает idle UI. Единственная текущая signature-анимация Emmy — тихие sleep marks; `prefers-reduced-motion` отключает smooth scrolling, сводит transitions/animations к `1ms` и одной итерации. Смена состояния не должна зависеть от движения.
+Default semantic motion — `140ms` для background, border, color и opacity с `--ease`. Motion подтверждает state, не украшает idle UI. Layered SVG Emmy меняет позу и микроанимации по реальным `idle/listening/thinking/searching/success/empty/error/offline` состояниям agent loop. `prefers-reduced-motion` отключает smooth scrolling, сводит transitions/animations к `1ms` и одной итерации, сохраняя различимую позу и fade. Смена состояния не зависит только от движения.
 
 ### Profile, shortlist, match and Emmy: current truth
 
@@ -216,7 +216,7 @@ Profile — реальный локальный screen, а не mock. Он за�
 
 Shortlist доступен из feed/detail, отдельного виртуализированного screen и shortcut `s`; данные переживают restart. Match-score считается локально и on-demand для показанных вакансий, отображает пять components, strengths и gaps. Глобальный match-sort пока отсутствует и отложен по ADR-018.
 
-Emmy — честный offline dock. Панель показывает sleeping SVG mascot, описание этапа M4 и disabled composer/send control. Сейчас нет LLMRouter, provider calls, tool calling, chat history или синтетических ответов. Offline Emmy не влияет на search, filters, detail, Settings или Profile.
+Emmy — рабочий дополнительный dock. Панель содержит layered SVG mascot, message timeline, tool activity, реальные job cards, comparison table, quick replies, inline confirmation и переключение последних разговоров. Composer доступен при настроенном BYOK или release demo credential; без provider credentials либо при полном отказе моделей Emmy честно переходит в `offline`. Эти состояния не блокируют search, filters, detail, Settings, Profile или Shortlist.
 
 ### Localization and accessibility
 
@@ -235,7 +235,7 @@ Semantic HTML и ARIA являются частью component contract: headings
 - **Do** сохранять visible focus, keyboard equivalence, semantic roles, live feedback и reduced-motion fallback.
 - **Do** виртуализировать списки длиннее 50 элементов.
 - **Do** писать весь новый UI copy через `t(...)`, а locale-sensitive formatting — через `getLocaleTag(...)`.
-- **Do** показывать реальный current scope: локальные Profile/Shortlist/on-demand match работают, global match-sort отсутствует, Emmy offline.
+- **Do** показывать реальный current scope: локальные Profile/Shortlist/on-demand match и core Emmy работают, global match-sort отсутствует, а недоступный AI явно обозначается как offline.
 
 ### Don't:
 
@@ -245,5 +245,5 @@ Semantic HTML и ARIA являются частью component contract: headings
 - **Don't** раскрашивать neutral UI без semantic причины или использовать Emmy palette как общий accent set.
 - **Don't** перехватывать screen-scoped shortcuts в полях ввода или на неподходящем screen.
 - **Don't** рендерить vacancy text как HTML/Markdown и не использовать его как UI-инструкцию.
-- **Don't** изображать global match-sort, AI chat, model responses или Emmy tools до их фактической реализации.
+- **Don't** изображать global match-sort, успешный model response или tool result без фактического локального/провайдерского результата.
 - **Don't** позволять animation, hover или color быть единственным носителем состояния.

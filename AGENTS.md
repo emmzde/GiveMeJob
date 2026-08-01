@@ -163,11 +163,12 @@ GiveMeJob! — локальное Windows-приложение, которое:
 
 ### AI
 
-- провайдеры первой версии: Groq, Gemini, OpenRouter;
+- провайдеры первой версии: Groq, Gemini, OpenRouter, Cerebras;
 - простые запросы предпочитают Groq Llama 3.1 8B;
 - tool-calling и сравнения предпочитают Groq Qwen 3.6 27B;
 - Gemini Flash-Lite — межпровайдерный fallback;
-- OpenRouter free — последний аварийный fallback;
+- OpenRouter free — аварийный fallback;
+- Cerebras GPT OSS 120B — последний последовательный fallback;
 - выбор учитывает capability, EWMA latency, ошибки, 429 и cooldown;
 - параллельная гонка моделей запрещена: она расходует бесплатные квоты;
 - при полном отказе Emmy переходит в `offline`, приложение продолжает работать.
@@ -325,7 +326,7 @@ FTS5 BM25 веса:
 M2 search contract:
 
 - `jobs.id` остаётся `INTEGER` внутри SQLite;
-- IPC, cursor и будущие Emmy tools используют `JobId`: branded положительную
+- IPC, cursor и Emmy tools используют `JobId`: branded положительную
   decimal string без знака и ведущих нулей;
 - значения внутри одной категории фильтров объединяются через OR, разные
   категории — через AND;

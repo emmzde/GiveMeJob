@@ -1,7 +1,9 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import { act, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppShell } from "@/app/AppShell";
+import { createAppQueryClient } from "@/app/queryClient";
 import { resetAppUiStore, useAppUiStore } from "@/app/store/appUiStore";
 import type { CatalogViewState } from "@/features/catalog/catalogStatus";
 
@@ -44,9 +46,11 @@ describe("AppShell themes", () => {
     );
 
     render(
-      <AppShell catalog={readyCatalog}>
-        <p>content</p>
-      </AppShell>,
+      <QueryClientProvider client={createAppQueryClient()}>
+        <AppShell catalog={readyCatalog}>
+          <p>content</p>
+        </AppShell>
+      </QueryClientProvider>,
     );
 
     expect(document.documentElement).toHaveAttribute("data-theme", "light");
@@ -59,9 +63,11 @@ describe("AppShell themes", () => {
 
   it("applies an explicit session theme from UI state", () => {
     render(
-      <AppShell catalog={readyCatalog}>
-        <p>content</p>
-      </AppShell>,
+      <QueryClientProvider client={createAppQueryClient()}>
+        <AppShell catalog={readyCatalog}>
+          <p>content</p>
+        </AppShell>
+      </QueryClientProvider>,
     );
 
     act(() => useAppUiStore.getState().setTheme("dark"));

@@ -37,8 +37,8 @@ Himalayas full sweep, на котором получена основная ча
 - 68 409 source rows;
 - attribution `Himalayas` и backlink присутствовали у всех строк.
 
-Эти значения должны быть повторно подтверждены read-only SQL перед созданием
-первого catalog artifact.
+Эти значения были повторно подтверждены read-only SQL и приняты вместе с
+первым catalog artifact; неизменяемая запись находится в `docs/evidence/`.
 
 ## Входит в v1
 
@@ -75,11 +75,12 @@ Match-score не является вероятностью трудоустро�
 - анимированная SVG-собачка;
 - состояния idle/listening/thinking/searching/success/empty/error/offline;
 - чат со strict structured output;
-- локальные tools: search, get, compare, match breakdown, shortlist;
+- ровно пять локальных tools: `search_jobs`, `get_job`, `compare_jobs`,
+  `get_match_breakdown`, `set_shortlist`;
 - подтверждение shortlist mutation;
-- бесплатные встроенные demo credentials;
+- release-only встроенные demo credentials, считающиеся извлекаемыми;
 - BYOK через Windows Credential Manager;
-- автоматический fallback провайдеров;
+- последовательный Groq → Gemini → OpenRouter → Cerebras fallback;
 - graceful offline state.
 
 ### Распространение
@@ -119,7 +120,8 @@ preview/prerelease не входит в текущий scope и требует �
 - настройки;
 - recent searches;
 - история Emmy;
-- provider health counters.
+- зарезервированная таблица `provider_health`; текущие EWMA, error/429 counters
+  и cooldown живут только в памяти процесса.
 
 В Windows Credential Manager:
 
@@ -127,6 +129,9 @@ preview/prerelease не входит в текущий scope и требует �
 
 Провайдеру не передаются вся база, полный профиль или резюме. Только последние
 12 сообщений, запрос и минимальные результаты явно вызванных инструментов.
+Agent loop выполняет не более четырёх tool-шагов. Локальная timeline загружает
+до 500 последних сообщений активного разговора и показывает до восьми последних
+разговоров.
 
 ## Принятые ограничения
 

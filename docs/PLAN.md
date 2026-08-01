@@ -45,6 +45,7 @@ flowchart LR
     ROUTER --> GROQ["Groq"]
     ROUTER --> GEMINI["Gemini"]
     ROUTER --> OR["OpenRouter"]
+    ROUTER --> CEREBRAS["Cerebras"]
 ```
 
 Пользовательский runtime не содержит FastAPI, PostgreSQL, Redis, Celery,
@@ -487,7 +488,8 @@ Score всегда воспроизводим. Он не меняется из-�
 - recent searches;
 - настройки;
 - conversation metadata/messages;
-- provider health и локальные quota counters;
+- зарезервированную таблицу `provider_health`, которую runtime M4 пока не
+  записывает;
 - зарезервированный локальный match cache по profile/catalog version.
 
 Schema version `1` включает все эти таблицы с первого публичного запуска.
@@ -571,15 +573,39 @@ interface EmmyResponse {
   jobCards: string[];
   quickReplies: string[];
   mascotState: EmmyState;
-  toolCall?: EmmyToolCall;
 }
+
+type EmmyModelOutput =
+  | { type: "response"; payload: EmmyResponse }
+  | { type: "tool_call"; payload: EmmyToolCall };
+
+type LlmError =
+  | { code: "rate_limit"; retryAfterSeconds: number | null }
+  | { code: "timeout" }
+  | { code: "transport" }
+  | { code: "schema" }
+  | { code: "unavailable" }
+  | { code: "tool_limit" }
+  | { code: "invalid_request" }
+  | { code: "local" };
 ```
 
 `compare_jobs` принимает 2–4 ID. `set_shortlist` сначала возвращает preview,
 затем исполняется после явного подтверждения.
 
+`EmmyModelOutput`, tool args/results, сообщения, turn result и `LlmError`
+являются закрытыми serde/zod-схемами: неизвестные поля и варианты отклоняются.
+
 Agent loop ограничен четырьмя tool steps. Job descriptions оборачиваются как
 untrusted tool data. Модель не получает произвольный filesystem/network tool.
+
+### 5.4 Chat timeline
+
+Локально хранится одна активная беседа; загрузка timeline ограничена новейшими
+500 сообщениями, а переключатель показывает восемь последних разговоров. В timeline отображаются
+сообщения, tool activity, реальные job cards, таблица сравнения, quick replies
+и inline confirmation для `set_shortlist`. Провайдер получает не всю историю,
+а максимум 12 последних сообщений и минимальный результат текущего tool.
 
 ## 6. LLMRouter и demo credentials
 
@@ -590,29 +616,40 @@ untrusted tool data. Модель не получает произвольный
 - Groq `llama-3.1-8b-instant` — простой чат;
 - Groq `qwen/qwen3.6-27b` — tools, русский язык, сравнения;
 - Gemini `gemini-3.5-flash-lite` — provider fallback;
-- OpenRouter `openrouter/free` — emergency fallback.
+- OpenRouter `openrouter/free` — emergency fallback;
+- Cerebras `gpt-oss-120b` — последний последовательный fallback по ADR-019.
+
+Groq Llama/Qwen используют поддерживаемый ими JSON Object Mode; компактная
+схема добавляется в system prompt, а результат обязательно проходит закрытую
+serde-валидацию. Gemini получает `responseJsonSchema`. OpenRouter и Cerebras
+получают очищенную совместимую JSON Schema со `strict: true`; для OpenRouter
+дополнительно требуется endpoint с поддержкой параметра structured outputs.
 
 Текущие лимиты перепроверяются перед release:
 
 - [Groq rate limits](https://console.groq.com/docs/rate-limits);
 - [Groq Qwen 3.6 27B](https://console.groq.com/docs/model/qwen/qwen3.6-27b);
 - [Gemini pricing](https://ai.google.dev/gemini-api/docs/pricing);
-- [OpenRouter pricing](https://openrouter.ai/pricing).
+- [OpenRouter pricing](https://openrouter.ai/pricing);
+- [Cerebras structured outputs](https://inference-docs.cerebras.ai/capabilities/structured-outputs).
 
 ### 6.2 Routing
 
-Для каждого provider/model локально хранятся:
+Для каждого provider/model только в памяти текущего процесса хранятся:
 
 - EWMA latency;
 - success/error counts;
 - последнее 429;
-- cooldown until;
-- оценка локально использованной квоты.
+- cooldown until.
+
+Runtime M4 не оценивает квоту и не сохраняет health между запусками. Таблица
+`provider_health` в schema v1 зарезервирована для будущей политики и пока не
+записывается.
 
 Router:
 
 1. Фильтрует модели по required capabilities.
-2. Исключает cooldown/quota-exhausted.
+2. Исключает модели с активным cooldown.
 3. Выбирает лучший health score.
 4. Вызывает с timeout.
 5. Валидирует structured output.
@@ -797,18 +834,25 @@ native Narrator/keyboard smoke и reduced motion, пройдены. M2 заве�
 
 ### M4. Emmy
 
-- [ ] Layered SVG и state machine.
-- [ ] Rust provider adapters.
-- [ ] LLMRouter health/failover.
-- [ ] Structured schemas.
-- [ ] Пять tools.
-- [ ] Confirmation flow.
-- [ ] Built-in demo credentials.
-- [ ] BYOK Credential Manager.
-- [ ] Offline degradation.
+- [x] Layered SVG и state machine, связанные с реальным agent loop.
+- [x] Rust adapters для Groq, Gemini, OpenRouter и Cerebras.
+- [x] LLMRouter health/failover с timeout, `Retry-After` и cooldown.
+- [x] Закрытые serde/zod structured schemas.
+- [x] Ровно пять локальных tools.
+- [x] Preview и отдельный confirmation flow для `set_shortlist`.
+- [x] Release-only wiring встроенных demo credentials; debug/test остаются
+  пустыми.
+- [x] BYOK через Windows Credential Manager и изолированный native roundtrip.
+- [x] Offline degradation без влияния на локальные функции.
+- [ ] Live smoke четырёх провайдеров с ротированными release/BYOK credentials.
+- [ ] UI save → restart → configured → clear для BYOK.
+- [ ] Protected GitHub Environment `release` и приватный release-build smoke.
+- [ ] Native all-providers-unavailable smoke без деградации локальных функций.
 
 Критерий: последовательный отказ провайдеров проверен тестом; local features
-не деградируют.
+не деградируют. Core выполнен и зафиксирован в
+[`evidence/M4_IMPLEMENTATION_PROGRESS_2026-08-01.md`](evidence/M4_IMPLEMENTATION_PROGRESS_2026-08-01.md),
+но M4 остаётся открытым до четырёх acceptance-пунктов выше.
 
 ### M5. Public Windows release
 

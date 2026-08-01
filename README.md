@@ -12,7 +12,7 @@ GiveMeJob! — open-source portfolio pet-project: локальное Windows-п�
 - M1 (verified snapshot) — завершён;
 - M2 (offline search и desktop shell) — завершён;
 - M3 (profile, on-demand match и shortlist) — завершён;
-- M4 (Emmy) — текущий этап;
+- M4 (Emmy) — core реализован, acceptance продолжается;
 - опубликованных GitHub Releases пока нет.
 
 Локальные NSIS и portable artifacts успешно собираются, но это инженерная
@@ -40,6 +40,15 @@ GiveMeJob! — open-source portfolio pet-project: локальное Windows-п�
   `s`;
 - детерминированный on-demand match-score с пятью компонентами, strengths и
   gaps;
+- Rust `LLMRouter` с последовательным Groq → Gemini → OpenRouter → Cerebras
+  fallback, timeout, `Retry-After`, cooldown и in-memory health metrics;
+- закрытые Rust/zod-схемы Emmy, максимум 12 сообщений и четыре tool-шага;
+- ровно пять локальных tools: `search_jobs`, `get_job`, `compare_jobs`,
+  `get_match_breakdown`, `set_shortlist` с отдельным подтверждением записи;
+- настоящий Emmy chat с timeline, tool activity, job cards, comparison table,
+  quick replies, историей разговоров и состояниями SVG-маскота;
+- BYOK через Windows Credential Manager и release-only wiring demo credentials;
+- graceful AI offline: отказ всех моделей не блокирует локальный продукт;
 - Windows-only Tauri configuration с NSIS и portable ZIP workflow.
 
 Пользовательский runtime не требует Docker, Python, PostgreSQL или сервера.
@@ -105,6 +114,9 @@ Versioned corpus timings, cursor audit и native package/recovery metrics:
 [`docs/evidence/M2_FINAL_ACCEPTANCE_2026-08-01.md`](docs/evidence/M2_FINAL_ACCEPTANCE_2026-08-01.md).
 Закрывающая запись M3 с native save/restart/load smoke:
 [`docs/evidence/M3_FINAL_ACCEPTANCE_2026-08-01.md`](docs/evidence/M3_FINAL_ACCEPTANCE_2026-08-01.md).
+Текущая проверка M4 core, включая fake-provider failover, native Credential
+Manager roundtrip и список ещё открытых live gates:
+[`docs/evidence/M4_IMPLEMENTATION_PROGRESS_2026-08-01.md`](docs/evidence/M4_IMPLEMENTATION_PROGRESS_2026-08-01.md).
 
 Однократный export из сохранённого frozen volume:
 
@@ -127,6 +139,7 @@ uv run python -m tools.catalog_export verify `
 
 ## Секреты
 
-`.env` не коммитится. BYOK в приложении должен храниться только в Windows
-Credential Manager. Release demo-ключи считаются извлекаемыми и поступают
-только из защищённого GitHub Actions environment в Rust release build.
+`.env` не коммитится. BYOK хранится только в Windows Credential Manager; React
+получает лишь статус настройки, но не значение ключа. Release demo-ключи
+считаются извлекаемыми и поступают только из защищённого GitHub Actions
+environment в Rust release build. Debug/test-сборки не содержат demo keys.

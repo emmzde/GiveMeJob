@@ -9,6 +9,11 @@ cursor/keyset готовы. Filter/sort UI, active chips, local autocomplete,
 cursor pagination, виртуализированная лента и job detail подключены к строгому
 IPC-контракту. Profile, shortlist и on-demand deterministic match готовы;
 глобальный match-sort отложен после core M4 и до M5 по ADR-018.
+Core Emmy уже реализован: provider adapters, router, structured contracts,
+пять tools, timeline/cards/comparison, локальная история, Credential Manager и
+graceful offline. M4 остаётся открытым до live-provider, UI BYOK restart и
+native all-providers-unavailable/protected-release smoke; текущая запись —
+`docs/evidence/M4_IMPLEMENTATION_PROGRESS_2026-08-01.md`.
 GitHub Release отложен до M5; актуальный gate описан в
 `docs/RELEASE_STATUS.md`.
 
@@ -39,6 +44,19 @@ pnpm -C apps/desktop typecheck
 pnpm -C apps/desktop lint
 pnpm -C apps/desktop test
 pnpm -C apps/desktop web:build
+```
+
+Для интерактивной проверки нативного окна:
+
+```powershell
+pnpm -C apps/desktop dev
+```
+
+Или сначала собрать standalone debug executable без installer, затем запустить
+`apps/desktop/src-tauri/target/debug/givemejob-desktop.exe`:
+
+```powershell
+pnpm -C apps/desktop exec tauri build --debug --no-bundle
 ```
 
 В debug/test-сборке Rust ищет каталог в
@@ -72,6 +90,55 @@ cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml `
 cargo clippy --manifest-path apps/desktop/src-tauri/Cargo.toml `
   --all-targets --all-features -- -D warnings
 ```
+
+## Emmy и provider credentials
+
+Agent loop, router, provider adapters, пять локальных tools и Credential
+Manager находятся в `apps/desktop/src-tauri/src/emmy`. Сетевые вызовы в
+unit/integration tests не выполняются: вертикаль search → tool result → второй
+model turn проверяется через fake provider.
+
+Адаптер учитывает реальные возможности API: Groq Llama/Qwen вызываются в JSON
+Object Mode со схемой в system prompt и последующей serde-валидацией; Gemini
+использует `responseJsonSchema`; OpenRouter/Cerebras — совместимую строгую
+JSON Schema. Ошибка инициализации AI runtime переводит только Emmy в offline и
+не блокирует запуск каталога.
+
+```powershell
+cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml emmy::
+```
+
+Для локального live smoke добавьте собственный, предварительно ротированный
+ключ на экране Settings → Emmy. Приложение записывает BYOK в Windows Credential
+Manager. При вводе поле существует во frontend только до IPC-вызова; после
+сохранения Rust возвращает React только `configured`, `byokConfigured` и
+`demoAvailable`, но не значение ключа. Очистка ключа выполняется на том же
+экране. BYOK имеет приоритет над встроенным demo credential.
+
+Изолированный native CredWrite/CredRead/CredDelete test уже проходит. Перед
+закрытием M4 отдельно выполняется пользовательский UI smoke: save → restart →
+`configured` → clear для каждого настроенного провайдера, без вывода значения
+ключа в IPC или logs.
+
+Отдельный native offline smoke запускается без доступных credentials/сети и
+подтверждает, что каталог, профиль и shortlist продолжают работать после
+перехода Emmy в `offline`.
+
+Release workflow получает четыре значения только из secrets защищённого
+GitHub Environment `release`:
+
+```text
+GIVEMEJOB_GROQ_DEMO_KEY
+GIVEMEJOB_GEMINI_DEMO_KEY
+GIVEMEJOB_OPENROUTER_DEMO_KEY
+GIVEMEJOB_CEREBRAS_DEMO_KEY
+```
+
+`build.rs` читает их только при `PROFILE=release`; debug/test сборки всегда
+получают пустые встроенные credentials. Значения не добавляются в `.env`, Git,
+документацию или команды. Обфускация release-значений не делает их секретными:
+для публичного бинарника используются отдельные free-tier проекты без billing,
+с минимальными квотами и готовой процедурой revoke/rotation.
 
 Versioned M2 corpus benchmark запускается отдельно уже после release build и
 при остановленном UI: он выполняет 5 warm-ups и 30 samples для каждого из 90

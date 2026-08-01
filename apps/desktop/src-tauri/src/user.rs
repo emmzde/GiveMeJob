@@ -6,6 +6,11 @@ use tauri::{App, Manager};
 use unicode_normalization::UnicodeNormalization;
 
 use crate::{
+    emmy::contracts::{
+        valid_local_id, EmmyConversation, EmmyConversationSummary, EmmyMessage, EmmyMessageContent,
+        EmmyMessageRole, EmmyToolCall, EmmyToolResult, ShortlistConfirmationStatus,
+        ShortlistPreview, MAX_CONVERSATION_MESSAGES, RECENT_CONVERSATION_LIMIT,
+    },
     ipc::IpcError,
     search::dto::{JobId, RemoteMode, Seniority},
 };
@@ -13,6 +18,7 @@ use crate::{
 const MAX_LIST_ITEM_LENGTH: usize = 100;
 const MAX_PROFILE_ROLES: usize = 5;
 const MAX_PROFILE_SKILLS: usize = 50;
+const MAX_CONVERSATION_TITLE_LENGTH: usize = 60;
 const MAX_SALARY_USD_YEAR: f64 = 10_000_000.0;
 const USER_SCHEMA_VERSION: &str = "1";
 
@@ -240,7 +246,7 @@ impl UserStore {
     }
 
     #[cfg(test)]
-    fn for_test(path: PathBuf) -> Self {
+    pub(crate) fn for_test(path: PathBuf) -> Self {
         Self { path: Some(path) }
     }
 
@@ -351,42 +357,245 @@ impl UserStore {
             return Err(IpcError::UserDataUnavailable);
         }
         let connection = self.open()?;
-        let id = input.job_id.as_i64()?;
-        if input.saved {
-            connection
-                .execute(
-                    "INSERT INTO shortlist (job_id, catalog_version, saved_at)
-                     VALUES (?1, ?2, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-                     ON CONFLICT(job_id) DO UPDATE SET
-                       catalog_version = excluded.catalog_version,
-                       saved_at = excluded.saved_at",
-                    params![id, catalog_version],
-                )
-                .map_err(|_| IpcError::UserDataUnavailable)?;
-            let saved_at = connection
-                .query_row(
-                    "SELECT saved_at FROM shortlist WHERE job_id = ?1",
-                    params![id],
-                    |row| row.get(0),
-                )
-                .map_err(|_| IpcError::UserDataUnavailable)?;
-            Ok(ShortlistState {
-                job_id: input.job_id,
-                saved: true,
-                catalog_version: catalog_version.to_owned(),
-                saved_at: Some(saved_at),
-            })
-        } else {
-            connection
-                .execute("DELETE FROM shortlist WHERE job_id = ?1", params![id])
-                .map_err(|_| IpcError::UserDataUnavailable)?;
-            Ok(ShortlistState {
-                job_id: input.job_id,
-                saved: false,
-                catalog_version: catalog_version.to_owned(),
-                saved_at: None,
-            })
+        set_shortlist_on(&connection, input, catalog_version)
+    }
+
+    pub(crate) fn new_local_id(&self) -> Result<String, IpcError> {
+        let connection = self.open()?;
+        new_local_id(&connection)
+    }
+
+    pub(crate) fn ensure_conversation(
+        &self,
+        conversation_id: Option<&str>,
+        initial_text: &str,
+    ) -> Result<EmmyConversationSummary, IpcError> {
+        let connection = self.open()?;
+        if let Some(conversation_id) = conversation_id {
+            if !valid_local_id(conversation_id) {
+                return Err(IpcError::InvalidQuery);
+            }
+            return load_conversation_summary(&connection, conversation_id)?
+                .ok_or(IpcError::NotFound);
         }
+        let id = new_local_id(&connection)?;
+        let title = conversation_title(initial_text);
+        connection
+            .execute(
+                "INSERT INTO conversations (id, title, created_at, updated_at)
+                 VALUES (?1, ?2, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+                         strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
+                params![id, title],
+            )
+            .map_err(|_| IpcError::UserDataUnavailable)?;
+        load_conversation_summary(&connection, &id)?.ok_or(IpcError::UserDataUnavailable)
+    }
+
+    pub(crate) fn create_conversation(&self) -> Result<EmmyConversation, IpcError> {
+        let conversation = self.ensure_conversation(None, "Новый разговор")?;
+        Ok(EmmyConversation {
+            conversation,
+            messages: Vec::new(),
+        })
+    }
+
+    pub(crate) fn list_conversations(&self) -> Result<Vec<EmmyConversationSummary>, IpcError> {
+        let connection = self.open()?;
+        let limit =
+            i64::try_from(RECENT_CONVERSATION_LIMIT).map_err(|_| IpcError::UserDataUnavailable)?;
+        let mut statement = connection
+            .prepare(
+                "SELECT id, title, created_at, updated_at
+                 FROM conversations
+                 ORDER BY updated_at DESC, id DESC
+                 LIMIT ?1",
+            )
+            .map_err(|_| IpcError::UserDataUnavailable)?;
+        let conversations = statement
+            .query_map([limit], decode_conversation_summary_row)
+            .map_err(|_| IpcError::UserDataUnavailable)?
+            .map(|row| row.map_err(|_| IpcError::UserDataUnavailable))
+            .collect();
+        conversations
+    }
+
+    pub(crate) fn load_conversation(
+        &self,
+        conversation_id: &str,
+    ) -> Result<EmmyConversation, IpcError> {
+        if !valid_local_id(conversation_id) {
+            return Err(IpcError::InvalidQuery);
+        }
+        let connection = self.open()?;
+        let conversation =
+            load_conversation_summary(&connection, conversation_id)?.ok_or(IpcError::NotFound)?;
+        let limit =
+            i64::try_from(MAX_CONVERSATION_MESSAGES).map_err(|_| IpcError::UserDataUnavailable)?;
+        let mut statement = connection
+            .prepare(
+                "SELECT id, conversation_id, role, content_json, created_at
+                 FROM (
+                   SELECT id, conversation_id, role, content_json, created_at
+                   FROM chat_messages
+                   WHERE conversation_id = ?1
+                   ORDER BY created_at DESC, id DESC
+                   LIMIT ?2
+                 ) AS recent_messages
+                 ORDER BY created_at ASC, id ASC",
+            )
+            .map_err(|_| IpcError::UserDataUnavailable)?;
+        let messages = statement
+            .query_map(
+                params![conversation_id, limit],
+                decode_stored_emmy_message_row,
+            )
+            .map_err(|_| IpcError::UserDataUnavailable)?
+            .map(|row| {
+                row.map_err(|_| IpcError::UserDataUnavailable)
+                    .and_then(decode_stored_emmy_message)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(EmmyConversation {
+            conversation,
+            messages,
+        })
+    }
+
+    pub(crate) fn append_emmy_message(
+        &self,
+        conversation_id: &str,
+        role: EmmyMessageRole,
+        content: EmmyMessageContent,
+    ) -> Result<EmmyMessage, IpcError> {
+        if !valid_local_id(conversation_id) || message_role(&content) != role {
+            return Err(IpcError::InvalidQuery);
+        }
+        let mut connection = self.open()?;
+        let transaction = connection
+            .transaction()
+            .map_err(|_| IpcError::UserDataUnavailable)?;
+        if load_conversation_summary(&transaction, conversation_id)?.is_none() {
+            return Err(IpcError::NotFound);
+        }
+        let id = message_id_from_content(&content)
+            .map(str::to_owned)
+            .unwrap_or(new_local_id(&transaction)?);
+        if !valid_local_id(&id) {
+            return Err(IpcError::InvalidQuery);
+        }
+        let content_json =
+            serde_json::to_string(&content).map_err(|_| IpcError::UserDataUnavailable)?;
+        transaction
+            .execute(
+                "INSERT INTO chat_messages (id, conversation_id, role, content_json, created_at)
+                 VALUES (?1, ?2, ?3, ?4, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
+                params![id, conversation_id, role.as_str(), content_json],
+            )
+            .map_err(|_| IpcError::UserDataUnavailable)?;
+        transaction
+            .execute(
+                "UPDATE conversations
+                 SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                 WHERE id = ?1",
+                [conversation_id],
+            )
+            .map_err(|_| IpcError::UserDataUnavailable)?;
+        let message = load_emmy_message(&transaction, conversation_id, &id)?
+            .ok_or(IpcError::UserDataUnavailable)?;
+        transaction
+            .commit()
+            .map_err(|_| IpcError::UserDataUnavailable)?;
+        Ok(message)
+    }
+
+    pub(crate) fn pending_shortlist_preview(
+        &self,
+        conversation_id: &str,
+        confirmation_id: &str,
+    ) -> Result<ShortlistPreview, IpcError> {
+        if !valid_local_id(conversation_id) || !valid_local_id(confirmation_id) {
+            return Err(IpcError::InvalidQuery);
+        }
+        let connection = self.open()?;
+        let message = load_emmy_message(&connection, conversation_id, confirmation_id)?
+            .ok_or(IpcError::NotFound)?;
+        shortlist_preview(&message)
+            .cloned()
+            .ok_or(IpcError::InvalidQuery)
+    }
+
+    pub(crate) fn resolve_shortlist_preview(
+        &self,
+        conversation_id: &str,
+        confirmation_id: &str,
+        confirmed: bool,
+        catalog_version: &str,
+    ) -> Result<(EmmyMessage, Option<ShortlistState>), IpcError> {
+        if !valid_local_id(conversation_id)
+            || !valid_local_id(confirmation_id)
+            || catalog_version.trim().is_empty()
+            || catalog_version.chars().count() > 100
+        {
+            return Err(IpcError::InvalidQuery);
+        }
+        let mut connection = self.open()?;
+        let transaction = connection
+            .transaction()
+            .map_err(|_| IpcError::UserDataUnavailable)?;
+        let message = load_emmy_message(&transaction, conversation_id, confirmation_id)?
+            .ok_or(IpcError::NotFound)?;
+        let preview = shortlist_preview(&message)
+            .filter(|preview| preview.status == ShortlistConfirmationStatus::Pending)
+            .cloned()
+            .ok_or(IpcError::InvalidQuery)?;
+
+        let shortlist = if confirmed {
+            Some(set_shortlist_on(
+                &transaction,
+                SetShortlistInput {
+                    job_id: preview.job.id.clone(),
+                    saved: preview.saved,
+                },
+                catalog_version,
+            )?)
+        } else {
+            None
+        };
+        let mut content = message.content;
+        let EmmyMessageContent::Tool { result, .. } = &mut content else {
+            return Err(IpcError::InvalidQuery);
+        };
+        let EmmyToolResult::SetShortlist { preview } = result.as_mut() else {
+            return Err(IpcError::InvalidQuery);
+        };
+        preview.status = if confirmed {
+            ShortlistConfirmationStatus::Confirmed
+        } else {
+            ShortlistConfirmationStatus::Cancelled
+        };
+        let content_json =
+            serde_json::to_string(&content).map_err(|_| IpcError::UserDataUnavailable)?;
+        transaction
+            .execute(
+                "UPDATE chat_messages SET content_json = ?1
+                 WHERE id = ?2 AND conversation_id = ?3",
+                params![content_json, confirmation_id, conversation_id],
+            )
+            .map_err(|_| IpcError::UserDataUnavailable)?;
+        transaction
+            .execute(
+                "UPDATE conversations
+                 SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                 WHERE id = ?1",
+                [conversation_id],
+            )
+            .map_err(|_| IpcError::UserDataUnavailable)?;
+        let updated = load_emmy_message(&transaction, conversation_id, confirmation_id)?
+            .ok_or(IpcError::UserDataUnavailable)?;
+        transaction
+            .commit()
+            .map_err(|_| IpcError::UserDataUnavailable)?;
+        Ok((updated, shortlist))
     }
 
     fn open(&self) -> Result<Connection, IpcError> {
@@ -412,6 +621,201 @@ impl UserStore {
         }
         Ok(connection)
     }
+}
+
+fn set_shortlist_on(
+    connection: &Connection,
+    input: SetShortlistInput,
+    catalog_version: &str,
+) -> Result<ShortlistState, IpcError> {
+    let id = input.job_id.as_i64()?;
+    if input.saved {
+        connection
+            .execute(
+                "INSERT INTO shortlist (job_id, catalog_version, saved_at)
+                 VALUES (?1, ?2, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+                 ON CONFLICT(job_id) DO UPDATE SET
+                   catalog_version = excluded.catalog_version,
+                   saved_at = excluded.saved_at",
+                params![id, catalog_version],
+            )
+            .map_err(|_| IpcError::UserDataUnavailable)?;
+        let saved_at = connection
+            .query_row(
+                "SELECT saved_at FROM shortlist WHERE job_id = ?1",
+                params![id],
+                |row| row.get(0),
+            )
+            .map_err(|_| IpcError::UserDataUnavailable)?;
+        Ok(ShortlistState {
+            job_id: input.job_id,
+            saved: true,
+            catalog_version: catalog_version.to_owned(),
+            saved_at: Some(saved_at),
+        })
+    } else {
+        connection
+            .execute("DELETE FROM shortlist WHERE job_id = ?1", params![id])
+            .map_err(|_| IpcError::UserDataUnavailable)?;
+        Ok(ShortlistState {
+            job_id: input.job_id,
+            saved: false,
+            catalog_version: catalog_version.to_owned(),
+            saved_at: None,
+        })
+    }
+}
+
+fn new_local_id(connection: &Connection) -> Result<String, IpcError> {
+    let id: String = connection
+        .query_row("SELECT lower(hex(randomblob(16)))", [], |row| row.get(0))
+        .map_err(|_| IpcError::UserDataUnavailable)?;
+    if valid_local_id(&id) {
+        Ok(id)
+    } else {
+        Err(IpcError::UserDataUnavailable)
+    }
+}
+
+fn conversation_title(initial_text: &str) -> String {
+    let normalized = initial_text.nfkc().collect::<String>();
+    let normalized = normalized.split_whitespace().collect::<Vec<_>>().join(" ");
+    if normalized.is_empty() {
+        return "Новый разговор".to_owned();
+    }
+    let characters = normalized.chars().collect::<Vec<_>>();
+    if characters.len() <= MAX_CONVERSATION_TITLE_LENGTH {
+        normalized
+    } else {
+        characters
+            .into_iter()
+            .take(MAX_CONVERSATION_TITLE_LENGTH - 1)
+            .chain(Some('…'))
+            .collect()
+    }
+}
+
+fn decode_conversation_summary_row(
+    row: &rusqlite::Row<'_>,
+) -> rusqlite::Result<EmmyConversationSummary> {
+    Ok(EmmyConversationSummary {
+        id: row.get(0)?,
+        title: row.get(1)?,
+        created_at: row.get(2)?,
+        updated_at: row.get(3)?,
+    })
+}
+
+fn load_conversation_summary(
+    connection: &Connection,
+    conversation_id: &str,
+) -> Result<Option<EmmyConversationSummary>, IpcError> {
+    let summary = connection
+        .query_row(
+            "SELECT id, title, created_at, updated_at FROM conversations WHERE id = ?1",
+            [conversation_id],
+            decode_conversation_summary_row,
+        )
+        .optional()
+        .map_err(|_| IpcError::UserDataUnavailable)?;
+    if summary
+        .as_ref()
+        .is_some_and(|summary| !valid_local_id(&summary.id) || summary.title.trim().is_empty())
+    {
+        return Err(IpcError::UserDataUnavailable);
+    }
+    Ok(summary)
+}
+
+struct StoredEmmyMessage {
+    id: String,
+    conversation_id: String,
+    role: String,
+    content_json: String,
+    created_at: String,
+}
+
+fn decode_stored_emmy_message_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredEmmyMessage> {
+    Ok(StoredEmmyMessage {
+        id: row.get(0)?,
+        conversation_id: row.get(1)?,
+        role: row.get(2)?,
+        content_json: row.get(3)?,
+        created_at: row.get(4)?,
+    })
+}
+
+fn decode_stored_emmy_message(stored: StoredEmmyMessage) -> Result<EmmyMessage, IpcError> {
+    if !valid_local_id(&stored.id) || !valid_local_id(&stored.conversation_id) {
+        return Err(IpcError::UserDataUnavailable);
+    }
+    let role = EmmyMessageRole::parse(&stored.role)?;
+    let content: EmmyMessageContent =
+        serde_json::from_str(&stored.content_json).map_err(|_| IpcError::UserDataUnavailable)?;
+    if message_role(&content) != role {
+        return Err(IpcError::UserDataUnavailable);
+    }
+    Ok(EmmyMessage {
+        id: stored.id,
+        conversation_id: stored.conversation_id,
+        role,
+        content,
+        created_at: stored.created_at,
+    })
+}
+
+fn load_emmy_message(
+    connection: &Connection,
+    conversation_id: &str,
+    message_id: &str,
+) -> Result<Option<EmmyMessage>, IpcError> {
+    connection
+        .query_row(
+            "SELECT id, conversation_id, role, content_json, created_at
+             FROM chat_messages WHERE conversation_id = ?1 AND id = ?2",
+            params![conversation_id, message_id],
+            decode_stored_emmy_message_row,
+        )
+        .optional()
+        .map_err(|_| IpcError::UserDataUnavailable)?
+        .map(decode_stored_emmy_message)
+        .transpose()
+}
+
+fn message_role(content: &EmmyMessageContent) -> EmmyMessageRole {
+    match content {
+        EmmyMessageContent::User { .. } => EmmyMessageRole::User,
+        EmmyMessageContent::Assistant { .. } | EmmyMessageContent::Notice { .. } => {
+            EmmyMessageRole::Assistant
+        }
+        EmmyMessageContent::Tool { .. } => EmmyMessageRole::Tool,
+    }
+}
+
+fn message_id_from_content(content: &EmmyMessageContent) -> Option<&str> {
+    let EmmyMessageContent::Tool { result, .. } = content else {
+        return None;
+    };
+    let EmmyToolResult::SetShortlist { preview } = result.as_ref() else {
+        return None;
+    };
+    Some(preview.confirmation_id.as_str())
+}
+
+fn shortlist_preview(message: &EmmyMessage) -> Option<&ShortlistPreview> {
+    let EmmyMessageContent::Tool { call, result } = &message.content else {
+        return None;
+    };
+    let EmmyToolCall::SetShortlist(args) = call.as_ref() else {
+        return None;
+    };
+    let EmmyToolResult::SetShortlist { preview } = result.as_ref() else {
+        return None;
+    };
+    (preview.confirmation_id == message.id
+        && preview.job.id == args.job_id
+        && preview.saved == args.saved)
+        .then_some(preview)
 }
 
 struct StoredProfile {
@@ -527,6 +931,7 @@ mod tests {
 
     use super::{ProfileInput, SetShortlistInput, UserStore};
     use crate::{
+        emmy::contracts::{EmmyMessageContent, MAX_CONVERSATION_MESSAGES},
         ipc::IpcError,
         search::dto::{JobId, RemoteMode, Seniority},
     };
@@ -672,6 +1077,51 @@ mod tests {
                 "user_meta",
             ]
         );
+    }
+
+    #[test]
+    fn conversation_limit_keeps_the_newest_messages_in_chronological_order() {
+        let directory = tempdir().expect("temporary directory should exist");
+        let path = directory.path().join("user.sqlite");
+        let store = UserStore::for_test(path.clone());
+        let conversation = store
+            .create_conversation()
+            .expect("conversation should initialize");
+        let mut connection = rusqlite::Connection::open(path).expect("database should reopen");
+        let transaction = connection
+            .transaction()
+            .expect("fixture transaction should start");
+        for index in 0..=MAX_CONVERSATION_MESSAGES {
+            transaction
+                .execute(
+                    "INSERT INTO chat_messages (
+                       id, conversation_id, role, content_json, created_at
+                     ) VALUES (?1, ?2, 'user', ?3, ?4)",
+                    rusqlite::params![
+                        format!("{index:032x}"),
+                        conversation.conversation.id,
+                        serde_json::json!({
+                            "type": "user",
+                            "text": format!("message-{index}")
+                        })
+                        .to_string(),
+                        format!("2026-08-01T00:00:{index:04}Z")
+                    ],
+                )
+                .expect("fixture message should insert");
+        }
+        transaction.commit().expect("fixture should commit");
+
+        let loaded = store
+            .load_conversation(&conversation.conversation.id)
+            .expect("conversation should load");
+        assert_eq!(loaded.messages.len(), MAX_CONVERSATION_MESSAGES);
+        let text = |index: usize| match &loaded.messages[index].content {
+            EmmyMessageContent::User { text } => text.as_str(),
+            _ => panic!("user message expected"),
+        };
+        assert_eq!(text(0), "message-1");
+        assert_eq!(text(MAX_CONVERSATION_MESSAGES - 1), "message-500");
     }
 
     #[test]

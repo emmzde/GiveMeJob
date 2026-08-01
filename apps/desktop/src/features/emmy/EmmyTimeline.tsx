@@ -169,7 +169,7 @@ function TimelineItemView({
             <EmmyMascot className="size-6" state="idle" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="whitespace-pre-wrap break-words text-xs leading-5 text-[var(--text)]">
+            <p className="whitespace-pre-wrap break-words text-[13px] leading-[1.55] text-[var(--text)]">
               {message.content.text}
             </p>
             {message.content.jobCards.length > 0 ? (
@@ -186,7 +186,7 @@ function TimelineItemView({
               <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label={t("emmyQuickReplies")}>
                 {message.content.quickReplies.map((reply) => (
                   <button
-                    className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-0)] px-2 py-1 text-left text-[10px] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text)]"
+                    className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-0)] px-2.5 py-1.5 text-left text-xs leading-4 text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text)]"
                     key={reply}
                     onClick={() => onQuickReply(reply)}
                     type="button"
@@ -205,7 +205,7 @@ function TimelineItemView({
 function UserBubble({ text }: { text: string }) {
   return (
     <div className="flex justify-end">
-      <p className="max-w-[88%] whitespace-pre-wrap break-words rounded-[var(--radius-md)] bg-[var(--accent-muted)] px-3 py-2 text-xs leading-5 text-[var(--text)]">
+      <p className="max-w-[88%] whitespace-pre-wrap break-words rounded-[var(--radius-md)] bg-[var(--accent-muted)] px-3 py-2 text-[13px] leading-[1.55] text-[var(--text)]">
         {text}
       </p>
     </div>
@@ -214,7 +214,7 @@ function UserBubble({ text }: { text: string }) {
 
 function Notice({ error }: { error: LlmError }) {
   return (
-    <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--warning-border)] bg-[var(--warning-muted)] p-2.5 text-xs leading-5 text-[var(--warning)]" role="status">
+    <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--warning-border)] bg-[var(--warning-muted)] p-2.5 text-[13px] leading-[1.55] text-[var(--warning)]" role="status">
       <CircleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
       <span>{errorLabel(error)}</span>
     </div>
@@ -224,7 +224,7 @@ function Notice({ error }: { error: LlmError }) {
 function LiveActivity({ event }: { event: EmmyStateEvent }) {
   const Icon = event.state === "searching" ? Search : Sparkles;
   return (
-    <div className="flex items-center gap-2 text-[11px] text-[var(--text-tertiary)]" role="status">
+    <div className="flex items-center gap-2 text-xs leading-4 text-[var(--text-tertiary)]" role="status">
       <span className="emmy-activity-pulse grid size-6 place-items-center rounded-[var(--radius-sm)] bg-[var(--surface-1)]">
         <Icon aria-hidden="true" className="size-3.5" />
       </span>
@@ -247,7 +247,7 @@ function ToolActivity({
   const preview = result.type === "set_shortlist" ? result.preview : null;
   return (
     <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] p-2.5">
-      <div className="flex items-center gap-2 text-[11px] text-[var(--text-secondary)]">
+      <div className="flex items-center gap-2 text-xs leading-4 text-[var(--text-secondary)]">
         <ToolGlyph name={call.name} />
         <span className="font-medium">{toolLabel(call.name)}</span>
         {preview?.status === "pending" ? (
@@ -258,11 +258,11 @@ function ToolActivity({
           <Check aria-hidden="true" className="ml-auto size-3.5 text-[var(--positive)]" />
         )}
       </div>
-      <p className="mt-1 text-[10px] leading-4 text-[var(--text-tertiary)]">{toolResultLabel(result)}</p>
+      <p className="mt-1 text-[11px] leading-4 text-[var(--text-tertiary)]">{toolResultLabel(result)}</p>
       {preview ? (
         <div className="mt-2 border-t border-[var(--border)] pt-2">
-          <p className="text-xs font-medium text-[var(--text)]">{preview.job.title}</p>
-          <p className="mt-0.5 text-[10px] text-[var(--text-tertiary)]">{preview.job.company} · {preview.job.attribution}</p>
+          <p className="text-[13px] font-medium leading-5 text-[var(--text)]">{preview.job.title}</p>
+          <p className="mt-0.5 text-[11px] leading-4 text-[var(--text-tertiary)]">{preview.job.company} · {preview.job.attribution}</p>
           {preview.status === "pending" ? (
             <div className="mt-2 flex gap-2">
               <Button className="h-7 px-2 text-xs" disabled={busy} onClick={() => onConfirm(preview, true)} type="button" variant="accent">

@@ -75,7 +75,11 @@ describe("EmmyPanel vertical", () => {
 
     const composer = await screen.findByRole("textbox", { name: "Спросите Emmy о вакансиях…" });
     fireEvent.change(composer, { target: { value: "Найди Rust вакансии" } });
-    fireEvent.keyDown(composer, { key: "Enter", ctrlKey: true });
+    fireEvent.keyDown(composer, { isComposing: true, key: "Enter" });
+    expect(send).not.toHaveBeenCalled();
+    fireEvent.keyDown(composer, { key: "Enter", shiftKey: true });
+    expect(send).not.toHaveBeenCalled();
+    fireEvent.keyDown(composer, { key: "Enter" });
 
     await waitFor(() => expect(send).toHaveBeenCalledWith({ text: "Найди Rust вакансии" }));
     expect(await screen.findByText("Нашла подходящие вакансии в локальном каталоге.")).toBeVisible();

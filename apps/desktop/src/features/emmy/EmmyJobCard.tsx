@@ -25,17 +25,17 @@ export function EmmyJobCard({
         </span>
         <div className="min-w-0 flex-1">
           <button
-            className="group flex w-full items-start gap-1 text-left text-xs font-semibold leading-4 text-[var(--text)] hover:text-[var(--accent)]"
+            className="group flex w-full items-start gap-1 text-left text-[13px] font-semibold leading-5 text-[var(--text)] hover:text-[var(--accent)]"
             onClick={() => onOpen(job)}
             type="button"
           >
             <span className="min-w-0 flex-1">{normalizeJobTitle(job.title)}</span>
             <ArrowUpRight aria-hidden="true" className="mt-px size-3.5 shrink-0 text-[var(--text-tertiary)] group-hover:text-[var(--accent)]" />
           </button>
-          <p className="mt-0.5 truncate text-[11px] text-[var(--text-secondary)]">{job.company}</p>
+          <p className="mt-0.5 truncate text-xs leading-4 text-[var(--text-secondary)]">{job.company}</p>
         </div>
       </div>
-      <div className="mt-2 grid gap-1 pl-9 text-[10px] text-[var(--text-tertiary)]">
+      <div className="mt-2 grid gap-1 pl-9 text-[11px] leading-4 text-[var(--text-tertiary)]">
         <span className="flex min-w-0 items-center gap-1">
           <MapPin aria-hidden="true" className="size-3 shrink-0" />
           <span className="truncate">{job.locationText || t("profileNoValue")}</span>

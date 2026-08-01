@@ -13,7 +13,7 @@ export function EmmyComparisonTable({
 }) {
   return (
     <div className="mt-2 overflow-x-auto rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-0)]">
-      <table className="min-w-[520px] border-collapse text-[10px]">
+      <table className="min-w-[520px] border-collapse text-[11px] leading-4">
         <caption className="sr-only">{t("emmyComparison")}</caption>
         <thead>
           <tr>

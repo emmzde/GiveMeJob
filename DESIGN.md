@@ -182,7 +182,7 @@ Backdrop command palette использует semantic overlay token. Карто
 
 ### Desktop shell and navigation
 
-Titlebar содержит product mark, текущий screen breadcrumb, вход в command palette, локальный catalog status, честный статус доступности Emmy, Settings и native window controls. Navigation sidebar содержит Jobs, Shortlist, Profile, Emmy и Settings. Active row получает neutral active surface и accent icon; все пять пунктов ведут к реально существующему screen или panel.
+Titlebar содержит product mark, текущий screen breadcrumb, вход в command palette, единую кнопку Emmy с SVG-позой и `aria-pressed`, Settings и native window controls. Отдельные status chips каталога и AI в titlebar отсутствуют: состояние каталога остаётся в status bar и Settings, а доступность Emmy раскрывается внутри её панели. Navigation sidebar содержит Jobs, Shortlist, Profile, Emmy и Settings. Active row получает neutral active surface и accent icon; все пять пунктов ведут к реально существующему screen или panel.
 
 Numeric shortcuts работают глобально только без Ctrl/Alt/Meta и вне editable controls: `1` открывает Search, `2` — Shortlist, `3` — Profile, `5` — Settings, `4` переключает панель Emmy. `s` меняет shortlist state выбранной вакансии только на Search/Shortlist.
 
@@ -201,14 +201,15 @@ Screen-scoped shortcuts:
 - `Ctrl+Enter` открывает original только на Search, при загруженном detail и вне editable controls;
 - `Ctrl+K` глобально переключает command palette, но не перехватывается внутри editable controls; dialog удерживает focus и возвращает его trigger/предыдущему элементу после закрытия;
 - `Ctrl+E` глобально переключает dock Emmy; текущий handler не ограничен active screen.
+- `Enter` отправляет сообщение в composer Emmy; `Shift+Enter` вставляет новую строку, а активная IME composition никогда не отправляет черновик.
 
 ### Buttons, fields, badges and state
 
-Buttons имеют базовую высоту `36px`, medium radius и варианты default, accent, outline и ghost. Hover меняет semantic background/opacity, active выбор остаётся видимым, disabled использует opacity и запрещает pointer events. Fields имеют border, neutral surface и visible placeholder; validation связывается через `aria-invalid`, description/error id и live alert. Badges различают neutral, accent, positive, warning и outline roles без декоративной радуги.
+Buttons имеют базовую высоту `36px`, medium radius и варианты default, accent, outline и ghost. Hover меняет semantic background/opacity, active выбор остаётся видимым, disabled использует opacity и запрещает pointer events. Выбор темы в Settings реализован трёхсегментной native radio-группой System/Light/Dark с иконками, browser-native keyboard behavior и отдельным selected state в обеих темах. Fields имеют border, neutral surface и visible placeholder; validation связывается через `aria-invalid`, description/error id и live alert. Badges различают neutral, accent, positive, warning и outline roles без декоративной радуги.
 
 Глобальный `:focus-visible` — контрастный `2px` outline с offset `2px`; сложные composite controls сохраняют эквивалентный видимый focus. Все mouse actions должны иметь keyboard path. Popup autocompletes поддерживают Arrow Up/Down, Home/End, Enter и Escape. Emmy resizer — focusable separator с value semantics и arrow resizing.
 
-Default semantic motion — `140ms` для background, border, color и opacity с `--ease`. Motion подтверждает state, не украшает idle UI. Layered SVG Emmy меняет позу и микроанимации по реальным `idle/listening/thinking/searching/success/empty/error/offline` состояниям agent loop. `prefers-reduced-motion` отключает smooth scrolling, сводит transitions/animations к `1ms` и одной итерации, сохраняя различимую позу и fade. Смена состояния не зависит только от движения.
+Default semantic motion — `140ms` для background, border, color и opacity с `--ease`. Motion подтверждает state, не украшает idle UI. Dock Emmy появляется справа через короткий `transform + opacity` transition; reduced motion оставляет только fade. Layered SVG Emmy меняет позу и микроанимации по реальным `idle/listening/thinking/searching/success/empty/error/offline` состояниям agent loop. `prefers-reduced-motion` отключает smooth scrolling, сводит transitions/animations к `1ms` и одной итерации, сохраняя различимую позу и fade. Смена состояния не зависит только от движения.
 
 ### Profile, shortlist, match and Emmy: current truth
 

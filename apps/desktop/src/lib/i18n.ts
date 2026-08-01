@@ -228,7 +228,7 @@ const messages = {
     emmyStarterMatch: "Покажи вакансии с лучшим совпадением с моим профилем",
     emmySend: "Отправить сообщение",
     emmyWorking: "Emmy отвечает",
-    emmySendHint: "Ctrl+Enter — отправить",
+    emmySendHint: "Enter — отправить · Shift+Enter — перенос",
     emmyQuickReplies: "Быстрые ответы Emmy",
     emmyThinking: "Emmy обдумывает ответ",
     emmyStateIdle: "Готова помочь",

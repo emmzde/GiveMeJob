@@ -1,22 +1,13 @@
-import {
-  Bot,
-  ChevronRight,
-  Minus,
-  Search,
-  Settings,
-  Square,
-  WifiOff,
-  X,
-} from "lucide-react";
+import { ChevronRight, Minus, Search, Settings, Square, X } from "lucide-react";
 import type { ReactNode, RefObject } from "react";
 
 import type { AppScreen } from "@/app/store/appUiStore";
 import { useAppUiStore } from "@/app/store/appUiStore";
 import { Kbd } from "@/components/ui/kbd";
-import { catalogStateLabel, isCatalogError, isCatalogReady } from "@/features/catalog/catalogStatus";
+import { catalogStateLabel, isCatalogError } from "@/features/catalog/catalogStatus";
 import type { CatalogViewState } from "@/features/catalog/catalogStatus";
+import { EmmyMascot } from "@/features/emmy/EmmyMascot";
 import { useEmmyConfiguration } from "@/features/emmy/hooks";
-import { formatCount } from "@/features/feed/jobPresentation";
 import { t } from "@/lib/i18n";
 import { desktopWindow } from "@/lib/tauri/window";
 import { cn } from "@/lib/utils";
@@ -62,17 +53,27 @@ function WindowButton({
 }
 
 export function DesktopTitlebar({ catalog, commandTriggerRef }: DesktopTitlebarProps) {
+  const panel = useAppUiStore((state) => state.panel);
   const screen = useAppUiStore((state) => state.screen);
+  const selectedId = useAppUiStore((state) => state.selectedId);
   const setCommandPaletteOpen = useAppUiStore((state) => state.setCommandPaletteOpen);
+  const setPanel = useAppUiStore((state) => state.setPanel);
   const setScreen = useAppUiStore((state) => state.setScreen);
-  const ready = isCatalogReady(catalog);
   const catalogError = isCatalogError(catalog);
   const emmy = useEmmyConfiguration();
-  const emmyLabel = emmy.isPending
-    ? t("aiChecking")
+  const emmyOpen = panel === "emmy";
+  const emmyButtonLabel = emmyOpen ? t("closeEmmy") : t("openEmmy");
+  const mascotState = emmy.isPending
+    ? "thinking"
     : emmy.data?.available
-      ? t("aiReady")
-      : t("aiOffline");
+      ? emmyOpen
+        ? "listening"
+        : "idle"
+      : "offline";
+
+  function toggleEmmy(): void {
+    setPanel(emmyOpen ? (selectedId === null ? null : "job_detail") : "emmy");
+  }
 
   return (
     <header
@@ -108,21 +109,22 @@ export function DesktopTitlebar({ catalog, commandTriggerRef }: DesktopTitlebarP
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        <div
-          aria-live={catalogError ? "assertive" : "polite"}
-          className="hidden h-7 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-2 text-[11px] text-[var(--text-secondary)] lg:flex"
-          role={catalogError ? "alert" : "status"}
+        <button
+          aria-label={emmyButtonLabel}
+          aria-pressed={emmyOpen}
+          className={cn(
+            "emmy-titlebar-trigger flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] border px-2 text-[11px] font-medium",
+            emmyOpen
+              ? "border-[var(--accent-border)] bg-[var(--accent-muted)] text-[var(--text)]"
+              : "border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]",
+          )}
+          onClick={toggleEmmy}
+          title={emmyButtonLabel}
+          type="button"
         >
-          <WifiOff aria-hidden="true" className="size-3 text-[var(--text-tertiary)]" />
-          <span>{catalogStateLabel(catalog)}</span>
-          {ready ? (
-            <><span aria-hidden="true" className="text-[var(--text-disabled)]">·</span><span className="tabular-nums text-[var(--text)]">{formatCount(catalog.status?.totalJobs ?? 0)}</span></>
-          ) : null}
-        </div>
-        <div className="hidden h-7 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-2 text-[11px] text-[var(--text-secondary)] xl:flex">
-          <Bot aria-hidden="true" className={emmy.data?.available ? "size-3 text-[var(--positive)]" : "size-3 text-[var(--text-tertiary)]"} />
-          {emmyLabel}
-        </div>
+          <EmmyMascot className="size-5" state={mascotState} />
+          <span className="hidden sm:inline">Emmy</span>
+        </button>
         <button
           aria-label={t("settings")}
           className="grid size-7 place-items-center rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
@@ -143,6 +145,13 @@ export function DesktopTitlebar({ catalog, commandTriggerRef }: DesktopTitlebarP
           </WindowButton>
         </div>
       </div>
+      <span
+        aria-live={catalogError ? "assertive" : "polite"}
+        className="sr-only"
+        role={catalogError ? "alert" : "status"}
+      >
+        {catalogStateLabel(catalog)}
+      </span>
     </header>
   );
 }

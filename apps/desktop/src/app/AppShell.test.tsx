@@ -1,11 +1,12 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { act, render } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppShell } from "@/app/AppShell";
 import { createAppQueryClient } from "@/app/queryClient";
 import { resetAppUiStore, useAppUiStore } from "@/app/store/appUiStore";
 import type { CatalogViewState } from "@/features/catalog/catalogStatus";
+import { t } from "@/lib/i18n";
 
 const readyCatalog: CatalogViewState = {
   isError: false,
@@ -73,5 +74,26 @@ describe("AppShell themes", () => {
     act(() => useAppUiStore.getState().setTheme("dark"));
 
     expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+  });
+
+  it("uses one Emmy trigger in the titlebar and toggles the chat panel", () => {
+    const { container } = render(
+      <QueryClientProvider client={createAppQueryClient()}>
+        <AppShell catalog={readyCatalog}>
+          <p>content</p>
+        </AppShell>
+      </QueryClientProvider>,
+    );
+    const titlebar = within(container.querySelector("header") as HTMLElement);
+    const trigger = titlebar.getByRole("button", { name: t("openEmmy") });
+
+    expect(trigger).toHaveAttribute("aria-pressed", "false");
+    expect(titlebar.getByText(t("offlineReady"))).toHaveClass("sr-only");
+    expect(titlebar.queryByText(t("aiReady"))).not.toBeInTheDocument();
+
+    fireEvent.click(trigger);
+
+    expect(useAppUiStore.getState().panel).toBe("emmy");
+    expect(screen.getByRole("button", { name: t("closeEmmy") })).toHaveAttribute("aria-pressed", "true");
   });
 });

@@ -13,16 +13,20 @@ describe("ThemeControl", () => {
 
   it("offers system, light, and dark and keeps the choice in session state", () => {
     render(<ThemeControl />);
-    const control = screen.getByRole("combobox", { name: t("theme") });
+    const choices = screen.getAllByRole("radio");
+    const system = screen.getByRole("radio", { name: t("themeSystem") });
+    const dark = screen.getByRole("radio", { name: t("themeDark") });
 
-    expect(control).toHaveValue("system");
-    expect(screen.getAllByRole("option").map((option) => option.getAttribute("value"))).toEqual([
+    expect(screen.getByRole("group", { name: t("theme") })).toBeInTheDocument();
+    expect(system).toBeChecked();
+    expect(choices.map((choice) => choice.getAttribute("value"))).toEqual([
       "system",
       "light",
       "dark",
     ]);
 
-    fireEvent.change(control, { target: { value: "dark" } });
+    fireEvent.click(dark);
+    expect(dark).toBeChecked();
     expect(useAppUiStore.getState().theme).toBe("dark");
     expect(window.localStorage).toHaveLength(0);
   });

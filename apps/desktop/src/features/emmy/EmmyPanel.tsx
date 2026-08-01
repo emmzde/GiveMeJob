@@ -167,7 +167,7 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
   }
 
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>): void {
-    if (event.key !== "Enter" || !event.ctrlKey) return;
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
     event.preventDefault();
     void sendText(draft);
   }
@@ -219,13 +219,13 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
   return (
     <aside
       aria-label={t("emmyPanelLabel")}
-      className="relative flex h-full min-w-0 flex-col border-l border-[var(--border)] bg-[var(--surface-0)]"
+      className="emmy-panel relative flex h-full min-w-0 flex-col border-l border-[var(--border)] bg-[var(--surface-0)]"
     >
       <header className="relative flex h-11 shrink-0 items-center gap-2 border-b border-[var(--border)] px-3">
         <EmmyMascot className="size-7" state={mascotState} />
         <div className="min-w-0 flex-1 leading-tight">
-          <p className="truncate text-xs font-semibold">{conversationTitle}</p>
-          <p className="text-[10px] text-[var(--text-tertiary)]">{stateLabel}</p>
+          <p className="truncate text-[13px] font-semibold leading-4">{conversationTitle}</p>
+          <p className="text-[11px] leading-4 text-[var(--text-tertiary)]">{stateLabel}</p>
         </div>
         <Button
           aria-controls="emmy-history-popover"
@@ -280,7 +280,7 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
               {conversations.data?.length ? conversations.data.map((item) => (
                 <button
                   aria-current={item.id === resolvedActiveId ? "true" : undefined}
-                  className="block w-full rounded-[var(--radius-md)] px-2 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] aria-[current=true]:bg-[var(--surface-active)] aria-[current=true]:text-[var(--text)]"
+                  className="block w-full rounded-[var(--radius-md)] px-2 py-2 text-left text-[13px] leading-4 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] aria-[current=true]:bg-[var(--surface-active)] aria-[current=true]:text-[var(--text)]"
                   key={item.id}
                   onClick={() => {
                     setActiveId(item.id);
@@ -340,11 +340,11 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
       )}
 
       <form className="border-t border-[var(--border)] p-2.5" onSubmit={submit}>
-        <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] p-2.5 focus-within:border-[var(--border-strong)]">
+        <div className="emmy-composer-shell rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] p-2.5">
           <label className="sr-only" htmlFor="emmy-composer">{available ? t("emmyInputPlaceholder") : t("emmyUnavailable")}</label>
           <textarea
             aria-label={available ? t("emmyInputPlaceholder") : t("emmyUnavailable")}
-            className="block h-14 w-full resize-none bg-transparent text-xs leading-5 text-[var(--text)] outline-none placeholder:text-[var(--text-placeholder)] disabled:text-[var(--text-disabled)]"
+            className="emmy-composer block h-14 w-full resize-none bg-transparent text-[13px] leading-5 text-[var(--text)] outline-none placeholder:text-[var(--text-placeholder)] disabled:text-[var(--text-disabled)]"
             disabled={!available || busy}
             id="emmy-composer"
             maxLength={4_000}
@@ -361,7 +361,7 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
             value={draft}
           />
           <div className="mt-1 flex items-center justify-between gap-2">
-            <span className="flex min-w-0 items-center gap-1 truncate text-[10px] text-[var(--text-tertiary)]">
+            <span className="flex min-w-0 items-center gap-1 truncate text-[11px] leading-4 text-[var(--text-tertiary)]">
               {!available ? <Lock aria-hidden="true" className="size-3 shrink-0" /> : null}
               {available ? t("emmySendHint") : t("emmyUnavailable")}
             </span>
@@ -387,7 +387,7 @@ function OfflineState({ onSettings }: { onSettings(): void }) {
         <EmmyMascot className="size-12" state="offline" />
       </div>
       <h2 className="mt-4 text-sm font-semibold">{t("emmyOfflineTitle")}</h2>
-      <p className="mt-2 max-w-72 text-xs leading-5 text-[var(--text-secondary)]">{t("emmyOfflineDescription")}</p>
+      <p className="mt-2 max-w-72 text-[13px] leading-5 text-[var(--text-secondary)]">{t("emmyOfflineDescription")}</p>
       <Button className="mt-4" onClick={onSettings} type="button" variant="outline">
         <Settings aria-hidden="true" className="size-4" />
         {t("emmyConfigureProviders")}
@@ -401,11 +401,11 @@ function WelcomeState({ onReply }: { onReply(reply: string): void }) {
     <div className="scroll-region min-h-0 flex-1 overflow-y-auto px-4 py-6">
       <EmmyMascot className="mx-auto size-20" state="idle" />
       <h2 className="mt-4 text-center text-sm font-semibold">{t("emmyWelcomeTitle")}</h2>
-      <p className="mx-auto mt-2 max-w-72 text-center text-xs leading-5 text-[var(--text-secondary)]">{t("emmyWelcomeDescription")}</p>
+      <p className="mx-auto mt-2 max-w-72 text-center text-[13px] leading-5 text-[var(--text-secondary)]">{t("emmyWelcomeDescription")}</p>
       <div className="mt-5 grid gap-2">
         {starterReplies.map((reply) => (
           <button
-            className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2.5 text-left text-xs leading-5 text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text)]"
+            className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2.5 text-left text-[13px] leading-5 text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text)]"
             key={reply}
             onClick={() => onReply(reply)}
             type="button"

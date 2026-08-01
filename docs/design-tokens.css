@@ -1,99 +1,118 @@
-/* GiveMeJob! — дизайн-токены Windows pet MVP.
- * Правило: в компонентах и SVG Emmy не должно быть инлайн-хекс-цветов.
- * Используются только эти семантические переменные.
- */
+/* GiveMeJob! desktop UI tokens. This file is the only color source for components. */
 
 :root {
-  /* Light */
-  --bg:              #ffffff;
-  --bg-secondary:    #f7f7f5;   /* сайдбар — чуть теплее основного */
-  --bg-hover:        rgba(55, 53, 47, 0.06);
-  --bg-active:       rgba(55, 53, 47, 0.10);
-  --bg-raised:       #ffffff;
-  --text:            #37352f;   /* тёплый почти-чёрный, не #000 */
-  --text-secondary:  #5f5d57;
-  --text-tertiary:   #73716b;
-  --text-placeholder: #73716b;
-  --border:          rgba(55, 53, 47, 0.09);
-  --accent:          #0b65b1;
-  --accent-muted:    rgba(11, 101, 177, 0.12);
-  --on-accent:       #ffffff;
-  --focus:           #2383e2;
-  --overlay:         rgba(25, 25, 25, 0.48);
+  --bg: #ffffff;
+  --bg-secondary: #f7f7f8;
+  --bg-raised: #ffffff;
+  --bg-hover: #f1f1f3;
+  --bg-active: #e9e9ee;
+  --surface-0: #ffffff;
+  --surface-1: #fafafa;
+  --surface-2: #f4f4f5;
+  --surface-3: #e9e9ee;
+  --surface-hover: #f1f1f3;
+  --surface-active: #e9e9ee;
 
-  --shadow-sm: 0 1px 2px rgba(15, 15, 15, 0.05);
-  --shadow-md: rgba(15, 15, 15, 0.05) 0 0 0 1px,
-               rgba(15, 15, 15, 0.10) 0 3px 6px,
-               rgba(15, 15, 15, 0.20) 0 9px 24px;
+  --text: #18181b;
+  --text-secondary: #52525b;
+  --text-tertiary: #64646e;
+  --text-placeholder: #64646e;
+  --text-disabled: #8b8b94;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
 
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-muted: #eeedff;
+  --accent-border: #c7d2fe;
+  --on-accent: #ffffff;
+  --focus: #6366f1;
+  --overlay: rgba(9, 9, 11, 0.48);
+
+  --positive: #15803d;
+  --positive-muted: #ecfdf3;
+  --positive-border: #bbf7d0;
+  --warning: #a16207;
+  --warning-muted: #fffbeb;
+  --warning-border: #fde68a;
+  --danger: #dc2626;
+  --on-danger: #ffffff;
+
+  --shadow-sm: 0 1px 2px rgba(9, 9, 11, 0.06);
+  --shadow-md: 0 12px 32px rgba(9, 9, 11, 0.16);
   --radius-sm: 4px;
-  --radius-md: 6px;
+  --radius-md: 7px;
   --radius-lg: 10px;
+  --font: "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
 
-  --font: "Inter", -apple-system, "Segoe UI", sans-serif;
-  --ease: cubic-bezier(0.16, 1, 0.3, 1);   /* мягкий выход, ощущение "дорого" */
+  --match-strong: #15803d;
+  --match-medium: #a16207;
+  --match-weak: #c2410c;
+  --match-none: #b91c1c;
 
-  /* Семантика матча — единственное место, где допустим цвет ради смысла */
-  --match-strong:  #2f9e68;
-  --match-medium:  #cb912f;
-  --match-weak:    #d9730d;
-  --match-none:    #e03e3e;
-
-  /* Emmy: спокойная тёплая палитра внутри почти монохромного продукта */
-  --emmy-fur:         #eee7dc;
-  --emmy-fur-shadow:  #d4c6b5;
-  --emmy-ear:         #b58e78;
-  --emmy-eye:         #37352f;
-  --emmy-nose:        #37352f;
-  --emmy-collar:      #2383e2;
-  --emmy-cheek:       #dca28d;
-  --emmy-thought:     rgba(55, 53, 47, 0.24);
+  --emmy-fur: #e7e5e4;
+  --emmy-fur-shadow: #c9c5c1;
+  --emmy-ear: #a78b7b;
+  --emmy-eye: #27272a;
+  --emmy-nose: #27272a;
+  --emmy-outline: #57534e;
+  --emmy-collar: #4f46e5;
 }
 
 [data-theme="dark"] {
-  --bg:             #191919;
-  --bg-secondary:   #202020;
-  --bg-hover:       rgba(255, 255, 255, 0.055);
-  --bg-active:      rgba(255, 255, 255, 0.10);
-  --bg-raised:      #252525;
-  --text:           rgba(255, 255, 255, 0.90);
-  --text-secondary: #c2c2c2;
-  --text-tertiary:  #a3a3a3;
-  --text-placeholder: #a3a3a3;
-  --border:         rgba(255, 255, 255, 0.10);
-  --accent:         #73b4e1;
-  --accent-muted:   rgba(115, 180, 225, 0.16);
-  --on-accent:      #191919;
-  --focus:          #529cca;
-  --overlay:        rgba(0, 0, 0, 0.64);
+  --bg: #09090b;
+  --bg-secondary: #111113;
+  --bg-raised: #18181b;
+  --bg-hover: #1c1c20;
+  --bg-active: #27272a;
+  --surface-0: #09090b;
+  --surface-1: #111113;
+  --surface-2: #18181b;
+  --surface-3: #27272a;
+  --surface-hover: #1c1c20;
+  --surface-active: #27272a;
 
-  --emmy-fur:        #d8cfc3;
-  --emmy-fur-shadow: #a99988;
-  --emmy-ear:        #a77f6b;
-  --emmy-eye:        #191919;
-  --emmy-nose:       #191919;
-  --emmy-collar:     #529cca;
-  --emmy-cheek:      #c78f7d;
-  --emmy-thought:    rgba(255, 255, 255, 0.28);
-}
+  --text: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #8b8b95;
+  --text-placeholder: #8b8b95;
+  --text-disabled: #64646e;
+  --border: #27272a;
+  --border-strong: #3f3f46;
 
-/* Микро-правила, которые дают 80% ощущения:
- *  - переходы 120–160 мс с --ease
- *  - hover-фон вместо смены цвета текста
- *  - border-radius контейнеров не больше --radius-lg
- *  - иконки строго 16px в одном стиле (Lucide)
- *  - фокус-ринг 2px акцентом, никогда не убирать outline полностью
- */
+  --accent: #818cf8;
+  --accent-hover: #a5b4fc;
+  --accent-muted: #1e1b4b;
+  --accent-border: #3730a3;
+  --on-accent: #09090b;
+  --focus: #818cf8;
+  --overlay: rgba(0, 0, 0, 0.68);
 
-* {
-  transition: background-color 140ms var(--ease),
-              border-color 140ms var(--ease),
-              opacity 140ms var(--ease);
-}
+  --positive: #4ade80;
+  --positive-muted: #052e16;
+  --positive-border: #166534;
+  --warning: #facc15;
+  --warning-muted: #422006;
+  --warning-border: #854d0e;
+  --danger: #dc2626;
+  --on-danger: #ffffff;
 
-:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.32);
+  --shadow-md: 0 14px 40px rgba(0, 0, 0, 0.44);
+
+  --match-strong: #4ade80;
+  --match-medium: #facc15;
+  --match-weak: #fb923c;
+  --match-none: #f87171;
+
+  --emmy-fur: #d6d3d1;
+  --emmy-fur-shadow: #a8a29e;
+  --emmy-ear: #9f7f70;
+  --emmy-eye: #27272a;
+  --emmy-nose: #27272a;
+  --emmy-outline: #78716c;
+  --emmy-collar: #818cf8;
 }
 
 @media (prefers-reduced-motion: reduce) {

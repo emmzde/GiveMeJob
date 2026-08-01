@@ -11,6 +11,7 @@ describe("app UI store", () => {
 
     expect(state).toMatchObject({
       screen: "search",
+      profileVisited: false,
       selectedId: null,
       panel: null,
       theme: "system",
@@ -27,5 +28,15 @@ describe("app UI store", () => {
 
     useAppUiStore.getState().selectJob(null);
     expect(useAppUiStore.getState()).toMatchObject({ selectedId: null, panel: null });
+  });
+
+  it("remembers that the profile screen was opened so its draft can stay mounted", () => {
+    useAppUiStore.getState().setScreen("profile");
+    useAppUiStore.getState().setScreen("search");
+
+    expect(useAppUiStore.getState()).toMatchObject({
+      screen: "search",
+      profileVisited: true,
+    });
   });
 });

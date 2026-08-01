@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { useRef, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { resetAppUiStore } from "@/app/store/appUiStore";
+import { resetAppUiStore, useAppUiStore } from "@/app/store/appUiStore";
 import { CommandPalette } from "@/features/commands/CommandPalette";
 import { t } from "@/lib/i18n";
 
@@ -36,7 +36,7 @@ function PaletteHarness({
 describe("CommandPalette", () => {
   beforeEach(resetAppUiStore);
 
-  it("opens with Ctrl+K and lists only implemented M2 actions", async () => {
+  it("opens with Ctrl+K and lists implemented navigation and actions", async () => {
     render(<PaletteHarness />);
 
     fireEvent.keyDown(window, { ctrlKey: true, key: "k" });
@@ -47,8 +47,9 @@ describe("CommandPalette", () => {
     expect(within(dialog).getByText(t("themeSystem"))).toBeInTheDocument();
     expect(within(dialog).getByText(t("themeLight"))).toBeInTheDocument();
     expect(within(dialog).getByText(t("themeDark"))).toBeInTheDocument();
-    expect(within(dialog).queryByText(t("shortlist"))).not.toBeInTheDocument();
-    expect(within(dialog).queryByText(t("emmy"))).not.toBeInTheDocument();
+    expect(within(dialog).getByText(t("shortlist"))).toBeInTheDocument();
+    expect(within(dialog).getByText(t("profile"))).toBeInTheDocument();
+    expect(within(dialog).getByText(t("emmy"))).toBeInTheDocument();
   });
 
   it("ignores Ctrl+K while an editable control owns the event", () => {
@@ -81,5 +82,15 @@ describe("CommandPalette", () => {
     const reopened = await screen.findByRole("dialog", { name: t("commandPalette") });
     fireEvent.click(within(reopened).getByText(t("focusSearch")));
     await waitFor(() => expect(onFocusSearch).toHaveBeenCalledTimes(1));
+  });
+
+  it("opens the real shortlist screen from the palette", async () => {
+    render(<PaletteHarness />);
+    fireEvent.click(screen.getByRole("button", { name: t("openCommandPalette") }));
+    const dialog = await screen.findByRole("dialog", { name: t("commandPalette") });
+
+    fireEvent.click(within(dialog).getByText(t("shortlist")));
+
+    await waitFor(() => expect(useAppUiStore.getState().screen).toBe("shortlist"));
   });
 });

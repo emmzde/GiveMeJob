@@ -2,6 +2,8 @@ import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
+import { t } from "@/lib/i18n";
+
 interface FilterSectionProps {
   activeCount?: number;
   children: ReactNode;
@@ -55,5 +57,5 @@ export function FilterSection({
 }
 
 function tallyLabel(count: number): string {
-  return count === 1 ? "Выбран" : "Выбрано";
+  return t(count === 1 ? "selectedOne" : "selectedMany");
 }

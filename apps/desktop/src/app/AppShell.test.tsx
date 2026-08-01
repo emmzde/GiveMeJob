@@ -1,10 +1,9 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppShell } from "@/app/AppShell";
 import { resetAppUiStore, useAppUiStore } from "@/app/store/appUiStore";
 import type { CatalogViewState } from "@/features/catalog/catalogStatus";
-import { t } from "@/lib/i18n";
 
 const readyCatalog: CatalogViewState = {
   isError: false,
@@ -58,7 +57,7 @@ describe("AppShell themes", () => {
     expect(document.documentElement).toHaveAttribute("data-theme", "dark");
   });
 
-  it("applies an explicit session theme from the accessible control", () => {
+  it("applies an explicit session theme from UI state", () => {
     render(
       <AppShell catalog={readyCatalog}>
         <p>content</p>
@@ -67,7 +66,6 @@ describe("AppShell themes", () => {
 
     act(() => useAppUiStore.getState().setTheme("dark"));
 
-    expect(screen.getByRole("combobox", { name: t("theme") })).toHaveValue("dark");
     expect(document.documentElement).toHaveAttribute("data-theme", "dark");
   });
 });

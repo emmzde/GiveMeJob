@@ -56,12 +56,21 @@ Narrator, UIA keyboard smoke и native reduced-motion также прошли. �
 gates закрыты. Aggregate warm p95 `150.86 ms` остаётся на `0.86 ms` выше
 неблокирующей цели `<150 ms`, но ниже hard gate `<300 ms`.
 
+Минимальный M3 закрыт 1 августа 2026 года. Полная schema v1 `user.sqlite`,
+локальный профиль, shortlist с кнопками/feed/detail/экраном/shortcut `s` и
+детерминированный on-demand match по пяти компонентам реализованы без LLM.
+Field-level validation фокусирует первое неверное поле, профиль имеет Retry, а
+черновик переживает переключение экранов. В настоящем frameless Tauri/WebView2
+окне подтверждены drag region, minimize/maximize/restore/close и отдельный
+save → restart → load для profile и shortlist. Закрывающая запись:
+[`evidence/M3_FINAL_ACCEPTANCE_2026-08-01.md`](evidence/M3_FINAL_ACCEPTANCE_2026-08-01.md).
+
 Exact per-option result counts
 для remote/seniority/employment не изображаются: текущий IPC возвращает count
-только для source и autocomplete. Shortlist/save относится к M3, hide/apply
-automation не входит в текущий продуктовый контракт.
-`match`-sort относится к M3 и также не реализован. M3, M4 и
-release-hardening M5 не завершены.
+только для source и autocomplete. Hide/apply automation не входит в текущий
+продуктовый контракт. Глобальный `match`-sort и catalog-wide пересчёт отложены
+после core M4 и до M5 по ADR-018. M4 и release-hardening M5 не завершены;
+текущий этап — M4.
 
 Публикация сейчас создала бы ложное ожидание готового MVP и зафиксировала бы
 неполный UX как первую публичную версию.
@@ -72,6 +81,7 @@ release-hardening M5 не завершены.
 - manifest и checksums без самого каталога;
 - offline desktop shell и локальный Rust SQLite IPC;
 - backend-фильтры и сортировки relevance/newest/salary;
+- локальный profile/shortlist и on-demand deterministic match;
 - удаление legacy backend/ingestion;
 - актуальная документация, roadmap и Windows CI;
 - remote feature branch; merge в `main` выполняется только через pull request.
@@ -86,7 +96,9 @@ Release разрешён только после выполнения всех �
 1. M2: **завершён** — UI audit и воспроизводимые
    feed-scroll/cold-query/startup/RAM measurements сохранены; hard gate warm
    search p95 строго <300 мс пройден, а строго <150 мс остаётся целевым уровнем.
-2. M3: `user.sqlite`, профиль, shortlist и детерминированный match-score.
+2. M3: **завершён** — `user.sqlite`, профиль, shortlist и детерминированный
+   on-demand match-score; глобальный match-sort остаётся обязательным post-M4
+   follow-up по ADR-018.
 3. M4: Emmy, Rust `LLMRouter`, ровно пять tools, BYOK и graceful offline.
 4. M5: clean-Windows install test, NSIS, portable ZIP и signed updater.
 5. `catalog-v1.sqlite.zst` опубликован отдельным versioned asset, а его

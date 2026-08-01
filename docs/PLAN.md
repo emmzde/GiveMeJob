@@ -293,27 +293,23 @@ description только в detail payload. Catalog-v1 имеет `description_f
 Команды отклоняются только закрытым `IpcError`; локальные path и сырые SQLite
 errors в frontend не передаются.
 
-#### 2.3.2 Future M3 contract
+#### 2.3.2 Реализованный минимальный M3 contract
 
-После завершения M2 текущий поиск расширяется, а не подменяется несуществующим
-контрактом. M3 добавляет локальные user data и match:
+M3 расширяет M2 локальными user data и on-demand match, не меняя search query:
 
 ```ts
-type M3SearchQuery = Omit<SearchQuery, "sort"> & {
-  savedOnly: boolean;
-  sort: "relevance" | "match" | "newest" | "salary";
-  cursor?: SearchCursor;
-};
-
-interface M3JobSummary extends JobSummary {
-  match: number | null;
-  saved: boolean;
-}
-
+getProfile(): Promise<UserProfile | null>
 saveProfile(input: ProfileInput): Promise<UserProfile>
-getMatchBreakdown(id: JobId): Promise<MatchBreakdown>
-setShortlist(id: JobId, saved: boolean): Promise<ShortlistState>
+listShortlist(): Promise<ShortlistRecord[]>
+isShortlisted(id: JobId): Promise<boolean>
+setShortlist(input: { jobId: JobId; saved: boolean }): Promise<ShortlistState>
+getMatchBreakdown(id: JobId): Promise<MatchBreakdown | null>
+getMatchBreakdowns(ids: JobId[]): Promise<JobMatch[]> // 1..200 unique IDs
 ```
+
+Match для feed запрашивается только по уже показанным ID. Глобальные
+`savedOnly`, `sort: "match"` и catalog-wide ranking отложены после core M4 и до
+M5 по ADR-018; текущий M3 не заявляет их готовыми.
 
 Emmy в M4 использует тот же `JobId` в `get_job`, `compare_jobs`,
 `get_match_breakdown` и `set_shortlist`. Все payload валидируются;
@@ -447,8 +443,9 @@ worst clean release p95 `273.02 ms`, новые indexes не потребова�
 - допустимые remote modes;
 - минимальная желаемая годовая зарплата USD, опционально.
 
-Онбординг можно пропустить. Без профиля поиск и shortlist работают, а
-match-sort скрыт.
+Отдельного многошагового onboarding нет: его роль выполняет profile
+empty-state с переходом в ту же анкету. Анкету можно пропустить. Без профиля
+поиск и shortlist работают, а match-score не вычисляется и match-sort скрыт.
 
 ### 4.2 Match formula
 
@@ -490,7 +487,11 @@ Score всегда воспроизводим. Он не меняется из-�
 - recent searches;
 - настройки;
 - conversation metadata/messages;
-- provider health и локальные quota counters.
+- provider health и локальные quota counters;
+- зарезервированный локальный match cache по profile/catalog version.
+
+Schema version `1` включает все эти таблицы с первого публичного запуска.
+BYOK в схему не входит и хранится только в Windows Credential Manager.
 
 При удалении приложения пользователь может выбрать удаление local data.
 Экспорт/синхронизация профиля не входит в v1.
@@ -749,7 +750,8 @@ Authenticode отсутствует в v1; SmartScreen warning документ�
 - [x] Job detail и original link.
 - [x] System/light/dark session theme, AA text/placeholder tokens и responsive panels.
 - [x] `/`, roving `j/k`, virtual scroll и `Ctrl+Enter`; editable controls не перехватываются.
-- [x] `cmdk` palette с доступным dialog, focus trap/restore и только M2 actions.
+- [x] `cmdk` palette с доступным dialog и focus trap/restore; M3 добавил
+  навигацию к profile и shortlist.
 - [x] Axe smoke для shell, filters, feed, detail, errors и command dialog.
 - [x] Catalog/search/detail loading, empty и error states.
 - [x] Versioned 90-query release benchmark, cold IPC query, full cursor audit,
@@ -765,18 +767,33 @@ Authenticode отсутствует в v1; SmartScreen warning документ�
 [`evidence/M2_FINAL_ACCEPTANCE_2026-08-01.md`](evidence/M2_FINAL_ACCEPTANCE_2026-08-01.md).
 Все hard gates, включая физически отключённое Wi-Fi radio, offline search/detail,
 native Narrator/keyboard smoke и reduced motion, пройдены. M2 завершён;
-текущий этап — M3.
+после него завершён минимальный M3 по ADR-018.
 
 ### M3. Profile, match и shortlist
 
-- [ ] Onboarding.
-- [ ] `user.sqlite`.
-- [ ] Match components.
-- [ ] Match explanations.
-- [ ] Shortlist persistence.
-- [ ] Match sorting.
+- [x] Profile empty-state выполняет роль опционального onboarding без
+  отдельного wizard.
+- [x] Полная schema v1 `user.sqlite` зафиксирована до первого публичного
+  запуска.
+- [x] Profile draft, field-level errors, focus первого неверного поля и Retry.
+- [x] Пять детерминированных match components с перераспределением неизвестных
+  весов.
+- [x] Score, strengths, gaps и component breakdown для показанных вакансий.
+- [x] `list_shortlist`, `is_shortlisted`, `set_shortlist`, кнопки в feed/detail,
+  экран shortlist и shortcut `s`.
+- [x] Profile и shortlist проходят save → restart → load в настоящем
+  Tauri/WebView2 окне.
 
-Критерий: весь этап работает при физически отключённой сети.
+Отложенный v1 follow-up, не входящий в M3 gate:
+
+- [ ] Глобальная match-сортировка и catalog-wide пересчёт — после core M4 и до
+  M5 по ADR-018.
+
+Критерий минимального M3: profile/shortlist/match работают локально без LLM,
+одинаковый input даёт одинаковый breakdown, а данные переживают перезапуск.
+Критерий пройден 1 августа 2026 года; закрывающая запись —
+[`evidence/M3_FINAL_ACCEPTANCE_2026-08-01.md`](evidence/M3_FINAL_ACCEPTANCE_2026-08-01.md).
+Текущий этап — M4.
 
 ### M4. Emmy
 

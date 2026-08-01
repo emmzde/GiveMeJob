@@ -2,13 +2,13 @@
 
 ## Активный этап
 
-D0, M1 и M2 завершены. В `config/catalog-manifest.json` зафиксирован проверенный
-snapshot из 78 719 вакансий. Текущий этап — M3: profile, match и shortlist.
+D0, M1, M2 и минимальный M3 завершены. В `config/catalog-manifest.json`
+зафиксирован проверенный snapshot из 78 719 вакансий. Текущий этап — M4: Emmy.
 Backend-фильтры, search correctness, сортировки relevance/newest/salary и
 cursor/keyset готовы. Filter/sort UI, active chips, local autocomplete,
 cursor pagination, виртуализированная лента и job detail подключены к строгому
-IPC-контракту. Все M2 hard gates и closing evidence пройдены; относящийся к M3
-match-sort ещё не реализован.
+IPC-контракту. Profile, shortlist и on-demand deterministic match готовы;
+глобальный match-sort отложен после core M4 и до M5 по ADR-018.
 GitHub Release отложен до M5; актуальный gate описан в
 `docs/RELEASE_STATUS.md`.
 
@@ -55,6 +55,11 @@ contract и только затем атомарно устанавливает 
 metadata без повторного hash всего SQLite; любое расхождение запускает полную
 verification/recovery. `user.sqlite` в этом lifecycle не открывается и не
 изменяется.
+
+Debug-сборка позволяет изолировать пользовательскую базу для smoke-тестов без
+изменения реального `%LOCALAPPDATA%`: задайте полный путь
+`GIVEMEJOB_USER_DATA_PATH`. Переменная читается только в debug/test build;
+release-код её игнорирует.
 
 Rust-проверки:
 
@@ -145,8 +150,9 @@ Artifact находится в `.artifacts/` и не коммитится. Postg
 
 1. M2 — завершён; closing evidence:
    `docs/evidence/M2_FINAL_ACCEPTANCE_2026-08-01.md`.
-2. M3 — текущий этап: профиль, shortlist и детерминированный match-score.
-3. M4 — Emmy, Rust `LLMRouter`, пять разрешённых tools и BYOK.
+2. M3 — завершён: профиль, shortlist и детерминированный on-demand match-score;
+   глобальный match-sort отложен по ADR-018.
+3. M4 — текущий этап: Emmy, Rust `LLMRouter`, пять разрешённых tools и BYOK.
 4. M5 — NSIS, portable ZIP, updater и public release.
 
 Следующий этап начинается только после фактического прохождения критерия

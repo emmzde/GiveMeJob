@@ -1,5 +1,5 @@
 -- GiveMeJob! — целевая документированная схема Windows MVP.
--- Обновлено: 2026-07-31.
+-- Обновлено: 2026-08-01.
 --
 -- Это два независимых SQLite-файла:
 --   1. catalog-v1.sqlite — versioned, read-only после сборки;
@@ -160,6 +160,8 @@ CREATE VIRTUAL TABLE jobs_fts USING fts5(
 -- ============================================================================
 
 PRAGMA foreign_keys = ON;
+PRAGMA journal_mode = WAL;
+PRAGMA synchronous = NORMAL;
 
 CREATE TABLE user_meta (
   key   TEXT PRIMARY KEY,
@@ -182,6 +184,8 @@ CREATE TABLE profile (
   CHECK (json_valid(preferred_roles_json)),
   CHECK (json_valid(skills_json)),
   CHECK (json_valid(remote_modes_json)),
+  CHECK (salary_min_usd_year IS NULL OR salary_min_usd_year BETWEEN 0 AND 10000000),
+  CHECK (version > 0),
   CHECK (
     seniority IS NULL OR seniority IN (
       'intern', 'junior', 'middle', 'senior', 'lead', 'staff', 'principal',
@@ -193,7 +197,10 @@ CREATE TABLE profile (
 CREATE TABLE shortlist (
   job_id            INTEGER PRIMARY KEY,
   catalog_version   TEXT NOT NULL,
-  saved_at          TEXT NOT NULL
+  saved_at          TEXT NOT NULL,
+
+  CHECK (job_id > 0),
+  CHECK (trim(catalog_version) <> '')
 ) STRICT;
 
 CREATE TABLE recent_searches (
@@ -261,8 +268,15 @@ CREATE TABLE match_cache (
   computed_at      TEXT NOT NULL,
   PRIMARY KEY (job_id, profile_version, catalog_version),
 
+  CHECK (job_id > 0),
+  CHECK (profile_version > 0),
   CHECK (score >= 0 AND score <= 100),
   CHECK (json_valid(breakdown_json))
 ) STRICT, WITHOUT ROWID;
+
+-- Schema v1 фиксируется целиком до первого публичного запуска. Новая установка
+-- сразу получает все таблицы M3/M4; последующее несовместимое изменение требует
+-- новой версии и явной миграции.
+INSERT INTO user_meta(key, value) VALUES ('schema_version', '1');
 
 -- BYOK здесь не хранится. Только Windows Credential Manager.

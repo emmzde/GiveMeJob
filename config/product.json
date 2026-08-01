@@ -1,6 +1,6 @@
 {
   "current": {
-    "stage": "M2",
+    "stage": "M4",
     "repositoryVisibility": "private",
     "releaseStatus": "hold",
     "publishedVersions": [],
@@ -9,7 +9,9 @@
       "backendFilters": true,
       "backendSorts": ["relevance", "newest", "salary"],
       "cursor": true,
-      "uiFilters": false,
+      "uiFilters": true,
+      "shortlist": true,
+      "matchOnDemand": true,
       "matchSort": false
     }
   },

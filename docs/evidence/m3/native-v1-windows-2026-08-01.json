@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-01T18:51:00+04:00",
+  "sourceCommit": "b1f6841c6c699bcda2d4ef6bbcd13db901745557",
+  "worktreeDirty": true,
+  "environment": {
+    "os": "Windows 10.0.26200 build 26200",
+    "architecture": "AMD64",
+    "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+    "ramBytes": 16961822720
+  },
+  "quality": {
+    "allConstituentGatesPassed": true,
+    "frontend": {
+      "typecheck": true,
+      "lint": true,
+      "testFiles": 32,
+      "testsPassed": 151,
+      "webBuild": true
+    },
+    "rust": {
+      "format": true,
+      "checkAllTargetsAllFeatures": true,
+      "testsPassed": 87,
+      "diagnosticTestsIgnored": 4,
+      "clippyAllTargetsAllFeaturesDenyWarnings": true
+    },
+    "python": {
+      "ruffCheck": true,
+      "ruffFormatCheck": true,
+      "mypy": true,
+      "testsPassed": 35,
+      "pytestBaseTemp": ".artifacts/pytest-m3-quality-20260801-1846"
+    },
+    "wrapper": {
+      "command": "pnpm quality",
+      "exitCode": 1,
+      "reason": "uv was not present in this shell PATH after frontend and Rust passed; the same Python environment was run directly from .venv, with an isolated pytest basetemp"
+    }
+  },
+  "productionBundle": {
+    "initialJsKb": 530.21,
+    "initialJsGzipKb": 158.97,
+    "emmyLazyChunkKb": 4.14,
+    "profileLazyChunkKb": 14.06,
+    "shortlistLazyChunkKb": 10.02,
+    "settingsLazyChunkKb": 3.73
+  },
+  "impeccableDetector": {
+    "findings": 0,
+    "result": "pass"
+  },
+  "nativeBuild": {
+    "command": "pnpm -C apps/desktop exec tauri build --debug --no-bundle",
+    "result": "pass",
+    "catalogVersion": "1",
+    "catalogJobs": 78719,
+    "isolatedUserDatabase": ".artifacts/m3-native-final-20260801-1851/user.sqlite",
+    "webView2ForceRendererAccessibilityForAutomation": true
+  },
+  "framelessWindow": {
+    "tauriWindowObserved": true,
+    "decorations": false,
+    "uiaElements": 126,
+    "dragDeltaPixels": [32, 24],
+    "minimize": true,
+    "restoreAfterMinimize": true,
+    "maximize": true,
+    "restoreAfterMaximize": true,
+    "closeFromTitlebar": true
+  },
+  "persistence": {
+    "beforeRestart": {
+      "profileSaved": true,
+      "matchBreakdownVisible": true,
+      "shortlistSaved": true
+    },
+    "afterRestart": {
+      "profileRoleLoaded": true,
+      "profileLocationLoaded": true,
+      "profileSalaryLoaded": true,
+      "shortlistJobLoaded": true,
+      "shortlistMatchVisible": true
+    }
+  },
+  "userDatabase": {
+    "schemaVersion": "1",
+    "journalMode": "wal",
+    "integrityCheck": "ok",
+    "profileRows": 1,
+    "shortlistRows": 1,
+    "tables": [
+      "chat_messages",
+      "conversations",
+      "match_cache",
+      "profile",
+      "provider_health",
+      "recent_searches",
+      "settings",
+      "shortlist",
+      "user_meta"
+    ]
+  },
+  "decision": "pass"
+}

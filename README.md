@@ -11,7 +11,8 @@ GiveMeJob! — open-source portfolio pet-project: локальное Windows-п�
 - D0 (документационный pivot) — завершён;
 - M1 (verified snapshot) — завершён;
 - M2 (offline search и desktop shell) — завершён;
-- M3 (profile, match и shortlist) — текущий этап;
+- M3 (profile, on-demand match и shortlist) — завершён;
+- M4 (Emmy) — текущий этап;
 - опубликованных GitHub Releases пока нет.
 
 Локальные NSIS и portable artifacts успешно собираются, но это инженерная
@@ -34,6 +35,11 @@ GiveMeJob! — open-source portfolio pet-project: локальное Windows-п�
   plain-text описание и безопасный переход на оригинал;
 - session-only system/light/dark theme, WCAG AA tokens, roving keyboard feed и
   доступная `Ctrl+K` command palette;
+- локальный profile с сохранением черновика, field-level validation и Retry;
+- schema v1 `user.sqlite`, сохраняемый shortlist, экран избранного и shortcut
+  `s`;
+- детерминированный on-demand match-score с пятью компонентами, strengths и
+  gaps;
 - Windows-only Tauri configuration с NSIS и portable ZIP workflow.
 
 Пользовательский runtime не требует Docker, Python, PostgreSQL или сервера.
@@ -97,6 +103,8 @@ Versioned corpus timings, cursor audit и native package/recovery metrics:
 Финальная physical-offline, Narrator/keyboard и reduced-motion запись, официально
 закрывающая M2:
 [`docs/evidence/M2_FINAL_ACCEPTANCE_2026-08-01.md`](docs/evidence/M2_FINAL_ACCEPTANCE_2026-08-01.md).
+Закрывающая запись M3 с native save/restart/load smoke:
+[`docs/evidence/M3_FINAL_ACCEPTANCE_2026-08-01.md`](docs/evidence/M3_FINAL_ACCEPTANCE_2026-08-01.md).
 
 Однократный export из сохранённого frozen volume:
 

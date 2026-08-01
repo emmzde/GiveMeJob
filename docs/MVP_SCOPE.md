@@ -50,7 +50,8 @@ Himalayas full sweep, на котором получена основная ча
 - фильтры по skills, location, remote mode, seniority, employment, salary и
   source;
 - M2-сортировки по relevance, newest и salary;
-- M3-сортировка по match после появления локального профиля;
+- глобальная сортировка по match после core M4 и до M5 release gate по
+  ADR-018;
 - карточка вакансии с attribution и оригинальной ссылкой;
 - видимая дата frozen snapshot (`source_frozen_at`);
 - локальная работа без сети.
@@ -60,12 +61,12 @@ Himalayas full sweep, на котором получена основная ча
 
 ### Профиль и match
 
-- короткая ручная анкета;
+- profile empty-state и короткая ручная анкета без отдельного wizard;
 - локальное хранение;
 - deterministic match-score 0–100;
 - component breakdown, strengths и gaps;
 - shortlist;
-- сортировка по match.
+- сортировка по match как отложенный post-M4 v1 follow-up.
 
 Match-score не является вероятностью трудоустройства.
 

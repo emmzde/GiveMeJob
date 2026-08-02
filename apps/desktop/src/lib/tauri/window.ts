@@ -7,7 +7,7 @@ interface WindowHandle {
   toggleMaximize(): Promise<void>;
 }
 
-export interface DesktopWindowApi {
+interface DesktopWindowApi {
   close(): Promise<void>;
   minimize(): Promise<void>;
   toggleMaximize(): Promise<void>;

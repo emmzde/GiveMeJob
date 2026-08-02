@@ -50,7 +50,7 @@ function addUniquenessChecks(
 }
 
 export const profileInputSchema = profileFieldsSchema.superRefine(addUniquenessChecks);
-export const userProfileSchema = profileFieldsSchema
+const userProfileSchema = profileFieldsSchema
   .extend({
     version: z.number().int().positive(),
     createdAt: z.string().min(1),
@@ -63,7 +63,7 @@ export type ProfileInput = z.infer<typeof profileInputSchema>;
 export type UserProfile = z.infer<typeof userProfileSchema>;
 export const profileQueryKey = ["user", "profile"] as const;
 
-export interface ProfileApi {
+interface ProfileApi {
   getProfile(): Promise<UserProfile | null>;
   saveProfile(input: ProfileInput): Promise<UserProfile>;
 }

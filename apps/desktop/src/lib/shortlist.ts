@@ -5,7 +5,7 @@ import type { JobId } from "@/lib/catalog";
 import { tauriAdapter } from "@/lib/tauri/adapter";
 import type { TauriAdapter } from "@/lib/tauri/adapter";
 
-export const shortlistRecordSchema = z
+const shortlistRecordSchema = z
   .object({
     jobId: jobIdSchema,
     catalogVersion: z.string().min(1).max(100),
@@ -13,7 +13,7 @@ export const shortlistRecordSchema = z
   })
   .strict();
 
-export const shortlistStateSchema = z
+const shortlistStateSchema = z
   .object({
     jobId: jobIdSchema,
     saved: z.boolean(),
@@ -31,7 +31,7 @@ export type ShortlistRecord = z.infer<typeof shortlistRecordSchema>;
 export type ShortlistState = z.infer<typeof shortlistStateSchema>;
 export type SetShortlistInput = z.infer<typeof setShortlistInputSchema>;
 
-export interface ShortlistApi {
+interface ShortlistApi {
   listShortlist(): Promise<ShortlistRecord[]>;
   isShortlisted(jobId: JobId): Promise<boolean>;
   setShortlist(input: SetShortlistInput): Promise<ShortlistState>;
@@ -83,5 +83,4 @@ export function createShortlistApi(adapter: TauriAdapter): ShortlistApi {
 const shortlistApi = createShortlistApi(tauriAdapter);
 
 export const listShortlist = shortlistApi.listShortlist;
-export const isShortlisted = shortlistApi.isShortlisted;
 export const setShortlist = shortlistApi.setShortlist;

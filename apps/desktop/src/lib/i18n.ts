@@ -313,7 +313,7 @@ const messages = {
   },
 } as const;
 
-export type Locale = keyof typeof messages;
+type Locale = keyof typeof messages;
 type MessageKey = keyof (typeof messages)["ru"];
 
 const configuredLocale = productConfig.localization.uiDefaultLocale;

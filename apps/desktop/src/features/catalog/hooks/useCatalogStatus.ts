@@ -8,7 +8,7 @@ import {
 } from "@/lib/catalog";
 import type { CatalogStatus } from "@/lib/catalog";
 
-export const catalogStatusQueryKey = ["catalog", "status"] as const;
+const catalogStatusQueryKey = ["catalog", "status"] as const;
 
 export function useCatalogStatus() {
   const queryClient = useQueryClient();

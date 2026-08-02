@@ -2,7 +2,7 @@ import { useLayoutEffect } from "react";
 
 import type { AppTheme } from "@/app/store/appUiStore";
 
-export type ResolvedTheme = Exclude<AppTheme, "system">;
+type ResolvedTheme = Exclude<AppTheme, "system">;
 
 export const themeOptions = ["system", "light", "dark"] as const satisfies readonly AppTheme[];
 

@@ -3,7 +3,7 @@ import { create } from "zustand";
 import type { JobId } from "@/lib/catalog";
 
 export type AppScreen = "search" | "shortlist" | "profile" | "settings";
-export type AppPanel = "job_detail" | "emmy" | null;
+type AppPanel = "job_detail" | "emmy" | null;
 export type AppTheme = "system" | "light" | "dark";
 
 interface AppUiState {

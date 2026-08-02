@@ -97,7 +97,7 @@ export const searchQuerySchema = z
   })
   .strict();
 
-export const catalogStatusKindSchema = z.enum([
+const catalogStatusKindSchema = z.enum([
   "initializing",
   "verifying",
   "ready",
@@ -105,7 +105,7 @@ export const catalogStatusKindSchema = z.enum([
   "recovering",
   "error",
 ]);
-export const catalogStageSchema = z.enum([
+const catalogStageSchema = z.enum([
   "starting",
   "checking_seal",
   "checking_space",
@@ -172,19 +172,19 @@ export const jobDetailSchema = jobSummarySchema
   })
   .strict();
 
-export const skillFacetSchema = z
+const skillFacetSchema = z
   .object({
     skill: boundedTrimmedString(MAX_FILTER_VALUE_LENGTH),
     count: z.number().int().nonnegative(),
   })
   .strict();
-export const locationFacetSchema = z
+const locationFacetSchema = z
   .object({
     location: z.string().trim().min(1),
     count: z.number().int().nonnegative(),
   })
   .strict();
-export const sourceFacetSchema = z
+const sourceFacetSchema = z
   .object({
     source: boundedTrimmedString(MAX_FILTER_VALUE_LENGTH),
     count: z.number().int().nonnegative(),
@@ -221,15 +221,15 @@ export const filterOptionsSchema = z
     ]),
   })
   .strict();
-export const skillSuggestionSchema = z
+const skillSuggestionSchema = z
   .object({
     label: boundedTrimmedString(MAX_FILTER_VALUE_LENGTH),
     canonicalName: boundedTrimmedString(MAX_FILTER_VALUE_LENGTH),
     count: z.number().int().nonnegative(),
   })
   .strict();
-export const locationKindSchema = z.enum(["country", "city", "location_text"]);
-export const locationSuggestionSchema = z
+const locationKindSchema = z.enum(["country", "city", "location_text"]);
+const locationSuggestionSchema = z
   .object({
     label: boundedTrimmedString(MAX_FILTER_VALUE_LENGTH),
     canonicalValue: boundedTrimmedString(MAX_FILTER_VALUE_LENGTH),
@@ -264,28 +264,22 @@ export const ipcErrorSchema = z.discriminatedUnion(
 );
 
 export type CatalogStatus = z.infer<typeof catalogStatusSchema>;
-export type CatalogStatusKind = z.infer<typeof catalogStatusKindSchema>;
-export type AutocompleteRequest = z.infer<typeof autocompleteRequestSchema>;
 export type EmploymentType = z.infer<typeof employmentTypeSchema>;
 export type FilterOptions = z.infer<typeof filterOptionsSchema>;
-export type IpcError = z.infer<typeof ipcErrorSchema>;
+type IpcError = z.infer<typeof ipcErrorSchema>;
 export type JobDetail = z.infer<typeof jobDetailSchema>;
 export type JobId = z.infer<typeof jobIdSchema>;
 export type JobSearchPage = z.infer<typeof jobSearchPageSchema>;
 export type JobSummary = z.infer<typeof jobSummarySchema>;
-export type LocationFacet = z.infer<typeof locationFacetSchema>;
 export type LocationKind = z.infer<typeof locationKindSchema>;
-export type LocationSuggestion = z.infer<typeof locationSuggestionSchema>;
+type LocationSuggestion = z.infer<typeof locationSuggestionSchema>;
 export type RemoteMode = z.infer<typeof remoteModeSchema>;
 export type SearchCursor = z.infer<typeof searchCursorSchema>;
-export type SearchFacets = z.infer<typeof searchFacetsSchema>;
-export type SearchPage<T> = Omit<JobSearchPage, "items"> & { items: T[] };
+type SearchFacets = z.infer<typeof searchFacetsSchema>;
 export type SearchQuery = z.infer<typeof searchQuerySchema>;
 export type SearchSort = z.infer<typeof searchSortSchema>;
 export type Seniority = z.infer<typeof senioritySchema>;
-export type SkillFacet = z.infer<typeof skillFacetSchema>;
-export type SkillSuggestion = z.infer<typeof skillSuggestionSchema>;
-export type SourceFacet = z.infer<typeof sourceFacetSchema>;
+type SkillSuggestion = z.infer<typeof skillSuggestionSchema>;
 
 const defaultSearchQuery: SearchQuery = {
   text: "",
@@ -309,7 +303,7 @@ export function createSearchQuery(overrides: Partial<SearchQuery> = {}): SearchQ
   return searchQuerySchema.parse({ ...defaultSearchQuery, ...overrides });
 }
 
-export interface CatalogApi {
+interface CatalogApi {
   getCatalogStatus(): Promise<CatalogStatus>;
   watchCatalogStatus(onStatus: (status: CatalogStatus) => void): Promise<Unlisten>;
   recoverLocalCatalog(): Promise<CatalogStatus>;
@@ -409,7 +403,7 @@ export function createCatalogApi(adapter: TauriAdapter): CatalogApi {
   };
 }
 
-export const catalogApi = createCatalogApi(tauriAdapter);
+const catalogApi = createCatalogApi(tauriAdapter);
 
 export const getCatalogStatus = () => catalogApi.getCatalogStatus();
 export const watchCatalogStatus = (onStatus: (status: CatalogStatus) => void) =>

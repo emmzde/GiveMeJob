@@ -5,14 +5,14 @@ import type { JobId } from "@/lib/catalog";
 import { tauriAdapter } from "@/lib/tauri/adapter";
 import type { TauriAdapter } from "@/lib/tauri/adapter";
 
-export const matchComponentNameSchema = z.enum([
+const matchComponentNameSchema = z.enum([
   "skills",
   "role",
   "seniority",
   "location",
   "salary",
 ]);
-export const matchReasonCodeSchema = z.enum([
+const matchReasonCodeSchema = z.enum([
   "skills_overlap",
   "skills_missing",
   "role_aligned",
@@ -25,7 +25,7 @@ export const matchReasonCodeSchema = z.enum([
   "salary_below",
 ]);
 const matchScoreSchema = z.number().int().min(0).max(100);
-export const matchReasonSchema = z
+const matchReasonSchema = z
   .object({
     component: matchComponentNameSchema,
     code: matchReasonCodeSchema,
@@ -48,7 +48,7 @@ export const matchBreakdownSchema = z
     gaps: z.array(matchReasonSchema).max(5),
   })
   .strict();
-export const jobMatchSchema = z
+const jobMatchSchema = z
   .object({ jobId: jobIdSchema, breakdown: matchBreakdownSchema })
   .strict();
 
@@ -69,7 +69,7 @@ export type MatchReason = z.infer<typeof matchReasonSchema>;
 export type MatchBreakdown = z.infer<typeof matchBreakdownSchema>;
 export type JobMatch = z.infer<typeof jobMatchSchema>;
 
-export interface MatchApi {
+interface MatchApi {
   getMatchBreakdown(jobId: JobId): Promise<MatchBreakdown | null>;
   getMatchBreakdowns(jobIds: readonly JobId[]): Promise<JobMatch[]>;
 }

@@ -13,7 +13,7 @@ import type { TauriAdapter, Unlisten } from "@/lib/tauri/adapter";
 const localIdSchema = z.string().regex(/^[a-f0-9]{32}$/u);
 const textSchema = z.string().trim().min(1).max(4_000);
 
-export const emmyStateSchema = z.enum([
+const emmyStateSchema = z.enum([
   "idle",
   "listening",
   "thinking",
@@ -24,8 +24,8 @@ export const emmyStateSchema = z.enum([
   "offline",
 ]);
 export const emmyProviderSchema = z.enum(["groq", "gemini", "openrouter", "cerebras"]);
-export const emmyMessageRoleSchema = z.enum(["user", "assistant", "tool"]);
-export const llmErrorSchema = z.discriminatedUnion("code", [
+const emmyMessageRoleSchema = z.enum(["user", "assistant", "tool"]);
+const llmErrorSchema = z.discriminatedUnion("code", [
   z.object({ code: z.literal("rate_limit"), retryAfterSeconds: z.number().int().nonnegative().nullable() }).strict(),
   z.object({ code: z.literal("timeout") }).strict(),
   z.object({ code: z.literal("transport") }).strict(),
@@ -63,7 +63,7 @@ export const emmyToolCallSchema = z.discriminatedUnion("name", [
   }).strict(),
 ]);
 
-export const emmyResponseSchema = z
+const emmyResponseSchema = z
   .object({
     message: textSchema,
     jobCards: z.array(jobIdSchema).max(8).refine((items) => new Set(items).size === items.length),
@@ -77,7 +77,7 @@ export const emmyModelOutputSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("tool_call"), payload: emmyToolCallSchema }).strict(),
 ]);
 
-export const emmyJobSnapshotSchema = z
+const emmyJobSnapshotSchema = z
   .object({
     summary: jobSummarySchema,
     employmentType: z.enum([
@@ -95,7 +95,7 @@ export const emmyJobSnapshotSchema = z
   })
   .strict();
 
-export const emmyComparisonSchema = z
+const emmyComparisonSchema = z
   .object({
     rows: z.array(z.object({
       job: emmyJobSnapshotSchema,
@@ -104,12 +104,12 @@ export const emmyComparisonSchema = z
   })
   .strict();
 
-export const shortlistConfirmationStatusSchema = z.enum([
+const shortlistConfirmationStatusSchema = z.enum([
   "pending",
   "confirmed",
   "cancelled",
 ]);
-export const shortlistPreviewSchema = z
+const shortlistPreviewSchema = z
   .object({
     confirmationId: localIdSchema,
     job: jobSummarySchema,
@@ -118,7 +118,7 @@ export const shortlistPreviewSchema = z
   })
   .strict();
 
-export const emmyToolResultSchema = z.discriminatedUnion("type", [
+const emmyToolResultSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("search_jobs"),
     items: z.array(jobSummarySchema).max(8),
@@ -134,7 +134,7 @@ export const emmyToolResultSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("set_shortlist"), preview: shortlistPreviewSchema }).strict(),
 ]);
 
-export const emmyMessageContentSchema = z.discriminatedUnion("type", [
+const emmyMessageContentSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("user"), text: textSchema }).strict(),
   z.object({
     type: z.literal("assistant"),
@@ -151,7 +151,7 @@ export const emmyMessageContentSchema = z.discriminatedUnion("type", [
   }).strict(),
 ]);
 
-export const emmyMessageSchema = z
+const emmyMessageSchema = z
   .object({
     id: localIdSchema,
     conversationId: localIdSchema,
@@ -161,7 +161,7 @@ export const emmyMessageSchema = z
   })
   .strict();
 
-export const emmyConversationSummarySchema = z
+const emmyConversationSummarySchema = z
   .object({
     id: localIdSchema,
     title: z.string().trim().min(1).max(60),
@@ -169,7 +169,7 @@ export const emmyConversationSummarySchema = z
     updatedAt: z.string().min(1),
   })
   .strict();
-export const emmyConversationSchema = z
+const emmyConversationSchema = z
   .object({
     conversation: emmyConversationSummarySchema,
     messages: z.array(emmyMessageSchema).max(500),
@@ -177,7 +177,7 @@ export const emmyConversationSchema = z
   .strict();
 const conversationListSchema = z.array(emmyConversationSummarySchema).max(8);
 
-export const emmyTurnResultSchema = z
+const emmyTurnResultSchema = z
   .object({
     conversationId: localIdSchema,
     messages: z.array(emmyMessageSchema).max(7),
@@ -187,7 +187,7 @@ export const emmyTurnResultSchema = z
   })
   .strict();
 
-export const emmyProviderConfigurationSchema = z
+const emmyProviderConfigurationSchema = z
   .object({
     provider: emmyProviderSchema,
     configured: z.boolean(),
@@ -201,7 +201,7 @@ export const emmyConfigurationSchema = z
     providers: z.array(emmyProviderConfigurationSchema).length(4),
   })
   .strict();
-export const emmyStateEventSchema = z
+const emmyStateEventSchema = z
   .object({
     state: emmyStateSchema,
     tool: z.enum([
@@ -220,15 +220,13 @@ export type EmmyProvider = z.infer<typeof emmyProviderSchema>;
 export type LlmError = z.infer<typeof llmErrorSchema>;
 export type EmmyToolCall = z.infer<typeof emmyToolCallSchema>;
 export type EmmyToolResult = z.infer<typeof emmyToolResultSchema>;
-export type EmmyResponse = z.infer<typeof emmyResponseSchema>;
 export type EmmyMessage = z.infer<typeof emmyMessageSchema>;
-export type EmmyMessageContent = z.infer<typeof emmyMessageContentSchema>;
 export type EmmyComparison = z.infer<typeof emmyComparisonSchema>;
 export type ShortlistPreview = z.infer<typeof shortlistPreviewSchema>;
-export type EmmyConversationSummary = z.infer<typeof emmyConversationSummarySchema>;
+type EmmyConversationSummary = z.infer<typeof emmyConversationSummarySchema>;
 export type EmmyConversation = z.infer<typeof emmyConversationSchema>;
 export type EmmyTurnResult = z.infer<typeof emmyTurnResultSchema>;
-export type EmmyConfiguration = z.infer<typeof emmyConfigurationSchema>;
+type EmmyConfiguration = z.infer<typeof emmyConfigurationSchema>;
 export type EmmyStateEvent = z.infer<typeof emmyStateEventSchema>;
 
 const sendRequestSchema = z.object({
@@ -247,7 +245,7 @@ function closedError(error: unknown): LlmError {
   return parsed.success ? parsed.data : { code: "local" };
 }
 
-export interface EmmyApi {
+interface EmmyApi {
   getConfiguration(): Promise<EmmyConfiguration>;
   setProviderKey(provider: EmmyProvider, key: string): Promise<EmmyConfiguration>;
   clearProviderKey(provider: EmmyProvider): Promise<EmmyConfiguration>;

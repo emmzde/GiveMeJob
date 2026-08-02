@@ -1,4 +1,4 @@
-export type DescriptionBlock =
+type DescriptionBlock =
   | { kind: "heading"; text: string }
   | { items: string[]; kind: "list" }
   | { kind: "note"; text: string }

@@ -8,7 +8,7 @@ import {
 } from "@/features/feed/searchLabels";
 import { t } from "@/lib/i18n";
 
-export interface ActiveFilterChip {
+interface ActiveFilterChip {
   id: string;
   label: string;
   remove(draft: SearchDraft): SearchDraft;

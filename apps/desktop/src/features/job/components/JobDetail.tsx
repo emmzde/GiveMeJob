@@ -110,26 +110,26 @@ export function JobDetail({
 
   return (
     <aside
-      className="detail-panel scroll-region min-h-0 min-w-0 overflow-y-auto p-5 pr-6"
+      className="detail-panel scroll-region min-h-0 min-w-0 overflow-y-auto bg-[var(--bg)] p-6"
       data-visible={dataVisible ? "true" : "false"}
     >
       {isLoading ? <JobDetailSkeleton /> : null}
       {!isLoading && detail.data ? (
         <article>
-          <header className="border-b border-[var(--border)] pb-5">
+          <header className="pb-5">
             <div className="flex items-start gap-3">
               <div
                 aria-hidden="true"
-                className="grid size-11 shrink-0 place-items-center rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-secondary)] text-base font-semibold"
+                className="grid size-10 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--sidebar-field)] text-sm font-semibold"
                 data-testid="company-monogram"
               >
                 {detail.data.company.slice(0, 1).toLocaleUpperCase(getLocaleTag())}
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-[var(--text)]">
+                <p className="truncate text-xs font-medium text-[var(--text-secondary)]">
                   {detail.data.company}
                 </p>
-                <h2 className="mt-1 text-xl font-semibold leading-tight tracking-[-0.025em]">
+                <h2 className="mt-1 text-[22px] font-semibold leading-tight tracking-[-0.025em]">
                   {normalizeJobTitle(detail.data.title)}
                 </h2>
               </div>
@@ -146,7 +146,7 @@ export function JobDetail({
                 </Button>
               </div>
             </div>
-            <div className="mt-4 flex flex-wrap gap-1.5 text-xs font-medium text-[var(--text-secondary)]">
+            <div className="mt-5 flex flex-wrap gap-1.5 text-[11px] font-medium text-[var(--text-secondary)]">
               {detail.data.locationText ? (
                 <span className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1">
                   <MapPin aria-hidden="true" className="size-4" />
@@ -154,7 +154,7 @@ export function JobDetail({
                 </span>
               ) : null}
               {detail.data.remoteMode ? (
-                <span className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--accent)] bg-[var(--accent-muted)] px-2 py-1 text-[var(--accent)]">
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1">
                   <Wifi aria-hidden="true" className="size-4" />
                   {remoteModeLabels[detail.data.remoteMode]}
                 </span>
@@ -185,7 +185,7 @@ export function JobDetail({
                 disabled={isOpeningOriginal}
                 onClick={() => void openSelectedOriginal()}
                 type="button"
-                variant="accent"
+                variant="default"
               >
                 <ExternalLink aria-hidden="true" className="size-4" />
                 {isOpeningOriginal ? t("openingOriginal") : t("openOriginal")}
@@ -206,7 +206,7 @@ export function JobDetail({
           </header>
 
           {!match.hasProfile ? (
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2.5 text-xs text-[var(--text-secondary)]">
+            <div className="surface-card mt-1 flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs text-[var(--text-secondary)]">
               <span>{t("matchUnavailable")}</span>
               <Button aria-label={t("openProfileForMatch")} onClick={() => setScreen("profile")} type="button" variant="outline">
                 {t("openProfileForMatch")}
@@ -222,7 +222,7 @@ export function JobDetail({
           {match.data ? <MatchBreakdownCard breakdown={match.data} /> : null}
 
           {detail.data.skills.length > 0 ? (
-            <section className="mt-6" aria-labelledby="job-skills-heading">
+            <section className="surface-card mt-5 p-5" aria-labelledby="job-skills-heading">
               <h3 className="text-base font-semibold" id="job-skills-heading">
                 {t("skills")}
               </h3>
@@ -241,7 +241,7 @@ export function JobDetail({
 
           <section
             aria-labelledby="job-description-heading"
-            className="mt-7 border-t border-[var(--border)] pt-5"
+            className="surface-card mt-5 p-5"
           >
             <h3 className="text-base font-semibold" id="job-description-heading">
               {t("description")}
@@ -249,7 +249,7 @@ export function JobDetail({
             <JobDescription description={detail.data.description} />
           </section>
 
-          <details className="group mt-7 border-t border-[var(--border)] pt-4 text-xs text-[var(--text-secondary)]">
+          <details className="group surface-card mt-5 p-4 text-xs text-[var(--text-secondary)]">
             <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-[var(--radius-sm)] py-1 font-medium hover:text-[var(--text)]">
               <ChevronDown
                 aria-hidden="true"

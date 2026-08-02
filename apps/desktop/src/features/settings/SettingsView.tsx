@@ -14,19 +14,21 @@ export function SettingsView({ catalog }: { catalog: CatalogViewState }) {
   const status = catalog.status;
   const unavailable = t("catalogUnavailableValue");
   return (
-    <div className="scroll-region h-full overflow-y-auto">
-      <section className="mx-auto max-w-2xl px-6 py-8">
-        <h1 className="text-lg font-semibold tracking-[-0.02em]">{t("settingsTitle")}</h1>
+    <div className="surface-page scroll-region h-full overflow-y-auto">
+      <section className="mx-auto max-w-3xl px-8 py-8">
+        <div className="border-b border-dashed border-[var(--border)] pb-6">
+        <h1 className="text-[22px] font-semibold tracking-[-0.025em]">{t("settingsTitle")}</h1>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">{t("settingsDescription")}</p>
+        </div>
 
         <section className="mt-8" aria-labelledby="appearance-heading">
           <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]" id="appearance-heading"><MonitorCog aria-hidden="true" className="size-4" />{t("appearance")}</h2>
-          <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-3"><ThemeControl /></div>
+          <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--panel-card)] p-3"><ThemeControl /></div>
         </section>
 
         <section className="mt-8" aria-labelledby="catalog-heading">
           <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]" id="catalog-heading"><Database aria-hidden="true" className="size-4" />{t("localCatalog")}</h2>
-          <dl className="mt-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)]">
+          <dl className="mt-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--panel-card)]">
             <SettingRow label={t("jobsIndexed")} value={status?.state === "ready" ? formatCount(status.totalJobs) : unavailable} />
             <SettingRow label={t("catalogVersion")} value={status?.catalogVersion ?? unavailable} />
             <SettingRow label={t("catalogSnapshotDate")} value={status?.sourceFrozenAt ? formatSnapshotDate(status.sourceFrozenAt) : unavailable} />

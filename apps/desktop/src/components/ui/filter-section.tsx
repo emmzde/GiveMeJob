@@ -26,7 +26,7 @@ export function FilterSection({
       onToggle={(event) => setIsOpen(event.currentTarget.open)}
       open={isOpen}
     >
-      <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-[var(--radius-sm)] px-1 text-xs font-medium hover:bg-[var(--bg-hover)]">
+      <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-[var(--radius-sm)] px-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]">
         <span>{title}</span>
         {activeCount > 0 ? (
           <span

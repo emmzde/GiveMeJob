@@ -135,7 +135,8 @@ export function SearchScreen({
     catalog.status?.state === "ready"
       ? formatSnapshotDate(catalog.status.sourceFrozenAt)
       : null;
-  const detailVisible = panel === "job_detail" && selectedId !== null;
+  const detailVisible =
+    selectedId !== null && (panel === "job_detail" || panel === "emmy");
 
   function commit(nextDraft: SearchDraft, refetchEqualQuery: boolean): void {
     const nextQuery = searchDraftToQuery(nextDraft);
@@ -181,10 +182,17 @@ export function SearchScreen({
         visible={filtersVisible}
       />
 
-      <section className="flex min-h-0 min-w-0 flex-col border-r border-[var(--border)]">
-        <div className="shrink-0 border-b border-[var(--border)] p-3">
+      <section className="flex min-h-0 min-w-0 flex-col border-r border-[var(--border)] bg-[var(--bg)]">
+        <div className="shrink-0 border-b border-[var(--border)] px-5 py-4">
           <div className="flex items-center justify-between gap-3">
-            <h1 className="text-sm font-semibold">{t("searchTitle")}</h1>
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold leading-6 tracking-[-0.025em]">
+                {t("searchTitle")}
+              </h1>
+              <p className="mt-1 truncate text-xs text-[var(--text-secondary)]">
+                {t("appDescription")}
+              </p>
+            </div>
             <div className="flex items-center gap-1">
               <Button
                 aria-controls="search-filters"
@@ -203,13 +211,13 @@ export function SearchScreen({
               </Button>
             </div>
           </div>
-          <form className="mt-2.5 flex gap-2" onSubmit={submitSearch}>
-            <label className="flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-raised)] px-3">
+          <form className="mt-4 flex gap-2" onSubmit={submitSearch}>
+            <label className="flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--sidebar-field)] px-3 focus-within:border-[var(--focus)]">
               <Search aria-hidden="true" className="size-4 text-[var(--text-secondary)]" />
               <span className="sr-only">{t("searchPlaceholder")}</span>
               <input
                 aria-describedby="search-syntax-hint"
-                className="h-9 min-w-0 flex-1 bg-transparent text-sm placeholder:text-[var(--text-placeholder)]"
+                className="h-10 min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-[var(--text-placeholder)]"
                 disabled={!catalogReady}
                 id="catalog-search-input"
                 onChange={(event) => setDraft({ ...draft, text: event.target.value })}
@@ -272,7 +280,7 @@ export function SearchScreen({
             </p>
           ) : null}
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-2.5">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-3">
             <div>
               <p
                 aria-atomic="true"

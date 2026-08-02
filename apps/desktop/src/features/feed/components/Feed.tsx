@@ -46,7 +46,7 @@ const virtualizationThreshold = 50;
 
 function SkeletonRow({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`space-y-2 px-4 ${compact ? "py-3" : "py-4"}`}>
+    <div className={`space-y-2 px-5 ${compact ? "py-3" : "py-4"}`}>
       <div className="h-4 w-2/3 animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-active)]" />
       <div className="h-3 w-1/3 animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-active)]" />
       <div className="h-3 w-1/2 animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-active)]" />
@@ -198,14 +198,14 @@ export function Feed({
       <div
         aria-posinset={index + 1}
         aria-setsize={jobs.length}
-        className="relative min-h-[112px] border-b border-[var(--border)]"
+        className="relative min-h-[112px] border-b border-[var(--border)] bg-[var(--panel-card)]"
         role="listitem"
       >
         <button
           aria-current={isSelected ? "true" : undefined}
-          className={`block min-h-[112px] w-full border px-4 py-3 pr-12 text-left focus-visible:outline-2 focus-visible:outline-offset-[-2px] ${
+          className={`group block min-h-[112px] w-full border px-5 py-3.5 pr-12 text-left transition-[background-color,border-color] duration-150 ease-[var(--ease)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] ${
             isSelected
-              ? "border-[var(--accent-border)] bg-[var(--accent-muted)]"
+              ? "border-[var(--border-strong)] bg-[var(--surface-active)]"
               : "border-transparent hover:bg-[var(--bg-hover)]"
           }`}
           data-job-id={job.id}
@@ -217,7 +217,7 @@ export function Feed({
           <span className="flex items-start gap-3">
           <span
             aria-hidden="true"
-            className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-raised)] text-xs font-semibold text-[var(--text-secondary)]"
+            className="grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--sidebar-field)] text-[11px] font-semibold text-[var(--text-secondary)] group-hover:border-[var(--border-strong)]"
           >
             {job.company.slice(0, 1).toLocaleUpperCase(getLocaleTag()) || (
               <Building2 className="size-4" />
@@ -226,7 +226,7 @@ export function Feed({
             <span className="min-w-0 flex-1">
               <span className="flex min-w-0 flex-wrap items-start gap-2">
                 <span
-                  className={`min-w-0 flex-1 break-words text-sm leading-5 ${isSelected ? "font-semibold" : "font-medium"}`}
+                  className={`min-w-0 flex-1 break-words text-[13px] leading-5 text-[var(--text)] ${isSelected ? "font-semibold" : "font-medium"}`}
                 >
                   {normalizeJobTitle(job.title)}
                 </span>
@@ -236,12 +236,12 @@ export function Feed({
                   isLoading={matches.isPending}
                 />
               </span>
-              <span className="mt-0.5 block truncate text-xs font-medium text-[var(--text-secondary)]">
+              <span className="mt-0.5 block truncate text-[11px] font-medium text-[var(--text-secondary)]">
                 {job.company}
               </span>
             </span>
           </span>
-          <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 pl-12 text-xs text-[var(--text-secondary)]">
+          <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 pl-11 text-[11px] text-[var(--text-secondary)]">
           <span className="inline-flex min-w-0 items-center gap-1">
             <MapPin aria-hidden="true" className="size-4 shrink-0" />
             <span className="max-w-48 truncate">{job.locationText || "—"}</span>

@@ -15,7 +15,7 @@ export function StatusBar({ catalog }: { catalog: CatalogViewState }) {
   const error = isCatalogError(catalog);
   const Icon = error ? CircleAlert : ready ? Check : Database;
   return (
-    <footer className="flex h-6 shrink-0 items-center justify-between border-t border-[var(--border)] bg-[var(--surface-0)] px-3 text-[10px] text-[var(--text-tertiary)]">
+    <footer className="flex h-6 shrink-0 items-center justify-between border-t border-[var(--border)] bg-[var(--sidebar)] px-3 text-[10px] text-[var(--text-tertiary)]">
       <div className="flex items-center gap-1.5">
         <Icon aria-hidden="true" className={ready ? "size-3 text-[var(--positive)]" : "size-3"} />
         <span>{error ? t("statusLocalError") : ready ? t("statusLocalReady") : t("statusLocalPreparing")}</span>

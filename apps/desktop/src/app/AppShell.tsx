@@ -16,8 +16,8 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-const MIN_EMMY_WIDTH = 300;
-const MAX_EMMY_WIDTH = 440;
+const MIN_EMMY_WIDTH = 316;
+const MAX_EMMY_WIDTH = 420;
 const EmmyPanel = lazy(() =>
   import("@/features/emmy/EmmyPanel").then((module) => ({ default: module.EmmyPanel })),
 );
@@ -29,13 +29,12 @@ export function AppShell({ catalog, children }: AppShellProps) {
   const commandPaletteOpen = useAppUiStore((state) => state.commandPaletteOpen);
   const filtersVisible = useAppUiStore((state) => state.filtersVisible);
   const setCommandPaletteOpen = useAppUiStore((state) => state.setCommandPaletteOpen);
-  const setFiltersVisible = useAppUiStore((state) => state.setFiltersVisible);
   const setPanel = useAppUiStore((state) => state.setPanel);
   const setScreen = useAppUiStore((state) => state.setScreen);
   const toggleFilters = useAppUiStore((state) => state.toggleFilters);
   const commandTriggerRef = useRef<HTMLButtonElement>(null);
   const resizing = useRef(false);
-  const [emmyWidth, setEmmyWidth] = useState(340);
+  const [emmyWidth, setEmmyWidth] = useState(320);
   useDocumentTheme(theme);
 
   const closeEmmy = useCallback(() => {
@@ -51,13 +50,6 @@ export function AppShell({ catalog, children }: AppShellProps) {
     setScreen("search");
     toggleFilters();
   }, [setScreen, toggleFilters]);
-
-  useEffect(() => {
-    const update = () => setFiltersVisible(window.innerWidth >= 1120);
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, [setFiltersVisible]);
 
   useEffect(() => {
     function handleGlobalShortcut(event: globalThis.KeyboardEvent): void {
@@ -109,20 +101,20 @@ export function AppShell({ catalog, children }: AppShellProps) {
   }
 
   return (
-    <main className="flex h-screen min-h-[620px] min-w-[320px] flex-col overflow-hidden bg-[var(--surface-0)] text-[var(--text)]">
+    <main className="flex h-screen min-h-[620px] min-w-[320px] flex-col overflow-hidden bg-[var(--bg)] text-[var(--text)]">
       <DesktopTitlebar catalog={catalog} commandTriggerRef={commandTriggerRef} />
       <div className="flex min-h-0 flex-1">
         <NavigationSidebar />
-        <div className="min-w-0 flex-1 overflow-hidden bg-[var(--surface-0)]">{children}</div>
+        <div className="min-w-0 flex-1 overflow-hidden bg-[var(--bg)]">{children}</div>
         {panel === "emmy" ? (
-          <div className="emmy-dock flex shrink-0" style={{ width: emmyWidth }}>
+          <div className="emmy-dock flex shrink-0 bg-[var(--surface-0)]" style={{ width: emmyWidth }}>
             <div
               aria-label={t("resizeEmmy")}
               aria-orientation="vertical"
               aria-valuemax={MAX_EMMY_WIDTH}
               aria-valuemin={MIN_EMMY_WIDTH}
               aria-valuenow={emmyWidth}
-              className="w-1 cursor-col-resize border-l border-[var(--border)] hover:bg-[var(--accent-muted)]"
+              className="w-1 cursor-col-resize border-l border-[var(--border)] hover:bg-[var(--surface-active)]"
               onKeyDown={resizeWithKeyboard}
               onMouseDown={startResize}
               role="separator"

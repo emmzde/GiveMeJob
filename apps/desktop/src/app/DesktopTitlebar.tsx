@@ -39,7 +39,7 @@ function WindowButton({
     <button
       aria-label={label}
       className={cn(
-        "grid h-10 w-11 place-items-center text-[var(--text-tertiary)] focus-visible:z-10",
+        "grid h-14 w-11 place-items-center text-[var(--text-tertiary)] focus-visible:z-10",
         danger
           ? "hover:bg-[var(--danger)] hover:text-[var(--on-danger)]"
           : "hover:bg-[var(--surface-hover)] hover:text-[var(--text)]",
@@ -75,24 +75,39 @@ export function DesktopTitlebar({ catalog, commandTriggerRef }: DesktopTitlebarP
     setPanel(emmyOpen ? (selectedId === null ? null : "job_detail") : "emmy");
   }
 
+  const currentLabel =
+    screen === "search" && selectedId !== null ? t("description") : screenLabels[screen];
+
   return (
     <header
-      className="desktop-titlebar flex h-10 shrink-0 select-none items-center gap-3 border-b border-[var(--border)] bg-[var(--surface-0)] pl-3"
+      className="desktop-titlebar flex h-14 shrink-0 select-none items-center border-b border-[var(--border)] bg-[var(--surface-0)]"
       data-tauri-drag-region
     >
-      <div className="flex shrink-0 items-center gap-2" data-tauri-drag-region>
-        <span className="grid size-5 place-items-center rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-2)] font-mono text-[11px] font-semibold text-[var(--text)]">
-          G
+      <div
+        className="flex h-full w-[260px] shrink-0 items-center gap-2.5 border-r border-[var(--border)] bg-[var(--sidebar)] px-5"
+        data-tauri-drag-region
+      >
+        <img
+          alt=""
+          aria-hidden="true"
+          className="size-6 rounded-[5px]"
+          src="/givemejob-mark.svg"
+        />
+        <span className="text-[15px] font-bold tracking-[-0.02em] text-[var(--text)]">
+          GiveMeJob!
         </span>
-        <span className="text-xs font-semibold tracking-tight">GiveMeJob!</span>
-        <ChevronRight aria-hidden="true" className="size-3 text-[var(--text-disabled)]" />
-        <span className="text-xs text-[var(--text-secondary)]">{screenLabels[screen]}</span>
       </div>
 
-      <div className="flex min-w-0 flex-1 justify-center px-2">
+      <div className="flex min-w-0 flex-1 items-center gap-2 px-8" data-tauri-drag-region>
+        <span className="text-xs text-[var(--text-secondary)]">{t("jobs")}</span>
+        <ChevronRight aria-hidden="true" className="size-3 text-[var(--text-disabled)]" />
+        <span className="truncate text-xs font-medium text-[var(--text)]">
+          {currentLabel}
+        </span>
+        <span className="flex-1" data-tauri-drag-region />
         <button
           aria-label={t("openCommandPalette")}
-          className="flex h-7 w-full max-w-md items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-2.5 text-left hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]"
+          className="flex h-8 w-full max-w-[280px] items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--sidebar-field)] px-2.5 text-left hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]"
           onClick={() => setCommandPaletteOpen(true)}
           ref={commandTriggerRef}
           type="button"
@@ -108,7 +123,7 @@ export function DesktopTitlebar({ catalog, commandTriggerRef }: DesktopTitlebarP
         </button>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex h-full shrink-0 items-center gap-1">
         <button
           aria-label={emmyButtonLabel}
           aria-pressed={emmyOpen}
@@ -127,13 +142,13 @@ export function DesktopTitlebar({ catalog, commandTriggerRef }: DesktopTitlebarP
         </button>
         <button
           aria-label={t("settings")}
-          className="grid size-7 place-items-center rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
+          className="grid size-8 place-items-center rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
           onClick={() => setScreen("settings")}
           type="button"
         >
           <Settings aria-hidden="true" className="size-4" />
         </button>
-        <div className="ml-1 flex">
+        <div className="ml-1 flex h-full">
           <WindowButton label={t("windowMinimize")} onClick={desktopWindow.minimize}>
             <Minus aria-hidden="true" className="size-3.5" />
           </WindowButton>

@@ -1,7 +1,20 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { History, Lock, Plus, RotateCcw, Send, Settings, X } from "lucide-react";
+import {
+  ArrowRight,
+  GitCompareArrows,
+  History,
+  Lock,
+  Plus,
+  RotateCcw,
+  Search,
+  Send,
+  Settings,
+  Target,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
+import type { LucideIcon } from "lucide-react";
 
 import { useAppUiStore } from "@/app/store/appUiStore";
 import { Button } from "@/components/ui/button";
@@ -23,10 +36,10 @@ import type {
 } from "@/lib/emmy";
 import { t } from "@/lib/i18n";
 
-const starterReplies = [
-  t("emmyStarterFind"),
-  t("emmyStarterCompare"),
-  t("emmyStarterMatch"),
+const starterReplies: readonly { icon: LucideIcon; reply: string }[] = [
+  { icon: Search, reply: t("emmyStarterFind") },
+  { icon: GitCompareArrows, reply: t("emmyStarterCompare") },
+  { icon: Target, reply: t("emmyStarterMatch") },
 ] as const;
 
 export function EmmyPanel({ onClose }: { onClose(): void }) {
@@ -219,9 +232,9 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
   return (
     <aside
       aria-label={t("emmyPanelLabel")}
-      className="emmy-panel relative flex h-full min-w-0 flex-col border-l border-[var(--border)] bg-[var(--surface-0)]"
+      className="emmy-panel relative flex h-full min-w-0 flex-col bg-[var(--surface-0)]"
     >
-      <header className="relative flex h-11 shrink-0 items-center gap-2 border-b border-[var(--border)] px-3">
+      <header className="relative flex h-12 shrink-0 items-center gap-2 px-4">
         <EmmyMascot className="size-7" state={mascotState} />
         <div className="min-w-0 flex-1 leading-tight">
           <p className="truncate text-[13px] font-semibold leading-4">{conversationTitle}</p>
@@ -339,12 +352,12 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
         <WelcomeState onReply={(reply) => void sendText(reply)} />
       )}
 
-      <form className="border-t border-[var(--border)] p-2.5" onSubmit={submit}>
-        <div className="emmy-composer-shell rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] p-2.5">
+      <form className="p-3" onSubmit={submit}>
+        <div className="emmy-composer-shell rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--panel-card)] p-3 shadow-[var(--shadow-sm)]">
           <label className="sr-only" htmlFor="emmy-composer">{available ? t("emmyInputPlaceholder") : t("emmyUnavailable")}</label>
           <textarea
             aria-label={available ? t("emmyInputPlaceholder") : t("emmyUnavailable")}
-            className="emmy-composer block h-14 w-full resize-none bg-transparent text-[13px] leading-5 text-[var(--text)] outline-none placeholder:text-[var(--text-placeholder)] disabled:text-[var(--text-disabled)]"
+            className="emmy-composer block h-16 w-full resize-none bg-transparent px-0.5 text-[13px] leading-5 text-[var(--text)] outline-none placeholder:text-[var(--text-placeholder)] disabled:text-[var(--text-disabled)]"
             disabled={!available || busy}
             id="emmy-composer"
             maxLength={4_000}
@@ -367,7 +380,7 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
             </span>
             <button
               aria-label={busy ? t("emmyWorking") : t("emmySend")}
-              className="grid size-7 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-[var(--accent)] text-[var(--on-accent)] hover:opacity-90 disabled:bg-[var(--surface-3)] disabled:text-[var(--text-disabled)]"
+              className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--text)] text-[var(--bg)] transition-[transform,opacity,background-color] duration-150 ease-[var(--ease)] active:scale-[0.96] hover:opacity-90 disabled:bg-[var(--surface-3)] disabled:text-[var(--text-disabled)] disabled:active:scale-100"
               disabled={!available || busy || draft.trim().length === 0}
               type="submit"
             >
@@ -382,13 +395,11 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
 
 function OfflineState({ onSettings }: { onSettings(): void }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center">
-      <div className="grid size-16 place-items-center rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)]">
-        <EmmyMascot className="size-12" state="offline" />
-      </div>
-      <h2 className="mt-4 text-sm font-semibold">{t("emmyOfflineTitle")}</h2>
+    <div className="flex min-h-0 flex-1 flex-col justify-end px-5 pb-5">
+      <EmmyMascot className="size-24" state="offline" />
+      <h2 className="mt-3 max-w-64 text-[21px] font-bold leading-7 tracking-[-0.025em]">{t("emmyOfflineTitle")}</h2>
       <p className="mt-2 max-w-72 text-[13px] leading-5 text-[var(--text-secondary)]">{t("emmyOfflineDescription")}</p>
-      <Button className="mt-4" onClick={onSettings} type="button" variant="outline">
+      <Button className="mt-4 self-start" onClick={onSettings} type="button" variant="outline">
         <Settings aria-hidden="true" className="size-4" />
         {t("emmyConfigureProviders")}
       </Button>
@@ -398,19 +409,26 @@ function OfflineState({ onSettings }: { onSettings(): void }) {
 
 function WelcomeState({ onReply }: { onReply(reply: string): void }) {
   return (
-    <div className="scroll-region min-h-0 flex-1 overflow-y-auto px-4 py-6">
-      <EmmyMascot className="mx-auto size-20" state="idle" />
-      <h2 className="mt-4 text-center text-sm font-semibold">{t("emmyWelcomeTitle")}</h2>
-      <p className="mx-auto mt-2 max-w-72 text-center text-[13px] leading-5 text-[var(--text-secondary)]">{t("emmyWelcomeDescription")}</p>
+    <div className="scroll-region flex min-h-0 flex-1 flex-col justify-end overflow-y-auto px-5 pb-5">
+      <EmmyMascot className="size-24" state="idle" />
+      <h2 className="mt-3 max-w-64 text-[21px] font-bold leading-7 tracking-[-0.025em]">{t("emmyWelcomeTitle")}</h2>
+      <p className="mt-2 max-w-72 text-[13px] leading-5 text-[var(--text-secondary)]">{t("emmyWelcomeDescription")}</p>
       <div className="mt-5 grid gap-2">
-        {starterReplies.map((reply) => (
+        {starterReplies.map(({ icon: StarterIcon, reply }) => (
           <button
-            className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2.5 text-left text-[13px] leading-5 text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text)]"
+            className="group flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--panel-card)] px-3 py-2.5 text-left text-[13px] leading-5 text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
             key={reply}
             onClick={() => onReply(reply)}
             type="button"
           >
-            {reply}
+            <span className="grid size-7 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-[var(--bg-secondary)] text-[var(--text)]">
+              <StarterIcon aria-hidden="true" className="size-4" />
+            </span>
+            <span className="min-w-0 flex-1">{reply}</span>
+            <ArrowRight
+              aria-hidden="true"
+              className="size-4 shrink-0 text-[var(--text-tertiary)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--accent)]"
+            />
           </button>
         ))}
       </div>

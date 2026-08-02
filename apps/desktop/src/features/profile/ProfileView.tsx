@@ -62,7 +62,7 @@ function Field({
   label: string;
 }) {
   return (
-    <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] p-3">
+    <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--panel-card)] p-4">
       <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">{label}</p>
       {children}
       {error && errorId ? (
@@ -341,12 +341,12 @@ export function ProfileView() {
   const [editing, setEditing] = useState(false);
 
   return (
-    <div className="scroll-region h-full overflow-y-auto">
-      <section className="mx-auto max-w-3xl px-6 py-8">
-        <header className="mb-6 flex items-start gap-3">
-          <div className="grid size-11 shrink-0 place-items-center rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)]"><UserRound aria-hidden="true" className="size-5 text-[var(--text-secondary)]" /></div>
+    <div className="surface-page scroll-region h-full overflow-y-auto">
+      <section className="mx-auto max-w-4xl px-8 py-8">
+        <header className="mb-7 flex items-start gap-3 border-b border-dashed border-[var(--border)] pb-6">
+          <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--panel-card)]"><UserRound aria-hidden="true" className="size-4 text-[var(--text-secondary)]" /></div>
           <div>
-            <h1 className="text-lg font-semibold tracking-[-0.02em]">{t("profileTitle")}</h1>
+            <h1 className="text-[22px] font-semibold tracking-[-0.025em]">{t("profileTitle")}</h1>
             <p className="mt-1 flex items-center gap-1.5 text-xs leading-5 text-[var(--text-secondary)]"><Lock aria-hidden="true" className="size-3.5" />{t("profilePrivacy")}</p>
           </div>
         </header>
@@ -360,7 +360,7 @@ export function ProfileView() {
           </div>
         ) : null}
         {!profile.isPending && !profile.isError && profile.data === null && !editing ? (
-          <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border-strong)] bg-[var(--surface-1)] px-6 py-10 text-center">
+          <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border-strong)] bg-[var(--panel-card)] px-6 py-12 text-center">
             <h2 className="text-sm font-semibold">{t("profileEmpty")}</h2>
             <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-[var(--text-secondary)]">{t("profileEmptyHint")}</p>
             <Button className="mt-5" onClick={() => setEditing(true)} type="button" variant="accent"><Plus aria-hidden="true" className="size-4" />{t("createProfile")}</Button>

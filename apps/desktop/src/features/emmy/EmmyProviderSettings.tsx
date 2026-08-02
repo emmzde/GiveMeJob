@@ -59,7 +59,7 @@ export function EmmyProviderSettings() {
   }
 
   return (
-    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)]">
+    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--panel-card)]">
       {emmyProviderSchema.options.map((provider) => {
         const status = configuration.data?.providers.find((item) => item.provider === provider);
         const busy = busyProvider === provider;

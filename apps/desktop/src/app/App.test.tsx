@@ -848,7 +848,7 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: t("profile") })).toBeEnabled();
     expect(screen.getByRole("button", { name: t("emmy") })).toBeEnabled();
     const originalButton = screen.getByRole("button", { name: t("openOriginal") });
-    expect(originalButton).toHaveClass("bg-[var(--accent)]", "text-[var(--on-accent)]");
+    expect(originalButton).toHaveClass("bg-[var(--text)]", "text-[var(--bg)]");
     fireEvent.click(originalButton);
     expect(catalogMocks.openOriginalJob).toHaveBeenCalledWith(sampleJob.id);
   });

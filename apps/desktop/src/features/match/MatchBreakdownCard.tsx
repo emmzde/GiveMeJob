@@ -60,7 +60,7 @@ export function MatchBreakdownCard({ breakdown }: { breakdown: MatchBreakdown })
   return (
     <section
       aria-labelledby="match-breakdown-heading"
-      className="mt-6 border-t border-[var(--border)] pt-5"
+      className="surface-card mt-5 p-5"
     >
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="text-base font-semibold" id="match-breakdown-heading">

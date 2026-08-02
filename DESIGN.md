@@ -1,28 +1,43 @@
 ---
 name: GiveMeJob!
-description: Compact, calm, content-first interface for an offline-first Windows job search app.
+description: Dark-first precision workbench for local Windows job search, match, shortlist, and optional Emmy assistance.
 colors:
   canvas: "var(--bg)"
-  surface: "var(--surface-0)"
-  surface-subtle: "var(--surface-1)"
+  canvas-secondary: "var(--bg-secondary)"
+  raised: "var(--bg-raised)"
+  sidebar: "var(--sidebar)"
+  sidebar-field: "var(--sidebar-field)"
+  panel-card: "var(--panel-card)"
+  surface-hover: "var(--surface-hover)"
   surface-active: "var(--surface-active)"
   text: "var(--text)"
   text-secondary: "var(--text-secondary)"
   text-tertiary: "var(--text-tertiary)"
+  text-disabled: "var(--text-disabled)"
   border: "var(--border)"
   border-strong: "var(--border-strong)"
   accent: "var(--accent)"
+  accent-hover: "var(--accent-hover)"
   accent-muted: "var(--accent-muted)"
+  accent-border: "var(--accent-border)"
   on-accent: "var(--on-accent)"
+  focus: "var(--focus)"
   positive: "var(--positive)"
   warning: "var(--warning)"
   danger: "var(--danger)"
+  emmy-fur: "var(--emmy-fur)"
+  emmy-outline: "var(--emmy-outline)"
 typography:
   micro:
     fontFamily: "var(--font)"
     fontSize: "10px"
     fontWeight: 400
-    lineHeight: 1.4
+    lineHeight: 1.6
+  caption:
+    fontFamily: "var(--font)"
+    fontSize: "11px"
+    fontWeight: 400
+    lineHeight: 1.455
   label:
     fontFamily: "var(--font)"
     fontSize: "0.75rem"
@@ -30,23 +45,33 @@ typography:
     lineHeight: 1.333
   body:
     fontFamily: "var(--font)"
-    fontSize: "0.875rem"
+    fontSize: "13px"
     fontWeight: 400
-    lineHeight: 1.429
-  title:
+    lineHeight: 1.538
+  workspace-title:
     fontFamily: "var(--font)"
     fontSize: "1.125rem"
     fontWeight: 600
-    lineHeight: 1.556
-  detail-title:
+    lineHeight: 1.333
+    letterSpacing: "-0.025em"
+  screen-title:
     fontFamily: "var(--font)"
-    fontSize: "1.25rem"
+    fontSize: "22px"
     fontWeight: 600
-    lineHeight: 1.4
+    lineHeight: 1.2
+    letterSpacing: "-0.025em"
 rounded:
   small: "var(--radius-sm)"
   medium: "var(--radius-md)"
   large: "var(--radius-lg)"
+spacing:
+  unit: "4px"
+  compact: "8px"
+  control: "12px"
+  panel: "16px"
+  section: "20px"
+  content: "24px"
+  screen: "32px"
 components:
   button-accent:
     backgroundColor: "{colors.accent}"
@@ -55,196 +80,201 @@ components:
     rounded: "{rounded.medium}"
     padding: "0 12px"
     height: "36px"
+  button-default:
+    backgroundColor: "{colors.text}"
+    textColor: "{colors.canvas}"
+    typography: "{typography.body}"
+    rounded: "{rounded.medium}"
+    padding: "0 12px"
+    height: "36px"
   field:
-    backgroundColor: "{colors.surface}"
+    backgroundColor: "{colors.sidebar-field}"
     textColor: "{colors.text}"
     typography: "{typography.label}"
     rounded: "{rounded.medium}"
     padding: "0 10px"
     height: "36px"
+  search-field:
+    backgroundColor: "{colors.sidebar-field}"
+    textColor: "{colors.text}"
+    typography: "{typography.body}"
+    rounded: "{rounded.medium}"
+    padding: "0 12px"
+    height: "40px"
   navigation-item:
     backgroundColor: "transparent"
     textColor: "{colors.text-secondary}"
-    typography: "{typography.label}"
+    typography: "{typography.body}"
     rounded: "{rounded.medium}"
-    padding: "0 8px"
-    height: "32px"
+    padding: "0 10px"
+    height: "36px"
+  panel-card:
+    backgroundColor: "{colors.panel-card}"
+    textColor: "{colors.text}"
+    rounded: "{rounded.large}"
+    padding: "20px"
 ---
 
 # Design System: GiveMeJob!
 
 ## Overview
 
-**Creative North Star: "Спокойный локальный рабочий стол"**
+**Creative North Star: "Точный локальный рабочий стол"**
 
-GiveMeJob! — компактный, спокойный и content-first Windows-интерфейс. Он ведёт себя как рабочий инструмент: каталог, фильтры, лента и карточка вакансии получают пространство первыми, а chrome остаётся тонким, почти монохромным и предсказуемым. Плотность высокая, но не тесная: иерархия строится типографикой, нейтральными поверхностями, однопиксельными границами и устойчивым ритмом.
+GiveMeJob! — плотный локальный workbench для Windows, а не светлая web-оболочка вокруг карточек. Референсное состояние — почти чёрная рабочая среда с угольными панелями, однопиксельными разделителями и компактной типографикой: навигация, поиск, лента, постоянный detail и опциональная Emmy читаются как единый точный инструмент.
 
-Встроенный design contract имеет seed `0c99543c`. Он фиксирует происхождение визуального направления — поставленную композицию `givemejob-design`, компактный desktop shell, локальный search workspace, detail и опциональный dock Emmy. Seed не является источником токенов и не разрешает добавлять отсутствующие продуктовые функции.
+Визуальная история следует реальному продукту: пользователь ищет в локальном каталоге, видит объяснимое совпадение, сохраняет вакансию и при желании подключает Emmy. AI остаётся дополнительным dock, а не центром композиции; offline-состояние не меняет иерархию каталога. Светлая тема реализована на той же семантической модели, но не возвращает систему к прежней бледной shell-эстетике.
 
-`PRODUCT.md` — сопровождающий Impeccable-контекст о пользователях, назначении и честных ограничениях продукта. Он объясняет, почему интерфейс выглядит и говорит именно так, но не заменяет `AGENTS.md`, ADR, scope-документы или фактический код. Этот `DESIGN.md` описывает визуальную систему и также не расширяет продуктовый scope.
+Design seed `0c99543c` фиксирует происхождение нового мира и поставленный desktop dashboard как визуальный ориентир. `PRODUCT.md` объясняет назначение и честные ограничения продукта; `AGENTS.md` и документы scope остаются выше этого визуального контракта.
 
 **Key Characteristics:**
 
-- Компактный, спокойный, keyboard-first desktop workspace.
-- Контент и локальный статус важнее декоративного chrome.
-- Почти монохромная палитра; акцент и semantic colors используются только по смыслу.
-- Плоские поверхности, тонкие границы и редкая elevation только для временных слоёв.
-- Честные loading, empty, error, disabled и offline-состояния без демонстрационных подмен.
-- Светлая, тёмная и системная темы на одной семантической модели.
+- Плотный dark-first desktop workbench с почти чёрным canvas и угольными поверхностями.
+- Постоянный контекст: navigation → search/feed → job detail, с Emmy как опциональным правым dock.
+- Однопиксельные dividers и тональные перепады вместо декоративной карточности.
+- Inter-first типографика с Segoe fallback и компактной информационной иерархией.
+- Синий только для действия, focus и явного выбора; обычная структура остаётся нейтральной.
+- Реальные loading, empty, error, offline и disabled-состояния без демонстрационных подмен.
+
+**The Local Truth Rule.** Каталог, совпадение и сохранение должны оставаться визуально полноценным продуктом без Emmy и без сети.
 
 ## Colors
 
-Единственный нормативный источник цветов — `docs/design-tokens.css`. Frontmatter выше содержит только ссылки на его CSS custom properties; он не дублирует и не переопределяет их значения. Runtime-файл `apps/desktop/src/styles/tokens.css` только импортирует этот источник.
+Единственный документированный источник значений цветов — `docs/design-tokens.css`. Frontmatter и sidecar только ссылаются на его semantic custom properties; runtime-файл `apps/desktop/src/styles/tokens.css` импортирует тот же источник.
 
 ### Primary
 
-- **Сдержанный индиго** (`--accent`, `--accent-hover`, `--accent-muted`, `--accent-border`, `--on-accent`): выбранные вакансии, активные navigation icons, основные действия, selected counters и focus-adjacent emphasis. Акцент редок и всегда обозначает действие, выбор или принадлежность к продукту.
-
-### Neutral
-
-- **Canvas и surfaces** (`--bg`, `--surface-0` … `--surface-3`, hover/active variants): формируют почти монохромную иерархию shell, панелей и контролов.
-- **Текстовая шкала** (`--text`, secondary, tertiary, placeholder, disabled): кодирует приоритет информации без лишнего цвета.
-- **Границы** (`--border`, `--border-strong`): разделяют постоянные области и контролы; они предпочтительнее теней.
+- **Signal Blue** (`--accent`, hover/muted/border/on roles): кнопка поиска, focus, выбранные сегменты, активные counters и другие состояния, где пользователь действует или подтверждает выбор.
+- **Precision Focus** (`--focus`): контрастный keyboard focus и focus-within у полей и composer.
 
 ### Secondary
 
-- **Semantic feedback** (`--positive`, `--warning`, `--danger` и их muted/border/on variants): только успех, предупреждение, ошибка или опасное системное действие.
-- **Emmy palette** (`--emmy-*`): небольшая тёплая подпись маскота внутри нейтрального shell. Она не становится общей декоративной палитрой приложения.
+- **Semantic Status** (`--positive`, `--warning`, `--danger` и связанные muted/border/on roles): готовность локального каталога, предупреждения, ошибки и destructive window state.
+- **Emmy Signature** (`--emmy-*`): тёплая шерсть, контур и ошейник SVG-маскота. Эта палитра принадлежит только Emmy.
 
-Светлая тема определена на `:root`, тёмная — на `[data-theme="dark"]`. Пользователь может выбрать system, light или dark; system следует `prefers-color-scheme`, а документ получает соответствующие `data-theme` и `color-scheme`. Компоненты не должны знать конкретные цветовые значения.
+### Neutral
 
-**The Semantic Color Rule.** Цвет появляется только для выбора, focus, статуса, опасного действия или Emmy; остальная иерархия остаётся нейтральной.
+- **Near-Black Canvas** (`--bg`, `--surface-0`): базовое dark-first поле приложения.
+- **Charcoal Structure** (`--sidebar`, `--bg-secondary`, `--surface-1` … `--surface-3`, `--panel-card`): навигация, контролы, карточки detail и интерактивные состояния.
+- **Paper Counterpart**: светлая тема использует те же semantic roles и ту же топологию, не отдельную визуальную систему.
+- **Text Ladder** (`--text`, secondary, tertiary, placeholder, disabled): приоритет информации задаётся контрастом, а не цветовой радугой.
+- **Hairline Dividers** (`--border`, `--border-strong`): геометрия постоянных панелей и границы контролов.
 
-**The One Source Rule.** Не добавлять inline hex, rgb/hsl/oklch или локальные theme maps в компоненты. Новый цвет сначала получает семантическую роль в `docs/design-tokens.css` для обеих тем.
+**The Blue Means Intent Rule.** Синий обозначает действие, focus или явный выбор; он не окрашивает постоянный chrome и не подменяет типографическую иерархию.
+
+**The One Color Source Rule.** Новый цвет сначала получает semantic role для обеих тем в `docs/design-tokens.css`; inline hex, локальные theme maps и дублирование значений запрещены.
 
 ## Typography
 
-**Display and body font:** `--font` — `Segoe UI Variable`, затем `Segoe UI` и системные sans-serif fallbacks. Корневой размер приложения — `15px`.
+**Display Font:** `Inter`, затем `Segoe UI Variable`, `Segoe UI` и системные sans-serif fallbacks через `--font`.
 
-**Label/mono font:** системный monospace применяется точечно для keyboard hints, catalog/profile versions и коротких технических идентификаторов.
+**Body Font:** тот же Inter-first stack через `--font`.
 
-**Character:** системная Windows-типографика делает интерфейс знакомым и быстрым. Иерархия компактна: большинство интерфейса живёт на уровнях micro, label и body; крупный текст зарезервирован для screen и job-detail headings.
+**Label/mono font:** тот же sans-serif для UI; системный monospace используется точечно для shortcut hints и версий каталога.
+
+**Character:** нейтральная, компактная и инженерно-точная типографика. Корневой размер приложения — `15px`; сглаживание и запрет font synthesis удерживают Inter и Segoe визуально стабильными.
 
 ### Hierarchy
 
-- **Detail title** (semibold, `1.25rem`, tight tracking): название выбранной вакансии.
-- **Screen title** (semibold, `1.125rem`): Profile и Settings; search shell использует более компактный heading.
-- **Body** (regular/medium, `0.875rem`): вакансии, описания и основные действия.
-- **Label** (medium/semibold, `0.75rem`): navigation, filters, controls и metadata.
-- **Micro** (regular/semibold, `10–11px`): status bar, counts, helper copy, badges и shortcut hints.
-- **Section eyebrow** (semibold, uppercase, `0.75rem`, tracking около `0.08em`): только короткие группы settings/profile, не длинный контент.
+- **Screen title** (semibold, `22px`, tight tracking): Profile, Settings и заголовок выбранной вакансии.
+- **Emmy headline** (bold, `21px`, `28px` line-height): только welcome/offline message в dock.
+- **Workspace title** (semibold, `1.125rem`, `1.5rem` line-height): заголовок локального поиска.
+- **Body** (regular/medium, преимущественно `13px`, `20px` line-height): feed, description, composer и основные действия.
+- **Label** (medium/semibold, `0.75rem`): controls, filters, sort и metadata.
+- **Caption** (regular/medium, `11px`, `16px` line-height): company, location, salary, timeline status.
+- **Micro** (regular/semibold, `10px`): status bar, counts, eyebrow labels и shortcut hints.
 
-Заголовки используют небольшое отрицательное tracking только там, где это уже реализовано. Для чисел каталога, зарплаты и счётчиков используется tabular alignment. Текст вакансии остаётся plain text; недоверенные descriptions не рендерятся как HTML или Markdown.
+Числа каталога, зарплаты и счётчики используют tabular alignment. Vacancy description остаётся plain text и не получает HTML/Markdown styling.
 
-**The Compact Hierarchy Rule.** Не вводить marketing-scale display type: рабочий контент должен оставаться самым заметным элементом экрана.
+**The Compact Type Rule.** Не добавлять marketing-scale display type: рабочий контент, а не декоративный заголовок, должен доминировать в viewport.
 
 ## Layout
 
-Desktop shell занимает viewport и имеет минимальные размеры `320px × 620px`. Вертикальная рамка фиксирована:
+Приложение занимает весь viewport с минимальной высотой `620px` и минимальной шириной `320px`. Вертикальный shell состоит из titlebar `56px`, рабочей области и status bar `24px`. На широком desktop слева постоянно стоит navigation `260px`.
 
-- custom titlebar — `40px`;
-- рабочая область — всё оставшееся пространство;
-- status bar — `24px`.
+Референсный первый viewport строится слева направо: navigation `260px`; search/feed; постоянный job detail; опциональный Emmy dock шириной `320px`. При открытых фильтрах перед feed появляется inline-колонка `232px`. Emmy изменяется от `316px` до `420px`, стартует с `320px` и поддерживает drag либо Arrow Left/Right по `16px`.
 
-На широком desktop постоянная navigation sidebar имеет ширину `176px`. Search workspace строится как grid: filters `240px`, feed и job detail делят оставшуюся ширину; при открытом detail feed удерживается примерно в диапазоне `340–410px`, а detail получает не менее `360px`. Без выбранной вакансии feed расширяется. Emmy открывается отдельным dock справа с изменяемой шириной `300–440px`; separator поддерживает mouse drag и Arrow Left/Right с шагом `16px`.
+Search workspace использует четыре точных режима:
 
-Spacing следует 4px-ритму, фактически чаще всего используя `8`, `12`, `16`, `20`, `24` и `32px`. Плотные controls имеют высоту `28–36px`, navigation rows — `32px`, filter rows — не менее `40px`, feed row — не менее `112px`. Spacing пока является implementation convention, а не отдельной дублирующей token scale.
+- **`1320px` и шире:** открытые filters занимают inline-колонку `232px`; feed и detail остаются рядом.
+- **ниже `1320px`:** filters становятся overlay от левого края workspace (`260px`) шириной до `300px`, между titlebar и status bar.
+- **ниже `980px`:** Emmy становится правым overlay и не уменьшает рабочие колонки.
+- **ниже `900px`:** job detail становится overlay поверх workspace; при `900px` и шире он остаётся inline.
+- **ниже `700px`:** navigation скрывается, offsets filters/detail сбрасываются, filters ограничены `280px`/`92vw`, Emmy занимает всю ширину, titlebar упрощается.
 
-Responsive transitions являются изменением режима панелей, а не уменьшенной копией desktop:
+Базовый spatial rhythm — `4px`; фактические интервалы концентрируются на `8`, `12`, `16`, `20`, `24` и `32px`. Search field имеет высоту `40px`, основные controls — `36px`, navigation rows — `36px`, filter rows — минимум `40px`, feed rows — минимум `112px`. Scroll принадлежит содержимому каждой панели; body не скроллится. Feed, shortlist, autocomplete и Emmy timeline виртуализируются по реализованным thresholds.
 
-- **около `1120px`:** filters перестают быть постоянной grid-column и становятся overlay под titlebar, над status bar, с привязкой слева к navigation rail;
-- **около `900px`:** Emmy перестаёт отнимать ширину workspace и становится правым overlay между titlebar и status bar;
-- **около `800px`:** job detail перестаёт быть второй grid-column и открывается overlay поверх workspace, сохраняя левый offset navigation;
-- **около `640px`:** navigation sidebar скрывается, offsets filters/detail сбрасываются к левому краю, Emmy может занять всю ширину, titlebar и status content упрощаются;
-- на `800px` и выше selected job может быть показан рядом с feed; на `1120px` и выше filters возвращаются в grid.
-
-Временные overlays сохраняют контекст вместо навигации на отдельную страницу. Scroll принадлежит содержимому панели; body остаётся фиксированным. Списки длиннее 50 элементов виртуализируются: это реализовано для feed, shortlist и autocomplete suggestions.
-
-**The Workspace First Rule.** При нехватке ширины сворачивать вторичные панели в overlays, а не сжимать feed и detail до нечитаемого состояния.
+**The Persistent Context Rule.** На desktop выбранная вакансия остаётся рядом с лентой; при нехватке ширины вторичные области переходят в overlays, а не сжимают feed и detail до нечитаемого состояния.
 
 ## Elevation & Depth
 
-Система flat-by-default. Постоянные области разделяются surface tone и границей; тяжёлые тени отсутствуют. `--shadow-sm` и `--shadow-md` определены в единственном token source, но medium elevation используется только там, где слой действительно проходит над другим: command dialog, autocomplete popup, overlay filters и overlay Emmy.
+Постоянный shell плоский: глубину создают near-black/charcoal tones и `1px` dividers. Малый shadow локально поднимает composer и выбранный theme segment; medium shadow используется у command palette, history/autocomplete popup и панелей, которые фактически переходят в overlay. Тяжёлых теней, glass, blur и свечения нет.
 
-Backdrop command palette использует semantic overlay token. Карточки внутри постоянных панелей не должны накапливать вложенные тени; depth передаётся surface level, border и spacing.
+### Shadow Vocabulary
 
-**The Temporary Elevation Rule.** Тень обозначает временный слой или popup, а не важность обычного контента.
+- **Local lift** (`--shadow-sm`): compact floating emphasis внутри существующей панели.
+- **Overlay separation** (`--shadow-md`): временный слой поверх workspace.
+
+**The Divider Before Shadow Rule.** Сначала разделять постоянные области тоном и однопиксельной линией; shadow допустим только там, где слой действительно проходит над другим.
 
 ## Shapes
 
-Форма сдержанно прямоугольная. Нормативная radius scale живёт в `docs/design-tokens.css`: small `4px`, medium `7px`, large `10px`. Структурные containers, dialogs, fields, buttons и cards не превышают `10px`; локальные `2px` и `5px` допустимы для tiny affordances и product mark. Полный круг/капсула зарезервирован для маленьких count indicators, а не для основных контейнеров.
+Форма сдержанно прямоугольная. Radius scale живёт рядом с цветовыми semantic tokens: small `4px`, medium `7px`, large `10px`. Fields, buttons, cards, dialogs и panels не превышают `10px`; локальные `2px` и `5px` используются только для tiny affordance и product mark. Полный круг зарезервирован для небольшого count indicator, checkbox/radio или кнопки отправки Emmy.
 
-Границы обычно однопиксельные. Dashed border допустим для честного empty state профиля. Lucide icons используются преимущественно в размере `16px`, с `12–14px` для micro chrome и `20px` для screen-level markers.
+Границы обычно однопиксельные. Dashed line применяется в headers и честном profile empty state. Lucide icons преимущественно `16px`, с `12–14px` для micro chrome и `20px` только для более заметного marker.
 
-**The Quiet Geometry Rule.** Не превращать интерфейс в коллекцию больших округлых карточек; радиус поддерживает affordance, а не создаёт декор.
+**The Quiet Geometry Rule.** Не превращать рабочие области в набор больших округлых карточек; радиус обозначает affordance, а dividers удерживают структуру.
 
 ## Components
 
 ### Desktop shell and navigation
 
-Titlebar содержит product mark, текущий screen breadcrumb, вход в command palette, единую кнопку Emmy с SVG-позой и `aria-pressed`, Settings и native window controls. Отдельные status chips каталога и AI в titlebar отсутствуют: состояние каталога остаётся в status bar и Settings, а доступность Emmy раскрывается внутри её панели. Navigation sidebar содержит Jobs, Shortlist, Profile, Emmy и Settings. Active row получает neutral active surface и accent icon; все пять пунктов ведут к реально существующему screen или panel.
+Titlebar высотой `56px` совмещает product mark, breadcrumb, compact command entry, Emmy trigger, Settings и native window controls. Brand block выровнен с navigation и имеет ту же ширину `260px`. Navigation использует neutral hover/active surfaces; синий не обязан сопровождать каждый active row. Status bar высотой `24px` держит readiness локального каталога, версию, count и keyboard hints.
 
-Numeric shortcuts работают глобально только без Ctrl/Alt/Meta и вне editable controls: `1` открывает Search, `2` — Shortlist, `3` — Profile, `5` — Settings, `4` переключает панель Emmy. `s` меняет shortlist state выбранной вакансии только на Search/Shortlist.
+### Search, filters, feed and detail
 
-### Search, feed and detail
+Search header содержит filters toggle, `40px` query field, accent submit, синтаксический hint, результат, snapshot metadata и segmented sort. Filters — угольная колонка с native `details/summary`, compact checkbox rows и combobox/listbox autocomplete. Active filter chips являются кнопками удаления.
 
-Search header объединяет filters toggle, поле запроса, accent submit, syntax hint, active filter chips, локальный progress/error feedback, result count, snapshot metadata и segmented sort. Filter groups используют native `details/summary`, checkboxes и combobox/listbox autocomplete. Selected filter chips являются кнопками снятия фильтра.
+Feed — border-separated list, а не сетка карточек. Вакансия и shortlist — соседние кнопки; выбранная строка получает более сильную нейтральную поверхность и border, hover — тональный сдвиг. Roving tab stop и virtual scroll сохраняют keyboard-first работу. Detail использует плоский canvas и отдельные `panel-card` sections для match, skills, description и technical data; original action остаётся самым сильным neutral CTA.
 
-Feed rows — border-separated list items, не отдельные shadow cards. Основная кнопка вакансии и соседняя кнопка shortlist не вложены друг в друга. Hover использует neutral surface; выбранная строка — accent-muted surface и accent border. Roving tab stop, `aria-current`, `data-selected` и virtual scroll держат большую ленту управляемой. Skeleton rows сохраняют геометрию загрузки; empty/error/end states остаются внутри feed.
+### Buttons, fields, chips and state
 
-Job detail показывает источник, attribution и snapshot version, а original action открывает системный браузер через native boundary. Description выводится как безопасный plain text. Technical metadata сворачивается native `details`.
+Основная высота кнопки — `36px`, medium radius, compact `13px` type. Варианты: dark default, blue accent, bordered outline и transparent ghost. Active press использует scale `0.97`; disabled — `50%` opacity без pointer events. Fields используют sidebar-field surface, `1px` border и visible placeholder. Глобальный focus-visible — `2px` outline с offset `2px`. Badges различают neutral, accent, positive, warning и outline roles, не создавая декоративную палитру.
 
-Screen-scoped shortcuts:
+### Profile, Settings and match
 
-- `/` фокусирует поиск только на Search, когда локальный каталог готов, и не перехватывает ввод в editable control;
-- `j` / `k` перемещают selection по feed только на Search и вне editable controls; Arrow Up/Down делают то же, когда focus уже внутри feed;
-- `Ctrl+Enter` открывает original только на Search, при загруженном detail и вне editable controls;
-- `Ctrl+K` глобально переключает command palette, но не перехватывается внутри editable controls; dialog удерживает focus и возвращает его trigger/предыдущему элементу после закрытия;
-- `Ctrl+E` глобально переключает dock Emmy; текущий handler не ограничен active screen.
-- `Enter` отправляет сообщение в composer Emmy; `Shift+Enter` вставляет новую строку, а активная IME composition никогда не отправляет черновик.
+Profile и Settings ограничивают строку чтения (`max-width` containers), используют dashed header divider, section eyebrows и bordered rows/cards. Theme control — трёхсегментная native radio-группа System/Light/Dark. Match breakdown показывает локальные компоненты, strengths и gaps; интерфейс называет результат «совпадением», не шансом оффера.
 
-### Buttons, fields, badges and state
+### Emmy
 
-Buttons имеют базовую высоту `36px`, medium radius и варианты default, accent, outline и ghost. Hover меняет semantic background/opacity, active выбор остаётся видимым, disabled использует opacity и запрещает pointer events. Выбор темы в Settings реализован трёхсегментной native radio-группой System/Light/Dark с иконками, browser-native keyboard behavior и отдельным selected state в обеих темах. Fields имеют border, neutral surface и visible placeholder; validation связывается через `aria-invalid`, description/error id и live alert. Badges различают neutral, accent, positive, warning и outline roles без декоративной радуги.
+Emmy — правый dock с header `48px`, layered SVG mascot, timeline, tool activity, job cards, comparison, quick replies, inline confirmation и composer. Welcome/offline state собирается снизу вверх: маскот `96px`, compact headline, краткое объяснение, затем реальные действия. Composer использует `10px` radius, strong border, local shadow и круглую send-button; offline state сохраняет композицию, но блокирует ввод и направляет в Settings.
 
-Глобальный `:focus-visible` — контрастный `2px` outline с offset `2px`; сложные composite controls сохраняют эквивалентный видимый focus. Все mouse actions должны иметь keyboard path. Popup autocompletes поддерживают Arrow Up/Down, Home/End, Enter и Escape. Emmy resizer — focusable separator с value semantics и arrow resizing.
+Обычные UI transitions ограничены наблюдаемым диапазоном `140–150ms` (внутри продуктового контракта `120–160ms`) с `--ease`: background, border, color, opacity и короткий press transform. Emmy dock не получает выдуманной entrance-анимации. Более длинные движения разрешены только внутри уже реализованных SVG-состояний Emmy и skeleton/status feedback; они не становятся общим motion language. `prefers-reduced-motion` сводит transitions и animations к `1ms`, одной итерации и отключает smooth scrolling.
 
-Default semantic motion — `140ms` для background, border, color и opacity с `--ease`. Motion подтверждает state, не украшает idle UI. Dock Emmy появляется справа через короткий `transform + opacity` transition; reduced motion оставляет только fade. Layered SVG Emmy меняет позу и микроанимации по реальным `idle/listening/thinking/searching/success/empty/error/offline` состояниям agent loop. `prefers-reduced-motion` отключает smooth scrolling, сводит transitions/animations к `1ms` и одной итерации, сохраняя различимую позу и fade. Смена состояния не зависит только от движения.
+### Keyboard and accessibility
 
-### Profile, shortlist, match and Emmy: current truth
+Все mouse paths имеют keyboard equivalent. `/`, `j/k`, `s`, `Ctrl+Enter`, `Ctrl+K`, `Ctrl+E` и numeric navigation не перехватывают editable controls вне своего контекста. Popup controls сохраняют Arrow/Home/End/Enter/Escape behavior, overlays возвращают focus, resizer имеет separator/value semantics, а loading/error/offline сообщаются через semantic roles и live regions.
 
-Profile — реальный локальный screen, а не mock. Он загружает, создаёт, валидирует, сохраняет и редактирует профиль в локальном `user.sqlite`: до пяти желаемых ролей, canonical skills из локального каталога, seniority, country/city, work modes и минимальная годовая зарплата USD. Черновик переживает переключение screen, field-level error фокусирует первое неверное поле, load error имеет Retry. Summary показывает сохранённые значения, локальную version и update time.
-
-Shortlist доступен из feed/detail, отдельного виртуализированного screen и shortcut `s`; данные переживают restart. Match-score считается локально и on-demand для показанных вакансий, отображает пять components, strengths и gaps. Глобальный match-sort пока отсутствует и отложен по ADR-018.
-
-Emmy — рабочий дополнительный dock. Панель содержит layered SVG mascot, message timeline, tool activity, реальные job cards, comparison table, quick replies, inline confirmation и переключение последних разговоров. Composer доступен при настроенном BYOK или release demo credential; без provider credentials либо при полном отказе моделей Emmy честно переходит в `offline`. Эти состояния не блокируют search, filters, detail, Settings, Profile или Shortlist.
-
-### Localization and accessibility
-
-Новый user-facing copy проходит через `t(...)`; locale-sensitive dates, numbers, capitalization и comparisons используют `getLocaleTag(...)`. Текущий default locale приходит из `config/product.json` и разрешается как `ru-RU`. Brand names и нединамические product marks могут оставаться literal, но компоненты не должны размножать русские строки или вручную форматировать locale-sensitive данные.
-
-Semantic HTML и ARIA являются частью component contract: headings и landmarks, navigation labels, list/listitem, button и combobox relations, live status/error regions, accessible names для icon-only controls, `aria-current`, `aria-expanded`, disabled semantics и focus restore. Loading использует skeleton/status вместо блокирующего spinner или modal. Интерфейс поддерживает light/dark contrast model, Windows Narrator и reduced motion; действия мышью должны оставаться доступны с клавиатуры.
+**The Real State Rule.** Selection, match, shortlist, provider availability и tool activity должны отражать фактическое локальное или provider state; animation, hover и цвет не могут быть единственным носителем смысла.
 
 ## Do's and Don'ts
 
 ### Do:
 
-- **Do** ставить локальный каталог, feed content и текущий status выше decorative chrome.
-- **Do** использовать только semantic properties из `docs/design-tokens.css` и добавлять theme counterparts одновременно.
-- **Do** сохранять компактный 4px rhythm, 40/176/240/24 shell dimensions и panel-mode breakpoints, пока изменение не подтверждено новой реализацией.
-- **Do** использовать borders и surface levels для постоянной структуры, medium shadow — только для overlays/popups.
-- **Do** сохранять visible focus, keyboard equivalence, semantic roles, live feedback и reduced-motion fallback.
-- **Do** виртуализировать списки длиннее 50 элементов.
-- **Do** писать весь новый UI copy через `t(...)`, а locale-sensitive formatting — через `getLocaleTag(...)`.
-- **Do** показывать реальный current scope: локальные Profile/Shortlist/on-demand match и core Emmy работают, global match-sort отсутствует, а недоступный AI явно обозначается как offline.
+- **Do** сохранять dark-first точность, near-black canvas, charcoal panels и `1px` dividers как основной визуальный характер.
+- **Do** держать первый desktop viewport в топологии navigation `260px` → search/feed → persistent detail → optional Emmy `320px`.
+- **Do** использовать только semantic properties из `docs/design-tokens.css` и одновременно определять обе темы.
+- **Do** применять синий только к действию, focus и явному выбору; neutral selection может оставаться charcoal.
+- **Do** сохранять Inter-first stack, компактный `4px` rhythm, точные shell dimensions и breakpoints `1320/980/900/700`.
+- **Do** виртуализировать длинные списки и сохранять видимый focus, keyboard equivalence, live feedback и reduced-motion behavior.
+- **Do** показывать реальные Profile, Shortlist, локальный match и optional Emmy; недоступный AI обозначать как offline, не блокируя каталог.
 
 ### Don't:
 
-- **Don't** добавлять gradients, heavy shadows, glass effects или декоративное свечение.
-- **Don't** использовать inline hex/colors, дублировать theme values или превращать `DESIGN.md` в второй token source.
-- **Don't** превышать `10px` radius для структурных rectangular components; не делать основные containers pill-shaped.
-- **Don't** раскрашивать neutral UI без semantic причины или использовать Emmy palette как общий accent set.
-- **Don't** перехватывать screen-scoped shortcuts в полях ввода или на неподходящем screen.
-- **Don't** рендерить vacancy text как HTML/Markdown и не использовать его как UI-инструкцию.
-- **Don't** изображать global match-sort, успешный model response или tool result без фактического локального/провайдерского результата.
-- **Don't** позволять animation, hover или color быть единственным носителем состояния.
+- **Don't** возвращать pale shell, white-card dashboard или равномерно светлую композицию как основной визуальный мир.
+- **Don't** добавлять gradients, glass, blur, heavy shadows, glow или декоративную многоцветность.
+- **Don't** использовать inline colors, дублировать theme values или превращать `DESIGN.md`/sidecar во второй источник значений.
+- **Don't** превышать `10px` radius для структурных прямоугольных компонентов или делать основные containers pill-shaped.
+- **Don't** придумывать dock transitions, idle flourishes или другие motion patterns сверх наблюдаемых `140–150ms` state transitions и реализованных состояний Emmy.
+- **Don't** сжимать feed/detail при responsive переходе, рендерить vacancy text как HTML/Markdown или изображать несуществующий global match-sort.
+- **Don't** позволять hover, animation или цвету быть единственным признаком selection, status или ошибки.

@@ -233,12 +233,12 @@ export function Filters({ disabled, draft, onChange, visible }: FiltersProps) {
 
   return (
     <aside
-      className="filter-panel scroll-region min-h-0 overflow-y-auto border-r border-[var(--border)] bg-[var(--surface-0)] p-3"
+      className="filter-panel scroll-region min-h-0 overflow-y-auto border-r border-[var(--border)] bg-[var(--sidebar)] p-3"
       data-visible={visible ? "true" : "false"}
       id="search-filters"
     >
       <div>
-        <p className="flex min-h-9 items-center gap-2 px-1 text-xs font-semibold text-[var(--text)]">
+        <p className="flex min-h-9 items-center gap-2 px-1 text-[13px] font-semibold text-[var(--text)]">
           <SlidersHorizontal aria-hidden="true" className="size-4" />
           {t("filters")}
           {activeFilterCount > 0 ? (

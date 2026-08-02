@@ -131,14 +131,14 @@ export function ShortlistView({ catalogVersion }: { catalogVersion: string | nul
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <header className="shrink-0 border-b border-[var(--border)] px-6 py-5">
+    <div className="surface-page flex h-full min-h-0 flex-col">
+      <header className="shrink-0 border-b border-dashed border-[var(--border)] px-8 py-7">
         <div className="flex items-start gap-3">
-          <div className="grid size-10 shrink-0 place-items-center rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)]">
-            <Bookmark aria-hidden="true" className="size-5 text-[var(--text-secondary)]" />
+          <div className="grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--panel-card)]">
+            <Bookmark aria-hidden="true" className="size-4 text-[var(--text-secondary)]" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-lg font-semibold tracking-[-0.02em]">{t("shortlistTitle")}</h1>
+            <h1 className="text-[22px] font-semibold tracking-[-0.025em]">{t("shortlistTitle")}</h1>
             <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
               {t("shortlistDescription")}
             </p>
@@ -177,7 +177,7 @@ export function ShortlistView({ catalogVersion }: { catalogVersion: string | nul
         </div>
       ) : null}
       {!shortlist.isPending && !shortlist.isError && records.length > 0 ? (
-        <div className="scroll-region min-h-0 flex-1 overflow-y-auto" ref={scrollRef}>
+        <div className="scroll-region min-h-0 flex-1 overflow-y-auto bg-[var(--panel-card)]" ref={scrollRef}>
           {shouldVirtualize ? (
             <div className="relative" data-virtualized="true" style={{ height: virtualizer.getTotalSize() }}>
               {virtualizer.getVirtualItems().map((row) => (

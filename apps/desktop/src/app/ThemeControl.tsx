@@ -40,7 +40,7 @@ export function ThemeControl() {
               className={cn(
                 "theme-option flex h-9 min-w-0 items-center justify-center gap-2 rounded-[var(--radius-sm)] border px-2 text-xs font-medium peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--focus)]",
                 theme === option
-                  ? "border-[var(--border-strong)] bg-[var(--surface-0)] text-[var(--text)] shadow-[var(--shadow-sm)]"
+                  ? "border-[var(--border-strong)] bg-[var(--panel-card)] text-[var(--text)] shadow-[var(--shadow-sm)]"
                   : "border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]",
               )}
             >

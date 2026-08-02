@@ -1,118 +1,124 @@
 /* GiveMeJob! desktop UI tokens. This file is the only color source for components. */
 
 :root {
-  --bg: #ffffff;
-  --bg-secondary: #f7f7f8;
+  --bg: #f7f7f7;
+  --bg-secondary: #efefef;
   --bg-raised: #ffffff;
-  --bg-hover: #f1f1f3;
-  --bg-active: #e9e9ee;
-  --surface-0: #ffffff;
-  --surface-1: #fafafa;
-  --surface-2: #f4f4f5;
-  --surface-3: #e9e9ee;
-  --surface-hover: #f1f1f3;
-  --surface-active: #e9e9ee;
+  --bg-hover: #f0f0f0;
+  --bg-active: #e7e7e7;
+  --surface-0: #f7f7f7;
+  --surface-1: #ffffff;
+  --surface-2: #f1f1f1;
+  --surface-3: #e8e8e8;
+  --surface-hover: #f0f0f0;
+  --surface-active: #e7e7e7;
+  --sidebar: #f1f1f1;
+  --sidebar-field: #ffffff;
+  --panel-card: #ffffff;
 
-  --text: #18181b;
+  --text: #171717;
   --text-secondary: #52525b;
   --text-tertiary: #64646e;
   --text-placeholder: #64646e;
   --text-disabled: #8b8b94;
-  --border: #e4e4e7;
-  --border-strong: #d4d4d8;
+  --border: #dedede;
+  --border-strong: #c9c9c9;
 
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
-  --accent-muted: #eeedff;
-  --accent-border: #c7d2fe;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-muted: #eaf1ff;
+  --accent-border: #b9ceff;
   --on-accent: #ffffff;
-  --focus: #6366f1;
-  --overlay: rgba(9, 9, 11, 0.48);
+  --focus: #2563eb;
+  --overlay: rgba(17, 17, 17, 0.48);
 
-  --positive: #15803d;
-  --positive-muted: #ecfdf3;
-  --positive-border: #bbf7d0;
+  --positive: #047857;
+  --positive-muted: #e8f7f1;
+  --positive-border: #9bd8c4;
   --warning: #a16207;
-  --warning-muted: #fffbeb;
-  --warning-border: #fde68a;
+  --warning-muted: #fff8e8;
+  --warning-border: #edcf87;
   --danger: #dc2626;
   --on-danger: #ffffff;
 
-  --shadow-sm: 0 1px 2px rgba(9, 9, 11, 0.06);
-  --shadow-md: 0 12px 32px rgba(9, 9, 11, 0.16);
+  --shadow-sm: 0 6px 18px rgba(17, 17, 17, 0.08);
+  --shadow-md: 0 18px 46px rgba(17, 17, 17, 0.18);
   --radius-sm: 4px;
   --radius-md: 7px;
   --radius-lg: 10px;
-  --font: "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font: "Inter", "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
 
-  --match-strong: #15803d;
+  --match-strong: #047857;
   --match-medium: #a16207;
   --match-weak: #c2410c;
   --match-none: #b91c1c;
 
-  --emmy-fur: #e7e5e4;
-  --emmy-fur-shadow: #c9c5c1;
-  --emmy-ear: #a78b7b;
-  --emmy-eye: #27272a;
-  --emmy-nose: #27272a;
-  --emmy-outline: #57534e;
-  --emmy-collar: #4f46e5;
+  --emmy-fur: #efad4d;
+  --emmy-fur-shadow: #cc8430;
+  --emmy-ear: #6f4a22;
+  --emmy-eye: #221b13;
+  --emmy-nose: #221b13;
+  --emmy-outline: #5e421f;
+  --emmy-collar: #2563eb;
 }
 
 [data-theme="dark"] {
-  --bg: #09090b;
-  --bg-secondary: #111113;
-  --bg-raised: #18181b;
-  --bg-hover: #1c1c20;
-  --bg-active: #27272a;
-  --surface-0: #09090b;
-  --surface-1: #111113;
-  --surface-2: #18181b;
-  --surface-3: #27272a;
-  --surface-hover: #1c1c20;
-  --surface-active: #27272a;
+  --bg: #111111;
+  --bg-secondary: #141414;
+  --bg-raised: #1e1e1e;
+  --bg-hover: #1a1a1a;
+  --bg-active: #242424;
+  --surface-0: #111111;
+  --surface-1: #141414;
+  --surface-2: #1a1a1a;
+  --surface-3: #242424;
+  --surface-hover: #1c1c1c;
+  --surface-active: #242424;
+  --sidebar: #161616;
+  --sidebar-field: #1e1e1e;
+  --panel-card: #141414;
 
-  --text: #f4f4f5;
+  --text: #f5f5f5;
   --text-secondary: #a1a1aa;
   --text-tertiary: #8b8b95;
   --text-placeholder: #8b8b95;
-  --text-disabled: #64646e;
-  --border: #27272a;
-  --border-strong: #3f3f46;
+  --text-disabled: #66666f;
+  --border: #252525;
+  --border-strong: #363636;
 
-  --accent: #818cf8;
-  --accent-hover: #a5b4fc;
-  --accent-muted: #1e1b4b;
-  --accent-border: #3730a3;
-  --on-accent: #09090b;
-  --focus: #818cf8;
-  --overlay: rgba(0, 0, 0, 0.68);
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --accent-muted: #17233d;
+  --accent-border: #274d87;
+  --on-accent: #ffffff;
+  --focus: #60a5fa;
+  --overlay: rgba(0, 0, 0, 0.72);
 
-  --positive: #4ade80;
-  --positive-muted: #052e16;
-  --positive-border: #166534;
-  --warning: #facc15;
-  --warning-muted: #422006;
-  --warning-border: #854d0e;
-  --danger: #dc2626;
+  --positive: #10b981;
+  --positive-muted: #0b2b22;
+  --positive-border: #17634e;
+  --warning: #f59e0b;
+  --warning-muted: #35250b;
+  --warning-border: #76500d;
+  --danger: #ef4444;
   --on-danger: #ffffff;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.32);
-  --shadow-md: 0 14px 40px rgba(0, 0, 0, 0.44);
+  --shadow-sm: 0 8px 22px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 22px 54px rgba(0, 0, 0, 0.48);
 
-  --match-strong: #4ade80;
-  --match-medium: #facc15;
+  --match-strong: #10b981;
+  --match-medium: #f59e0b;
   --match-weak: #fb923c;
   --match-none: #f87171;
 
-  --emmy-fur: #d6d3d1;
-  --emmy-fur-shadow: #a8a29e;
-  --emmy-ear: #9f7f70;
-  --emmy-eye: #27272a;
-  --emmy-nose: #27272a;
-  --emmy-outline: #78716c;
-  --emmy-collar: #818cf8;
+  --emmy-fur: #f2b257;
+  --emmy-fur-shadow: #cb822f;
+  --emmy-ear: #714821;
+  --emmy-eye: #21190f;
+  --emmy-nose: #21190f;
+  --emmy-outline: #8c642d;
+  --emmy-collar: #3b82f6;
 }
 
 @media (prefers-reduced-motion: reduce) {

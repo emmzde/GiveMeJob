@@ -18,7 +18,7 @@ export function JobDescription({ description }: { description: string }) {
         }
         if (block.kind === "list") {
           return (
-            <ul className="list-disc space-y-2 pl-5 marker:text-[var(--accent)]" key={index}>
+            <ul className="list-disc space-y-2 pl-5 marker:text-[var(--text-tertiary)]" key={index}>
               {block.items.map((item, itemIndex) => (
                 <li className="pl-1" key={`${item}-${itemIndex}`}>
                   {item}

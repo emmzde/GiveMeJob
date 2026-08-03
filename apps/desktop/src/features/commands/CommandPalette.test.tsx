@@ -50,6 +50,7 @@ describe("CommandPalette", () => {
     expect(within(dialog).getByText(t("shortlist"))).toBeInTheDocument();
     expect(within(dialog).getByText(t("profile"))).toBeInTheDocument();
     expect(within(dialog).getByText(t("emmy"))).toBeInTheDocument();
+    expect(dialog.querySelector("kbd")).toBeNull();
   });
 
   it("ignores Ctrl+K while an editable control owns the event", () => {

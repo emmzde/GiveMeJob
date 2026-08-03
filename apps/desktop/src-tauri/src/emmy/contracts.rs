@@ -12,6 +12,7 @@ use crate::{
 pub(crate) const MAX_CONTEXT_MESSAGES: usize = 12;
 pub(crate) const MAX_TOOL_STEPS: usize = 4;
 pub(crate) const MAX_CHAT_TEXT_LENGTH: usize = 4_000;
+pub(crate) const MAX_CONVERSATION_MEMORY_LENGTH: usize = 4_000;
 pub(crate) const MAX_JOB_CARDS: usize = 8;
 pub(crate) const MAX_QUICK_REPLIES: usize = 4;
 pub(crate) const MAX_CONVERSATION_MESSAGES: usize = 500;
@@ -251,13 +252,17 @@ pub(crate) struct EmmyResponse {
     pub(crate) job_cards: Vec<JobId>,
     pub(crate) quick_replies: Vec<String>,
     pub(crate) mascot_state: EmmyState,
+    pub(crate) conversation_memory: String,
 }
 
 impl EmmyResponse {
     pub(crate) fn validate(&self) -> Result<(), LlmError> {
         let message_length = self.message.trim().chars().count();
+        let memory_length = self.conversation_memory.trim().chars().count();
         if message_length == 0
             || message_length > MAX_CHAT_TEXT_LENGTH
+            || memory_length == 0
+            || memory_length > MAX_CONVERSATION_MEMORY_LENGTH
             || self.job_cards.len() > MAX_JOB_CARDS
             || self.quick_replies.len() > MAX_QUICK_REPLIES
             || self.quick_replies.iter().any(|reply| {
@@ -528,7 +533,8 @@ mod tests {
                 "message": "Нашла три вакансии.",
                 "jobCards": ["1", "2"],
                 "quickReplies": ["Сравни их"],
-                "mascotState": "success"
+                "mascotState": "success",
+                "conversationMemory": "Пользователь ищет Rust-вакансии."
             }
         });
         let output: EmmyModelOutput =

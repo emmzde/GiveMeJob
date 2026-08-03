@@ -9,7 +9,8 @@ use crate::{
     emmy::contracts::{
         valid_local_id, EmmyConversation, EmmyConversationSummary, EmmyMessage, EmmyMessageContent,
         EmmyMessageRole, EmmyToolCall, EmmyToolResult, ShortlistConfirmationStatus,
-        ShortlistPreview, MAX_CONVERSATION_MESSAGES, RECENT_CONVERSATION_LIMIT,
+        ShortlistPreview, MAX_CONVERSATION_MEMORY_LENGTH, MAX_CONVERSATION_MESSAGES,
+        RECENT_CONVERSATION_LIMIT,
     },
     ipc::IpcError,
     search::dto::{JobId, RemoteMode, Seniority},
@@ -87,6 +88,14 @@ CREATE TABLE IF NOT EXISTS conversations (
   title      TEXT NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS conversation_memory (
+  conversation_id  TEXT PRIMARY KEY
+                   REFERENCES conversations(id) ON DELETE CASCADE,
+  memory            TEXT NOT NULL,
+  updated_at        TEXT NOT NULL,
+  CHECK (length(trim(memory)) BETWEEN 1 AND 4000)
 ) STRICT;
 
 CREATE TABLE IF NOT EXISTS chat_messages (
@@ -461,15 +470,73 @@ impl UserStore {
         })
     }
 
+    pub(crate) fn load_conversation_memory(
+        &self,
+        conversation_id: &str,
+    ) -> Result<Option<String>, IpcError> {
+        if !valid_local_id(conversation_id) {
+            return Err(IpcError::InvalidQuery);
+        }
+        let connection = self.open()?;
+        connection
+            .query_row(
+                "SELECT memory FROM conversation_memory WHERE conversation_id = ?1",
+                [conversation_id],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(|_| IpcError::UserDataUnavailable)
+    }
+
     pub(crate) fn append_emmy_message(
         &self,
         conversation_id: &str,
         role: EmmyMessageRole,
         content: EmmyMessageContent,
     ) -> Result<EmmyMessage, IpcError> {
+        self.append_emmy_message_with_memory(conversation_id, role, content, None)
+    }
+
+    pub(crate) fn append_emmy_response(
+        &self,
+        conversation_id: &str,
+        content: EmmyMessageContent,
+        conversation_memory: &str,
+    ) -> Result<EmmyMessage, IpcError> {
+        self.append_emmy_message_with_memory(
+            conversation_id,
+            EmmyMessageRole::Assistant,
+            content,
+            Some(conversation_memory),
+        )
+    }
+
+    fn append_emmy_message_with_memory(
+        &self,
+        conversation_id: &str,
+        role: EmmyMessageRole,
+        content: EmmyMessageContent,
+        conversation_memory: Option<&str>,
+    ) -> Result<EmmyMessage, IpcError> {
         if !valid_local_id(conversation_id) || message_role(&content) != role {
             return Err(IpcError::InvalidQuery);
         }
+        if conversation_memory.is_some()
+            && !matches!(&content, EmmyMessageContent::Assistant { .. })
+        {
+            return Err(IpcError::InvalidQuery);
+        }
+        let conversation_memory = match conversation_memory {
+            Some(memory) => {
+                let memory = memory.trim();
+                let length = memory.chars().count();
+                if length == 0 || length > MAX_CONVERSATION_MEMORY_LENGTH {
+                    return Err(IpcError::InvalidQuery);
+                }
+                Some(memory)
+            }
+            None => None,
+        };
         let mut connection = self.open()?;
         let transaction = connection
             .transaction()
@@ -500,6 +567,18 @@ impl UserStore {
                 [conversation_id],
             )
             .map_err(|_| IpcError::UserDataUnavailable)?;
+        if let Some(memory) = conversation_memory {
+            transaction
+                .execute(
+                    "INSERT INTO conversation_memory (conversation_id, memory, updated_at)
+                     VALUES (?1, ?2, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+                     ON CONFLICT(conversation_id) DO UPDATE SET
+                       memory = excluded.memory,
+                       updated_at = excluded.updated_at",
+                    params![conversation_id, memory],
+                )
+                .map_err(|_| IpcError::UserDataUnavailable)?;
+        }
         let message = load_emmy_message(&transaction, conversation_id, &id)?
             .ok_or(IpcError::UserDataUnavailable)?;
         transaction
@@ -931,7 +1010,9 @@ mod tests {
 
     use super::{ProfileInput, SetShortlistInput, UserStore};
     use crate::{
-        emmy::contracts::{EmmyMessageContent, MAX_CONVERSATION_MESSAGES},
+        emmy::contracts::{
+            EmmyMessageContent, MAX_CONVERSATION_MEMORY_LENGTH, MAX_CONVERSATION_MESSAGES,
+        },
         ipc::IpcError,
         search::dto::{JobId, RemoteMode, Seniority},
     };
@@ -1067,6 +1148,7 @@ mod tests {
             tables,
             vec![
                 "chat_messages",
+                "conversation_memory",
                 "conversations",
                 "match_cache",
                 "profile",
@@ -1076,6 +1158,61 @@ mod tests {
                 "shortlist",
                 "user_meta",
             ]
+        );
+    }
+
+    #[test]
+    fn conversation_memory_is_written_atomically_with_an_assistant_response() {
+        let directory = tempdir().expect("temporary directory should exist");
+        let path = directory.path().join("user.sqlite");
+        let store = UserStore::for_test(path.clone());
+        let conversation = store
+            .create_conversation()
+            .expect("conversation should initialize");
+        let conversation_id = conversation.conversation.id;
+        let assistant = |text: &str| EmmyMessageContent::Assistant {
+            text: text.to_owned(),
+            job_cards: Vec::new(),
+            quick_replies: Vec::new(),
+            comparison: None,
+        };
+
+        store
+            .append_emmy_response(
+                &conversation_id,
+                assistant("Первый ответ"),
+                "Пользователь предпочитает удалённую работу.",
+            )
+            .expect("assistant response and memory should save");
+        assert_eq!(
+            store
+                .load_conversation_memory(&conversation_id)
+                .expect("memory should load")
+                .as_deref(),
+            Some("Пользователь предпочитает удалённую работу.")
+        );
+
+        let oversized = "x".repeat(MAX_CONVERSATION_MEMORY_LENGTH + 1);
+        assert_eq!(
+            store
+                .append_emmy_response(&conversation_id, assistant("Невалидный ответ"), &oversized,),
+            Err(IpcError::InvalidQuery)
+        );
+        let reopened = UserStore::for_test(path);
+        assert_eq!(
+            reopened
+                .load_conversation_memory(&conversation_id)
+                .expect("previous memory should survive reopen")
+                .as_deref(),
+            Some("Пользователь предпочитает удалённую работу.")
+        );
+        assert_eq!(
+            reopened
+                .load_conversation(&conversation_id)
+                .expect("conversation should remain readable")
+                .messages
+                .len(),
+            1
         );
     }
 

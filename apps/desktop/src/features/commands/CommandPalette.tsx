@@ -113,34 +113,28 @@ export function CommandPalette({
           <Command.Item onSelect={() => run(() => setScreen("search"))} value={t("jobs")}>
             <BriefcaseBusiness aria-hidden="true" className="size-4" />
             <span>{t("jobs")}</span>
-            <kbd>1</kbd>
           </Command.Item>
           <Command.Item onSelect={() => run(() => setScreen("shortlist"))} value={t("shortlist")}>
             <Bookmark aria-hidden="true" className="size-4" />
             <span>{t("shortlist")}</span>
-            <kbd>2</kbd>
           </Command.Item>
           <Command.Item onSelect={() => run(() => setScreen("profile"))} value={t("profile")}>
             <UserRound aria-hidden="true" className="size-4" />
             <span>{t("profile")}</span>
-            <kbd>3</kbd>
           </Command.Item>
           <Command.Item onSelect={() => run(() => setPanel("emmy"))} value={t("emmy")}>
             <Bot aria-hidden="true" className="size-4" />
             <span>{t("emmy")}</span>
-            <kbd>4</kbd>
           </Command.Item>
           <Command.Item onSelect={() => run(() => setScreen("settings"))} value={t("settings")}>
             <Settings aria-hidden="true" className="size-4" />
             <span>{t("settings")}</span>
-            <kbd>5</kbd>
           </Command.Item>
         </Command.Group>
         <Command.Group heading={t("commandActions")}>
           <Command.Item onSelect={() => run(onFocusSearch, false)} value={t("focusSearch")}>
             <Search aria-hidden="true" className="size-4" />
             <span>{t("focusSearch")}</span>
-            <kbd>/</kbd>
           </Command.Item>
           <Command.Item onSelect={() => run(onToggleFilters)} value={filtersVisible ? t("hideFilters") : t("showFilters")}>
             <Filter aria-hidden="true" className="size-4" />

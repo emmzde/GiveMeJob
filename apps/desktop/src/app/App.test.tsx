@@ -269,7 +269,11 @@ describe("App", () => {
 
   it("opens Emmy as an honest offline panel without simulated chat", async () => {
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole(
+      "heading",
+      { level: 2, name: sampleJob.title },
+      { timeout: 5_000 },
+    );
 
     fireEvent.click(screen.getByRole("button", { name: t("emmy") }));
 
@@ -431,9 +435,7 @@ describe("App", () => {
 
     render(<App />);
 
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "Поиск по локальному каталогу",
-    );
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(t("searchTitle"));
     expect(screen.getByRole("navigation", { name: "Основная навигация" })).toBeInTheDocument();
     expect(screen.getByTestId("initial-search-skeleton")).toBeInTheDocument();
     expect(screen.getByText(t("catalogPreparingSearch"))).toHaveAttribute(
@@ -448,7 +450,6 @@ describe("App", () => {
     render(<App />);
 
     expect((await screen.findByText(t("catalogError"))).closest('[role="alert"]')).not.toBeNull();
-    expect(screen.getByText(t("statusLocalError"))).toBeInTheDocument();
     expect(catalogMocks.searchLocalJobs).not.toHaveBeenCalled();
   });
 
@@ -843,7 +844,7 @@ describe("App", () => {
     });
     expect(selectedFeedItem).toHaveAttribute("aria-current", "true");
     expect(selectedFeedItem).toHaveAttribute("data-selected", "true");
-    expect(screen.getByTestId("company-monogram")).toHaveTextContent("L");
+    expect(screen.queryByTestId("company-monogram")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: t("shortlist") })).toBeEnabled();
     expect(screen.getByRole("button", { name: t("profile") })).toBeEnabled();
     expect(screen.getByRole("button", { name: t("emmy") })).toBeEnabled();

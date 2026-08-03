@@ -41,8 +41,8 @@ export function EmmyJobCard({
           <span className="truncate">{job.locationText || t("profileNoValue")}</span>
         </span>
         <span className="flex flex-wrap gap-x-1.5">
-          <span>{salary ?? t("salaryNotSpecified")}</span>
-          {posted ? <><span aria-hidden="true">·</span><span>{posted}</span></> : null}
+          <span className="ui-mono">{salary ?? t("salaryNotSpecified")}</span>
+          {posted ? <><span aria-hidden="true">·</span><span className="ui-mono">{posted}</span></> : null}
           <span aria-hidden="true">·</span>
           <span>{job.attribution}</span>
         </span>

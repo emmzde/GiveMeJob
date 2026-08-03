@@ -69,6 +69,7 @@ const emmyResponseSchema = z
     jobCards: z.array(jobIdSchema).max(8).refine((items) => new Set(items).size === items.length),
     quickReplies: z.array(z.string().trim().min(1).max(100)).max(4),
     mascotState: z.enum(["idle", "success", "empty", "error", "offline"]),
+    conversationMemory: z.string().trim().min(1).max(4_000),
   })
   .strict();
 

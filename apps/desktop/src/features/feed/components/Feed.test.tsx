@@ -159,7 +159,7 @@ describe("Feed", () => {
     });
 
     const feed = screen.getByRole("region", { name: t("searchResults") });
-    fireEvent.scroll(feed, { target: { scrollTop: 10_000 } });
+    fireEvent.scroll(feed, { target: { scrollTop: 100_000 } });
 
     await waitFor(() => expect(onLoadMore).toHaveBeenCalledTimes(1));
     heightSpy.mockRestore();

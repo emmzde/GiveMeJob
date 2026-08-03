@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Banknote, Lock, MapPin, Pencil, Plus, UserRound, X } from "lucide-react";
+import { Banknote, Lock, MapPin, Pencil, Plus, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 
@@ -62,14 +62,16 @@ function Field({
   label: string;
 }) {
   return (
-    <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--panel-card)] p-4">
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">{label}</p>
-      {children}
-      {error && errorId ? (
-        <p className="mt-2 text-[10px] leading-4 text-[var(--danger)]" id={errorId} role="alert">
-          {error}
-        </p>
-      ) : null}
+    <div className="profile-field">
+      <p className="profile-field-label">{label}</p>
+      <div className="profile-field-body">
+        {children}
+        {error && errorId ? (
+          <p className="mt-2 text-[11px] leading-4 text-[var(--danger)]" id={errorId} role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -86,7 +88,7 @@ function ChipList({
   return (
     <div className="flex flex-wrap gap-1.5">
       {values.map((value) => (
-        <Badge className="gap-1" key={value} tone="accent">
+        <Badge className="gap-1" key={value} tone="outline">
           {value}
           <button aria-label={`${t(label)}: ${value}`} className="rounded-[2px] hover:text-[var(--text)]" onClick={() => onRemove(value)} type="button">
             <X aria-hidden="true" className="size-3" />
@@ -200,7 +202,7 @@ function ProfileForm({ initial, onCancel, onSaved }: { initial: UserProfile | nu
   }
 
   return (
-    <form className="space-y-4" onSubmit={submit}>
+    <form className="profile-form" onSubmit={submit}>
       <Field error={fieldErrors.preferredRoles} errorId="profile-roles-error" label={t("preferredRoles")}>
         <div className="flex gap-2">
           <input
@@ -223,15 +225,14 @@ function ProfileForm({ initial, onCancel, onSaved }: { initial: UserProfile | nu
             <Plus aria-hidden="true" className="size-4" />
           </Button>
         </div>
-        <p className="mt-1.5 text-[10px] text-[var(--text-tertiary)]" id="profile-roles-hint">{t("preferredRolesHint")}</p>
+        <p className="mt-1.5 text-[11px] text-[var(--text-tertiary)]" id="profile-roles-hint">{t("preferredRolesHint")}</p>
         {draft.preferredRoles.length > 0 ? <div className="mt-2"><ChipList label="removeRole" onRemove={(role) => {
           clearFieldError("preferredRoles");
           setDraft({ ...draft, preferredRoles: draft.preferredRoles.filter((value) => value !== role) });
         }} values={draft.preferredRoles} /></div> : null}
       </Field>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field error={fieldErrors.skills} errorId="profile-skills-error" label={t("skills")}>
+      <Field error={fieldErrors.skills} errorId="profile-skills-error" label={t("skills")}>
           <FilterAutocomplete
             ariaDescribedBy={fieldErrors.skills ? "profile-skills-error" : undefined}
             ariaInvalid={fieldErrors.skills !== undefined}
@@ -252,8 +253,8 @@ function ProfileForm({ initial, onCancel, onSaved }: { initial: UserProfile | nu
             clearFieldError("skills");
             setDraft({ ...draft, skills: draft.skills.filter((value) => value !== skill) });
           }} values={draft.skills} /></div> : null}
-        </Field>
-        <Field error={fieldErrors.seniority} errorId="profile-seniority-error" label={t("seniority")}>
+      </Field>
+      <Field error={fieldErrors.seniority} errorId="profile-seniority-error" label={t("seniority")}>
           <select
             aria-label={t("seniority")}
             aria-describedby={fieldErrors.seniority ? "profile-seniority-error" : undefined}
@@ -269,11 +270,9 @@ function ProfileForm({ initial, onCancel, onSaved }: { initial: UserProfile | nu
             <option value="">{t("profileNoValue")}</option>
             {senioritySchema.options.map((value) => <option key={value} value={value}>{seniorityLabels[value]}</option>)}
           </select>
-        </Field>
-      </div>
+      </Field>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label={t("location")}>
+      <Field label={t("location")}>
           <div className="grid grid-cols-2 gap-2">
             <input aria-describedby={fieldErrors.country ? "profile-country-error" : undefined} aria-invalid={fieldErrors.country ? true : undefined} aria-label={t("country")} className="form-control" maxLength={100} onChange={(event) => {
               clearFieldError("country");
@@ -284,21 +283,20 @@ function ProfileForm({ initial, onCancel, onSaved }: { initial: UserProfile | nu
               setDraft({ ...draft, city: event.target.value || null });
             }} placeholder={t("city")} ref={cityRef} value={draft.city ?? ""} />
           </div>
-          {fieldErrors.country ? <p className="mt-2 text-[10px] text-[var(--danger)]" id="profile-country-error" role="alert">{fieldErrors.country}</p> : null}
-          {fieldErrors.city ? <p className="mt-2 text-[10px] text-[var(--danger)]" id="profile-city-error" role="alert">{fieldErrors.city}</p> : null}
-        </Field>
-        <Field error={fieldErrors.salaryMinUsdYear} errorId="profile-salary-error" label={t("minimumSalary")}>
+          {fieldErrors.country ? <p className="mt-2 text-[11px] text-[var(--danger)]" id="profile-country-error" role="alert">{fieldErrors.country}</p> : null}
+          {fieldErrors.city ? <p className="mt-2 text-[11px] text-[var(--danger)]" id="profile-city-error" role="alert">{fieldErrors.city}</p> : null}
+      </Field>
+      <Field error={fieldErrors.salaryMinUsdYear} errorId="profile-salary-error" label={t("minimumSalary")}>
           <input aria-describedby={fieldErrors.salaryMinUsdYear ? "profile-salary-error" : undefined} aria-invalid={fieldErrors.salaryMinUsdYear ? true : undefined} aria-label={t("minimumSalary")} className="form-control w-full tabular-nums" inputMode="decimal" maxLength={16} onChange={(event) => {
             clearFieldError("salaryMinUsdYear");
             setSalaryInput(event.target.value);
           }} placeholder="100000" ref={salaryRef} value={salaryInput} />
-        </Field>
-      </div>
+      </Field>
 
       <Field error={fieldErrors.remoteModes} errorId="profile-work-modes-error" label={t("preferredWorkModes")}>
         <div className="flex flex-wrap gap-2">
           {remoteModeSchema.options.map((value) => (
-            <label className="flex min-h-8 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] px-2.5 text-xs hover:bg-[var(--surface-hover)]" key={value}>
+            <label className="flex min-h-8 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-2.5 text-xs hover:bg-[var(--surface-hover)]" key={value}>
               <input aria-describedby={fieldErrors.remoteModes ? "profile-work-modes-error" : undefined} aria-invalid={fieldErrors.remoteModes ? true : undefined} checked={draft.remoteModes.includes(value)} className="size-4 accent-[var(--accent)]" onChange={() => toggleRemoteMode(value)} ref={value === remoteModeSchema.options[0] ? remoteModeRef : undefined} type="checkbox" />
               {remoteModeLabels[value]}
             </label>
@@ -306,10 +304,10 @@ function ProfileForm({ initial, onCancel, onSaved }: { initial: UserProfile | nu
         </div>
       </Field>
 
-      {validationError || save.isError ? <p aria-live="assertive" className="alert-card" role="alert">{validationError ?? t("profileSaveError")}</p> : null}
-      {save.isSuccess ? <p aria-live="polite" className="text-xs text-[var(--positive)]" role="status">{t("profileSaved")}</p> : null}
-      <div className="flex gap-2">
-        <Button disabled={save.isPending} type="submit" variant="accent">{save.isPending ? t("savingProfile") : t("saveProfile")}</Button>
+      {validationError || save.isError ? <p aria-live="assertive" className="alert-card m-3" role="alert">{validationError ?? t("profileSaveError")}</p> : null}
+      {save.isSuccess ? <p aria-live="polite" className="mx-3 mt-3 text-xs text-[var(--positive)]" role="status">{t("profileSaved")}</p> : null}
+      <div className="profile-form-actions">
+        <Button disabled={save.isPending} type="submit">{save.isPending ? t("savingProfile") : t("saveProfile")}</Button>
         <Button disabled={save.isPending} onClick={onCancel} type="button" variant="outline">{t("cancel")}</Button>
       </div>
     </form>
@@ -319,16 +317,14 @@ function ProfileForm({ initial, onCancel, onSaved }: { initial: UserProfile | nu
 function ProfileSummary({ onEdit, profile }: { onEdit(): void; profile: UserProfile }) {
   const location = [profile.city, profile.country].filter(Boolean).join(", ") || t("profileNoValue");
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-2">
-        <Field label={t("preferredRoles")}><div className="flex flex-wrap gap-1.5">{profile.preferredRoles.length > 0 ? profile.preferredRoles.map((value) => <Badge key={value} tone="accent">{value}</Badge>) : t("profileNoValue")}</div></Field>
+    <div>
+        <Field label={t("preferredRoles")}><div className="flex flex-wrap gap-1.5">{profile.preferredRoles.length > 0 ? profile.preferredRoles.map((value) => <Badge key={value} tone="outline">{value}</Badge>) : t("profileNoValue")}</div></Field>
         <Field label={t("skills")}><div className="flex flex-wrap gap-1.5">{profile.skills.length > 0 ? profile.skills.map((value) => <Badge key={value}>{value}</Badge>) : t("profileNoValue")}</div></Field>
         <Field label={t("location")}><p className="flex items-center gap-2 text-sm"><MapPin aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />{location}</p></Field>
         <Field label={t("seniority")}><p className="text-sm">{profile.seniority ? seniorityLabels[profile.seniority] : t("profileNoValue")}</p></Field>
         <Field label={t("preferredWorkModes")}><div className="flex flex-wrap gap-1.5">{profile.remoteModes.length > 0 ? profile.remoteModes.map((value) => <Badge key={value} tone="outline">{remoteModeLabels[value]}</Badge>) : t("profileNoValue")}</div></Field>
         <Field label={t("minimumSalary")}><p className="flex items-center gap-2 text-sm tabular-nums"><Banknote aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />{profile.salaryMinUsdYear === null ? t("profileNoValue") : `$${profile.salaryMinUsdYear.toLocaleString(getLocaleTag())}`}</p></Field>
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="profile-form-actions justify-between">
         <p className="text-[10px] text-[var(--text-tertiary)]">{t("profileVersion")}: {profile.version} · {t("profileUpdated")}: {new Intl.DateTimeFormat(getLocaleTag(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(profile.updatedAt))}</p>
         <Button onClick={onEdit} type="button" variant="outline"><Pencil aria-hidden="true" className="size-4" />{t("editProfile")}</Button>
       </div>
@@ -341,18 +337,18 @@ export function ProfileView() {
   const [editing, setEditing] = useState(false);
 
   return (
-    <div className="surface-page scroll-region h-full overflow-y-auto">
-      <section className="mx-auto max-w-4xl px-8 py-8">
-        <header className="mb-7 flex items-start gap-3 border-b border-dashed border-[var(--border)] pb-6">
-          <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--panel-card)]"><UserRound aria-hidden="true" className="size-4 text-[var(--text-secondary)]" /></div>
+    <div className="workspace-page">
+      <section className="workspace-frame">
+        <header className="workspace-header">
           <div>
-            <h1 className="text-[22px] font-semibold tracking-[-0.025em]">{t("profileTitle")}</h1>
-            <p className="mt-1 flex items-center gap-1.5 text-xs leading-5 text-[var(--text-secondary)]"><Lock aria-hidden="true" className="size-3.5" />{t("profilePrivacy")}</p>
+            <h1 className="workspace-title">{t("profileTitle")}</h1>
+            <p className="workspace-description flex items-center gap-1.5"><Lock aria-hidden="true" className="size-3.5" />{t("profilePrivacy")}</p>
           </div>
         </header>
-        {profile.isPending ? <div aria-label={t("profileTitle")} className="h-40 animate-pulse rounded-[var(--radius-lg)] bg-[var(--surface-1)]" role="status" /> : null}
+        <div className="scroll-region min-h-0 flex-1 overflow-y-auto">
+        {profile.isPending ? <div aria-label={t("profileTitle")} className="m-4 h-40 animate-pulse rounded-[var(--radius-md)] bg-[var(--surface-1)]" role="status" /> : null}
         {profile.isError ? (
-          <div className="alert-card" role="alert">
+          <div className="alert-card m-4" role="alert">
             <p>{t("profileLoadError")}</p>
             <Button className="mt-3" onClick={() => void profile.refetch()} type="button" variant="outline">
               {t("profileRetry")}
@@ -360,14 +356,15 @@ export function ProfileView() {
           </div>
         ) : null}
         {!profile.isPending && !profile.isError && profile.data === null && !editing ? (
-          <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border-strong)] bg-[var(--panel-card)] px-6 py-12 text-center">
+          <div className="grid min-h-80 place-content-center px-6 py-12 text-center">
             <h2 className="text-sm font-semibold">{t("profileEmpty")}</h2>
             <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-[var(--text-secondary)]">{t("profileEmptyHint")}</p>
-            <Button className="mt-5" onClick={() => setEditing(true)} type="button" variant="accent"><Plus aria-hidden="true" className="size-4" />{t("createProfile")}</Button>
+            <Button className="mt-5" onClick={() => setEditing(true)} type="button"><Plus aria-hidden="true" className="size-4" />{t("createProfile")}</Button>
           </div>
         ) : null}
         {!profile.isPending && !profile.isError && editing ? <ProfileForm initial={profile.data ?? null} onCancel={() => setEditing(false)} onSaved={() => setEditing(false)} /> : null}
         {!profile.isPending && !profile.isError && profile.data && !editing ? <ProfileSummary onEdit={() => setEditing(true)} profile={profile.data} /> : null}
+        </div>
       </section>
     </div>
   );

@@ -1,10 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, KeyRound, Trash2 } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { emmyConfigurationQueryKey, useEmmyConfiguration } from "@/features/emmy/hooks";
-import { emmyApi, emmyProviderSchema } from "@/lib/emmy";
+import { emmyApi } from "@/lib/emmy";
 import type { EmmyProvider } from "@/lib/emmy";
 import { t } from "@/lib/i18n";
 
@@ -14,6 +14,12 @@ const providerLabels: Readonly<Record<EmmyProvider, string>> = {
   openrouter: "OpenRouter",
   cerebras: "Cerebras",
 };
+const providerOrder = [
+  "openrouter",
+  "groq",
+  "gemini",
+  "cerebras",
+] as const satisfies readonly EmmyProvider[];
 
 export function EmmyProviderSettings() {
   const configuration = useEmmyConfiguration();
@@ -54,43 +60,45 @@ export function EmmyProviderSettings() {
 
   if (configuration.isPending) {
     return (
-      <div aria-label={t("emmyCredentials")} className="h-40 animate-pulse rounded-[var(--radius-lg)] bg-[var(--surface-1)]" role="status" />
+      <div aria-label={t("emmyCredentials")} className="h-40 animate-pulse rounded-[var(--radius-md)] bg-[var(--surface-1)]" role="status" />
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--panel-card)]">
-      {emmyProviderSchema.options.map((provider) => {
+    <div className="provider-route">
+      {providerOrder.map((provider, index) => {
         const status = configuration.data?.providers.find((item) => item.provider === provider);
         const busy = busyProvider === provider;
         return (
           <form
-            className="border-b border-[var(--border)] p-4 last:border-b-0"
+            className="provider-route-row"
+            data-primary={provider === "openrouter" ? "true" : "false"}
             key={provider}
             onSubmit={(event) => void save(event, provider)}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2 text-xs font-semibold">
-                  <KeyRound aria-hidden="true" className="size-3.5 text-[var(--text-tertiary)]" />
-                  {providerLabels[provider]}
-                </div>
-                <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">
-                  {status?.byokConfigured
+            <span aria-hidden="true" className="provider-route-index ui-mono">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                {providerLabels[provider]}
+                {provider === "openrouter" ? (
+                  <span className="rounded-[var(--radius-sm)] bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-secondary)]">
+                    {t("emmyPrimaryProvider")}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-0.5 text-[11px] leading-4 text-[var(--text-tertiary)]">
+                {provider === "openrouter"
+                  ? t("emmyOpenRouterCascade")
+                  : status?.byokConfigured
                     ? t("emmyByokConfigured")
                     : status?.demoAvailable
                       ? t("emmyDemoAvailable")
                       : t("emmyProviderNotConfigured")}
-                </p>
-              </div>
-              {status?.configured ? (
-                <span className="flex items-center gap-1 text-[11px] text-[var(--positive)]">
-                  <Check aria-hidden="true" className="size-3.5" />
-                  {t("emmyConfigured")}
-                </span>
-              ) : null}
+              </p>
             </div>
-            <div className="mt-3 flex gap-2">
+            <div className="provider-route-controls">
               <label className="min-w-0 flex-1">
                 <span className="sr-only">{providerLabels[provider]} API key</span>
                 <input
@@ -111,7 +119,7 @@ export function EmmyProviderSettings() {
               {status?.byokConfigured ? (
                 <Button
                   aria-label={`${t("emmyClearKey")}: ${providerLabels[provider]}`}
-                  className="w-9 px-0"
+                  className="w-8 px-0"
                   disabled={busy}
                   onClick={() => void clear(provider)}
                   type="button"
@@ -121,8 +129,18 @@ export function EmmyProviderSettings() {
                 </Button>
               ) : null}
             </div>
+            <div className="provider-route-status">
+              {status?.configured ? (
+                <span className="inline-flex items-center gap-1 text-[11px] text-[var(--positive)]">
+                  <Check aria-hidden="true" className="size-3.5" />
+                  {t("emmyConfigured")}
+                </span>
+              ) : (
+                <span className="text-[11px] text-[var(--text-tertiary)]">{t("emmyProviderNotConfigured")}</span>
+              )}
+            </div>
             {errorProvider === provider ? (
-              <p className="mt-2 text-xs text-[var(--danger)]" role="alert">
+              <p className="col-span-full text-xs text-[var(--danger)]" role="alert">
                 {t("emmyCredentialError")}
               </p>
             ) : null}

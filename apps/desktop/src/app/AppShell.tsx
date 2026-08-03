@@ -3,7 +3,6 @@ import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 
 import { DesktopTitlebar } from "@/app/DesktopTitlebar";
 import { NavigationSidebar } from "@/app/NavigationSidebar";
-import { StatusBar } from "@/app/StatusBar";
 import { useAppUiStore } from "@/app/store/appUiStore";
 import { useDocumentTheme } from "@/app/theme";
 import { CommandPalette } from "@/features/commands/CommandPalette";
@@ -16,8 +15,9 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-const MIN_EMMY_WIDTH = 316;
-const MAX_EMMY_WIDTH = 420;
+const MIN_EMMY_WIDTH = 400;
+const MAX_EMMY_WIDTH = 480;
+const PANEL_MOTION_MS = 160;
 const EmmyPanel = lazy(() =>
   import("@/features/emmy/EmmyPanel").then((module) => ({ default: module.EmmyPanel })),
 );
@@ -34,7 +34,9 @@ export function AppShell({ catalog, children }: AppShellProps) {
   const toggleFilters = useAppUiStore((state) => state.toggleFilters);
   const commandTriggerRef = useRef<HTMLButtonElement>(null);
   const resizing = useRef(false);
-  const [emmyWidth, setEmmyWidth] = useState(320);
+  const [emmyWidth, setEmmyWidth] = useState(440);
+  const [emmyDockMounted, setEmmyDockMounted] = useState(panel === "emmy");
+  const [emmyDockVisible, setEmmyDockVisible] = useState(panel === "emmy");
   useDocumentTheme(theme);
 
   const closeEmmy = useCallback(() => {
@@ -50,6 +52,25 @@ export function AppShell({ catalog, children }: AppShellProps) {
     setScreen("search");
     toggleFilters();
   }, [setScreen, toggleFilters]);
+
+  useEffect(() => {
+    let nextFrame: number | null = null;
+    let unmountTimer: number | null = null;
+    const frame = window.requestAnimationFrame(() => {
+      if (panel === "emmy") {
+        setEmmyDockMounted(true);
+        nextFrame = window.requestAnimationFrame(() => setEmmyDockVisible(true));
+        return;
+      }
+      setEmmyDockVisible(false);
+      unmountTimer = window.setTimeout(() => setEmmyDockMounted(false), PANEL_MOTION_MS);
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      if (nextFrame !== null) window.cancelAnimationFrame(nextFrame);
+      if (unmountTimer !== null) window.clearTimeout(unmountTimer);
+    };
+  }, [panel]);
 
   useEffect(() => {
     function handleGlobalShortcut(event: globalThis.KeyboardEvent): void {
@@ -102,37 +123,44 @@ export function AppShell({ catalog, children }: AppShellProps) {
 
   return (
     <main className="flex h-screen min-h-[620px] min-w-[320px] flex-col overflow-hidden bg-[var(--bg)] text-[var(--text)]">
-      <DesktopTitlebar catalog={catalog} commandTriggerRef={commandTriggerRef} />
+      <DesktopTitlebar catalog={catalog} />
       <div className="flex min-h-0 flex-1">
-        <NavigationSidebar />
+        <NavigationSidebar commandTriggerRef={commandTriggerRef} />
         <div className="min-w-0 flex-1 overflow-hidden bg-[var(--bg)]">{children}</div>
-        {panel === "emmy" ? (
-          <div className="emmy-dock flex shrink-0 bg-[var(--surface-0)]" style={{ width: emmyWidth }}>
-            <div
-              aria-label={t("resizeEmmy")}
-              aria-orientation="vertical"
-              aria-valuemax={MAX_EMMY_WIDTH}
-              aria-valuemin={MIN_EMMY_WIDTH}
-              aria-valuenow={emmyWidth}
-              className="w-1 cursor-col-resize border-l border-[var(--border)] hover:bg-[var(--surface-active)]"
-              onKeyDown={resizeWithKeyboard}
-              onMouseDown={startResize}
-              role="separator"
-              tabIndex={0}
-            />
-            <div className="min-w-0 flex-1">
-              <Suspense
-                fallback={
-                  <div aria-label={t("emmyPanelLabel")} className="h-full animate-pulse bg-[var(--surface-1)]" role="status" />
-                }
-              >
-                <EmmyPanel onClose={closeEmmy} />
-              </Suspense>
+        {emmyDockMounted ? (
+          <div
+            aria-hidden={!emmyDockVisible}
+            className="emmy-dock shrink-0 bg-[var(--emmy-bg)]"
+            data-visible={emmyDockVisible}
+            inert={!emmyDockVisible}
+            style={{ width: emmyDockVisible ? emmyWidth : 0 }}
+          >
+            <div className="emmy-dock-stage flex" style={{ width: emmyWidth }}>
+              <div
+                aria-label={t("resizeEmmy")}
+                aria-orientation="vertical"
+                aria-valuemax={MAX_EMMY_WIDTH}
+                aria-valuemin={MIN_EMMY_WIDTH}
+                aria-valuenow={emmyWidth}
+                className="w-1 cursor-col-resize hover:bg-[var(--surface-active)]"
+                onKeyDown={resizeWithKeyboard}
+                onMouseDown={startResize}
+                role="separator"
+                tabIndex={0}
+              />
+              <div className="min-w-0 flex-1">
+                <Suspense
+                  fallback={
+                    <div aria-label={t("emmyPanelLabel")} className="h-full animate-pulse bg-[var(--surface-1)]" role="status" />
+                  }
+                >
+                  <EmmyPanel onClose={closeEmmy} />
+                </Suspense>
+              </div>
             </div>
           </div>
         ) : null}
       </div>
-      <StatusBar catalog={catalog} />
       <CommandPalette
         filtersVisible={filtersVisible}
         onFocusSearch={focusSearch}

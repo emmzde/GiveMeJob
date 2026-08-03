@@ -69,11 +69,24 @@ Core M4 реализован: закрытые Rust/TypeScript contracts, Rust a
 Gemini, OpenRouter и Cerebras, последовательный `LLMRouter`, максимум четыре
 tool-шага, ровно пять локальных tools, confirmation для shortlist, локальная
 timeline/history, реальные job cards/comparison и state-driven SVG Emmy.
-Fake-provider вертикаль и failover проходят; изолированный WinAPI Credential
-Manager write/read/delete roundtrip также пройден. Полный M4 gate остаётся
-открытым до live-provider smoke, UI save → restart → configured → clear для
-BYOK, native all-providers-unavailable smoke и protected release-build с
-отдельными demo credentials.
+По ADR-020 OpenRouter стал основным каскадом из восьми явно заданных
+free-моделей. ADR-021 добавил native tool calling, трёхсекундный attempt
+timeout и 15-секундный budget всего turn; после tool result
+разрешён ранний последовательный fallback к Groq, Gemini и Cerebras. Memory-
+сводка разговора атомарно хранится локально и переносит контекст между
+моделями и провайдерами при сохранении лимита 12 сырых сообщений.
+Fake-provider вертикаль и failover проходят; targeted live OpenRouter
+simple/native-tool smokes и полный search → tool → final-answer smoke прошли,
+итоговые simple/search замеры — 1,86/6,14 секунды. Изолированный WinAPI Credential Manager
+write/read/delete roundtrip также пройден. Полный M4 gate остаётся открытым до
+оставшейся live-provider matrix, UI save → restart → configured → clear для
+BYOK, native
+all-providers-unavailable smoke и protected release-build с отдельными demo
+credentials.
+
+После hot reload runtime timeline дополнительно зафиксировала четыре
+последовательных успешных пользовательских turn за 4,30–7,05 секунды без
+новых timeout notices и без CJK/Hangul в сохранённых assistant payload.
 
 Exact per-option result counts
 для remote/seniority/employment не изображаются: текущий IPC возвращает count

@@ -10,7 +10,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { EmmyComparisonTable } from "@/features/emmy/EmmyComparisonTable";
@@ -36,10 +36,12 @@ interface EmmyTimelineProps {
   messages: readonly EmmyMessage[];
   optimisticText: string | null;
   liveEvent: EmmyStateEvent | null;
+  revealMessageId: string | null;
   confirmationPending: string | null;
   onConfirm(preview: ShortlistPreview, confirmed: boolean): void;
   onOpenJob(jobId: JobId): void;
   onQuickReply(text: string): void;
+  onRevealComplete(messageId: string): void;
 }
 
 export function EmmyTimeline(props: EmmyTimelineProps) {
@@ -63,6 +65,8 @@ export function EmmyTimeline(props: EmmyTimelineProps) {
     onConfirm: props.onConfirm,
     onOpenJob: props.onOpenJob,
     onQuickReply: props.onQuickReply,
+    onRevealComplete: props.onRevealComplete,
+    revealMessageId: props.revealMessageId,
   };
   return items.length > 50 ? (
     <VirtualTimeline items={items} {...shared} />
@@ -73,7 +77,7 @@ export function EmmyTimeline(props: EmmyTimelineProps) {
 
 type TimelineRenderProps = Pick<
   EmmyTimelineProps,
-  "confirmationPending" | "onConfirm" | "onOpenJob" | "onQuickReply"
+  "confirmationPending" | "onConfirm" | "onOpenJob" | "onQuickReply" | "onRevealComplete" | "revealMessageId"
 >;
 
 function SimpleTimeline({ items, ...props }: { items: TimelineItem[] } & TimelineRenderProps) {
@@ -143,6 +147,8 @@ function TimelineItemView({
   onConfirm,
   onOpenJob,
   onQuickReply,
+  onRevealComplete,
+  revealMessageId,
 }: { item: TimelineItem } & TimelineRenderProps) {
   if (item.kind === "optimistic") return <UserBubble text={item.text} />;
   if (item.kind === "live") return <LiveActivity event={item.event} />;
@@ -164,27 +170,54 @@ function TimelineItemView({
       );
     case "assistant":
       return (
-        <div className="flex items-start gap-2">
-          <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-1)]">
-            <EmmyMascot className="size-6" state="idle" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="whitespace-pre-wrap break-words text-[13px] leading-[1.55] text-[var(--text)]">
-              {message.content.text}
-            </p>
-            {message.content.jobCards.length > 0 ? (
+        <AssistantMessage
+          content={message.content}
+          onComplete={() => onRevealComplete(message.id)}
+          onOpenJob={onOpenJob}
+          onQuickReply={onQuickReply}
+          revealing={message.id === revealMessageId}
+        />
+      );
+  }
+}
+
+type AssistantContent = Extract<EmmyMessage["content"], { type: "assistant" }>;
+
+function AssistantMessage({
+  content,
+  onComplete,
+  onOpenJob,
+  onQuickReply,
+  revealing,
+}: {
+  content: AssistantContent;
+  onComplete(): void;
+  onOpenJob(jobId: JobId): void;
+  onQuickReply(text: string): void;
+  revealing: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-2">
+      <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-1)]">
+        <EmmyMascot className="size-6" state={revealing ? "thinking" : "idle"} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <StreamingCopy active={revealing} key={revealing ? "streaming" : "complete"} onComplete={onComplete} text={content.text} />
+        {!revealing ? (
+          <div className="emmy-answer-attachments">
+            {content.jobCards.length > 0 ? (
               <div className="mt-2 border-y border-[var(--border)]">
-                {message.content.jobCards.map((job) => (
+                {content.jobCards.map((job) => (
                   <EmmyJobCard job={job} key={job.id} onOpen={() => onOpenJob(job.id)} />
                 ))}
               </div>
             ) : null}
-            {message.content.comparison ? (
-              <EmmyComparisonTable comparison={message.content.comparison} onOpen={onOpenJob} />
+            {content.comparison ? (
+              <EmmyComparisonTable comparison={content.comparison} onOpen={onOpenJob} />
             ) : null}
-            {message.content.quickReplies.length > 0 ? (
+            {content.quickReplies.length > 0 ? (
               <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label={t("emmyQuickReplies")}>
-                {message.content.quickReplies.map((reply) => (
+                {content.quickReplies.map((reply) => (
                   <button
                     className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-0)] px-2.5 py-1.5 text-left text-xs leading-4 text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text)]"
                     key={reply}
@@ -197,9 +230,61 @@ function TimelineItemView({
               </div>
             ) : null}
           </div>
-        </div>
-      );
-  }
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function StreamingCopy({ active, onComplete, text }: { active: boolean; onComplete(): void; text: string }) {
+  const characters = useMemo(() => Array.from(text), [text]);
+  const [visibleCount, setVisibleCount] = useState(active ? 0 : characters.length);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  useEffect(() => {
+    if (!active) return;
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || characters.length === 0) {
+      const completion = window.setTimeout(() => {
+        setVisibleCount(characters.length);
+        onCompleteRef.current();
+      }, 0);
+      return () => window.clearTimeout(completion);
+    }
+
+    let shown = 0;
+    let completion: number | null = null;
+    const chunkSize = Math.max(1, Math.ceil(characters.length / 45));
+    const interval = window.setInterval(() => {
+      shown = Math.min(characters.length, shown + chunkSize);
+      setVisibleCount(shown);
+      if (shown < characters.length) return;
+      window.clearInterval(interval);
+      completion = window.setTimeout(() => onCompleteRef.current(), 90);
+    }, 24);
+
+    return () => {
+      window.clearInterval(interval);
+      if (completion !== null) window.clearTimeout(completion);
+    };
+  }, [active, characters.length]);
+
+  return (
+    <p
+      aria-busy={active}
+      aria-label={text}
+      className="whitespace-pre-wrap break-words text-[13px] leading-[1.55] text-[var(--text)]"
+      data-streaming={active}
+    >
+      <span aria-hidden="true" className={active ? "emmy-streaming-copy" : undefined}>
+        {characters.slice(0, visibleCount).join("")}
+      </span>
+    </p>
+  );
 }
 
 function UserBubble({ text }: { text: string }) {
@@ -222,14 +307,29 @@ function Notice({ error }: { error: LlmError }) {
 }
 
 function LiveActivity({ event }: { event: EmmyStateEvent }) {
-  const Icon = event.state === "searching" ? Search : Sparkles;
   return (
     <div className="flex items-center gap-2 text-xs leading-4 text-[var(--text-tertiary)]" role="status">
-      <span className="emmy-activity-pulse grid size-6 place-items-center rounded-[var(--radius-sm)] bg-[var(--surface-1)]">
-        <Icon aria-hidden="true" className="size-3.5" />
+      <span className="grid size-7 place-items-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-1)] text-[var(--text)]">
+        <ThinkingGlyph searching={event.state === "searching"} />
       </span>
       <span>{event.tool ? toolLabel(event.tool) : t("emmyThinking")}</span>
     </div>
+  );
+}
+
+function ThinkingGlyph({ searching }: { searching: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className="emmy-thinking-glyph size-4"
+      data-searching={searching}
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <path className="emmy-thinking-corners" d="M8 4H4v4m12-4h4v4M8 20H4v-4m12 4h4v-4" stroke="currentColor" strokeLinecap="square" strokeWidth="1.5" />
+      <path className="emmy-thinking-trace" d="M3 12h4l2.2-4.5 4.1 9 2.2-4.5H21" stroke="currentColor" strokeLinecap="square" strokeLinejoin="miter" strokeWidth="1.5" />
+      <rect className="emmy-thinking-node" fill="currentColor" height="3" width="3" x="2" y="10.5" />
+    </svg>
   );
 }
 

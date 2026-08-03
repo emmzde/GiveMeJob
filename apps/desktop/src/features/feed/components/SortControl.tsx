@@ -16,7 +16,7 @@ export function SortControl({ disabled, onChange, value }: SortControlProps) {
   return (
     <fieldset>
       <legend className="sr-only">{t("sort")}</legend>
-      <div className="inline-flex rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] p-0.5">
+      <div className="inline-flex rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-0)] p-0.5">
         {searchSortSchema.options.map((sort) => (
           <label className="cursor-pointer" key={sort}>
             <input
@@ -28,7 +28,7 @@ export function SortControl({ disabled, onChange, value }: SortControlProps) {
               type="radio"
               value={sort}
             />
-            <span className="flex min-h-8 items-center rounded-[var(--radius-sm)] px-2.5 text-xs text-[var(--text-secondary)] peer-checked:bg-[var(--bg-raised)] peer-checked:font-medium peer-checked:text-[var(--text)] peer-focus-visible:outline-2 peer-focus-visible:outline-[var(--focus)] peer-focus-visible:outline-offset-1">
+            <span className="flex min-h-7 items-center rounded-[var(--radius-sm)] px-2.5 text-[11px] text-[var(--text-secondary)] peer-checked:bg-[var(--text)] peer-checked:font-medium peer-checked:text-[var(--bg)] peer-focus-visible:outline-2 peer-focus-visible:outline-[var(--focus)] peer-focus-visible:outline-offset-1">
               {searchSortLabels[sort]}
             </span>
           </label>

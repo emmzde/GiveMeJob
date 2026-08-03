@@ -26,6 +26,7 @@ describe("AppShell themes", () => {
   beforeEach(resetAppUiStore);
 
   afterEach(() => {
+    vi.useRealTimers();
     delete document.documentElement.dataset.theme;
     vi.unstubAllGlobals();
   });
@@ -95,5 +96,27 @@ describe("AppShell themes", () => {
 
     expect(useAppUiStore.getState().panel).toBe("emmy");
     expect(screen.getByRole("button", { name: t("closeEmmy") })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("keeps the Emmy dock mounted for its closing motion", () => {
+    vi.useFakeTimers();
+    const { container } = render(
+      <QueryClientProvider client={createAppQueryClient()}>
+        <AppShell catalog={readyCatalog}>
+          <p>content</p>
+        </AppShell>
+      </QueryClientProvider>,
+    );
+    const titlebar = within(container.querySelector("header") as HTMLElement);
+
+    fireEvent.click(titlebar.getByRole("button", { name: t("openEmmy") }));
+    act(() => vi.advanceTimersByTime(34));
+    expect(container.querySelector(".emmy-dock")).toHaveAttribute("data-visible", "true");
+
+    fireEvent.click(titlebar.getByRole("button", { name: t("closeEmmy") }));
+    act(() => vi.advanceTimersByTime(17));
+    expect(container.querySelector(".emmy-dock")).toHaveAttribute("data-visible", "false");
+    act(() => vi.advanceTimersByTime(160));
+    expect(container.querySelector(".emmy-dock")).toBeNull();
   });
 });

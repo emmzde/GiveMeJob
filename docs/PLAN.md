@@ -511,10 +511,16 @@ BYOK в схему не входит и хранится только в Windows
 Emmy открывается дополнительной панелью поверх правой части. При узкой ширине
 job detail и Emmy становятся mutually exclusive panels.
 
+Появление UI следует геометрии: Emmy входит справа и сохраняется на время
+короткого закрывающего перехода, filters появляются слева, detail — справа,
+основные screens используют небольшой вертикальный fade. Эти переходы
+ограничены 160 мс и полностью схлопываются при `prefers-reduced-motion`;
+виртуализированные строки вакансий не получают entrance-анимации.
+
 Реализованный M2 shell позволяет независимо скрыть filters и job detail;
 на узком окне они становятся overlay panels. Выбранная вакансия имеет
-`aria-current`, акцентный фон и левую границу. В feed используются monogram
-компании, стабильные колонки location/salary и явное состояние неизвестной
+`aria-current`, акцентный фон и левую границу. Feed не синтезирует логотипы
+из первых букв компании; используются стабильные колонки location/salary и явное состояние неизвестной
 зарплаты. Description остаётся недоверенным plain text, но безопасно
 разбивается React-компонентом на абзацы, маркированные списки и NOTE-блок без
 HTML/Markdown rendering.
@@ -527,6 +533,12 @@ HTML/Markdown rendering.
 - shortlist;
 - profile/settings;
 - Emmy chat;
+
+Profile, Shortlist и Settings используют общий плоский workspace-frame с одним
+внешним border и разделителями внутри, а не набор равноценных карточек. Settings
+имеет внутренний navigation rail; порядок AI-провайдеров показывается как
+реальная последовательность fallback `01–04`. На узком окне rail становится
+горизонтальным, а profile rows переходят из `label / value` в один столбец.
 - first-run catalog initialization;
 - update/error/offline states.
 
@@ -541,7 +553,12 @@ HTML/Markdown rendering.
 
 ### 5.2 Маскот
 
-Emmy — code-native layered SVG, а не растровая картинка.
+Emmy — code-native layered pixel SVG, а не растровая картинка. Растровый
+identity-anchor используется только как визуальный ориентир. Когда панель Emmy
+открыта, независимые зрачки следуют за курсором; доступное ЛКМ и Enter/Space
+поглаживание временно показывает bliss-эмоцию, не подменяя состояние agent
+loop. При `prefers-reduced-motion` взгляд остаётся по центру, а поза меняется
+без продолжительной анимации.
 
 ```ts
 type EmmyState =
@@ -558,6 +575,12 @@ type EmmyState =
 Анимация использует transform/opacity и не вызывает layout thrashing.
 `prefers-reduced-motion` обязателен. Цвета берутся только из design tokens.
 
+Во время ожидания ответа timeline показывает монохромный SVG-индикатор без
+generic sparkle. После завершения structured turn только новое сообщение
+раскрывается последовательно; уже сохранённая история отображается сразу.
+Карточки, сравнение и quick replies появляются после текста. При
+`prefers-reduced-motion` новый ответ также показывается сразу.
+
 ### 5.3 Agent tools
 
 ```ts
@@ -573,6 +596,7 @@ interface EmmyResponse {
   jobCards: string[];
   quickReplies: string[];
   mascotState: EmmyState;
+  conversationMemory: string;
 }
 
 type EmmyModelOutput =
@@ -602,28 +626,41 @@ untrusted tool data. Модель не получает произвольный
 ### 5.4 Chat timeline
 
 Локально хранится одна активная беседа; загрузка timeline ограничена новейшими
-500 сообщениями, а переключатель показывает восемь последних разговоров. В timeline отображаются
-сообщения, tool activity, реальные job cards, таблица сравнения, quick replies
-и inline confirmation для `set_shortlist`. Провайдер получает не всю историю,
-а максимум 12 последних сообщений и минимальный результат текущего tool.
+500 сообщениями, а переключатель показывает восемь последних разговоров. В
+timeline отображаются сообщения, tool activity, реальные job cards, таблица
+сравнения, quick replies и inline confirmation для `set_shortlist`. Провайдер
+получает не всю историю, а максимум 12 последних сообщений, memory-сводку до
+4000 символов и минимальный результат текущего tool. Сводка обновляется в
+закрытом structured response, атомарно сохраняется вместе с ответом и
+переносится между моделями/провайдерами без ключей, полного профиля и сырых
+описаний вакансий.
 
 ## 6. LLMRouter и demo credentials
 
 ### 6.1 Провайдеры
 
-Начальный capability pool:
+Начальный capability pool по ADR-020:
 
-- Groq `llama-3.1-8b-instant` — простой чат;
-- Groq `qwen/qwen3.6-27b` — tools, русский язык, сравнения;
-- Gemini `gemini-3.5-flash-lite` — provider fallback;
-- OpenRouter `openrouter/free` — emergency fallback;
-- Cerebras `gpt-oss-120b` — последний последовательный fallback по ADR-019.
+- OpenRouter: `inclusionai/ling-3.0-flash:free`,
+  `nvidia/nemotron-3-ultra-550b-a55b:free`,
+  `google/gemma-4-31b-it:free`, `google/gemma-4-26b-a4b-it:free`,
+  `openai/gpt-oss-20b:free`, `nvidia/nemotron-3-nano-30b-a3b:free`,
+  `poolside/laguna-s-2.1:free`, `cohere/north-mini-code:free`;
+- Groq `llama-3.1-8b-instant` — внешний fallback простого чата;
+- Groq `qwen/qwen3.6-27b` — внешний fallback tools и сравнений;
+- Gemini `gemini-3.5-flash-lite` — следующий provider fallback;
+- Cerebras `gpt-oss-120b` — последний последовательный fallback.
 
-Groq Llama/Qwen используют поддерживаемый ими JSON Object Mode; компактная
-схема добавляется в system prompt, а результат обязательно проходит закрытую
-serde-валидацию. Gemini получает `responseJsonSchema`. OpenRouter и Cerebras
-получают очищенную совместимую JSON Schema со `strict: true`; для OpenRouter
-дополнительно требуется endpoint с поддержкой параметра structured outputs.
+Первый OpenRouter tool-step использует native function calling по ровно пяти
+разрешённым schemas; `tool_choice: required` не позволяет модели заменить
+локальный action текстом. Reasoning отключён. На бесплатных OpenRouter
+endpoints финальный контракт передаётся через system prompt: server-side
+strict JSON Schema у них неоднородна, но закрытая serde-валидация остаётся
+обязательной. Известный unwrapped response payload нормализуется только
+закрытыми defaults и повторно валидируется; неожиданные CJK/Hangul-символы не
+попадают в generated UI text. Groq Llama/Qwen используют JSON Object Mode со схемой в system
+prompt, Gemini получает `responseJsonSchema`, Cerebras — очищенную строгую
+JSON Schema. Schema error запускает следующую последовательную попытку.
 
 Текущие лимиты перепроверяются перед release:
 
@@ -650,13 +687,17 @@ Router:
 
 1. Фильтрует модели по required capabilities.
 2. Исключает модели с активным cooldown.
-3. Выбирает лучший health score.
-4. Вызывает с timeout.
+3. Выбирает phase-specific priority: OpenRouter Ling первым для простого чата,
+   OpenRouter native tool-call первым для tools; затем применяется ранний
+   cross-provider fallback до оставшихся медленных free endpoints.
+4. Вызывает модель с трёхсекундным attempt timeout внутри общего
+   15-секундного turn budget.
 5. Валидирует structured output.
 6. На rate limit, timeout, transport или schema error пробует следующую.
 7. При полном отказе возвращает typed `Unavailable`.
 
-Параллельно модели не вызываются.
+Параллельно модели не вызываются. В operational log не попадают prompt, ключи
+или raw provider responses: только provider/model, outcome и latency.
 
 ### 6.3 Privacy
 

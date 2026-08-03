@@ -124,9 +124,9 @@ Emmy — дружелюбная анимированная SVG-собачка и
 
 Первичный вариант не требует настройки пользователя:
 
+- OpenRouter как основной последовательный каскад по ADR-020;
 - Groq;
 - Gemini;
-- OpenRouter как аварийный fallback;
 - Cerebras как последний последовательный fallback по ADR-019.
 
 Все вызовы идут через Rust `LLMRouter`. Router выбирает модель по capability,
@@ -358,6 +358,84 @@ Gemini и OpenRouter разрешён четвёртый последовате�
 
 Причина: дополнительный независимый free-tier provider повышает доступность
 Emmy, не создавая обязательного cloud backend и не затрагивая offline core.
+
+## ADR-020. OpenRouter-first каскад и переносимая память Emmy
+
+2 августа 2026 года пользователь передал восемь free model IDs и явно выбрал
+соответствующий gateway основным. Идентификаторы формата
+`provider/model:free` сверены с актуальным каталогом OpenRouter; они не
+являются model IDs OpenCode Zen. Поэтому используется уже существующий
+OpenRouter credential и endpoint, без нового ошибочного provider-контракта:
+
+1. `inclusionai/ling-3.0-flash:free`;
+2. `nvidia/nemotron-3-ultra-550b-a55b:free`;
+3. `google/gemma-4-31b-it:free`;
+4. `google/gemma-4-26b-a4b-it:free`;
+5. `openai/gpt-oss-20b:free`;
+6. `nvidia/nemotron-3-nano-30b-a3b:free`;
+7. `poolside/laguna-s-2.1:free`;
+8. `cohere/north-mini-code:free`.
+
+Router пробует модели строго последовательно. Timeout, 429, transport/schema
+error или невалидный structured output переводят попытку к следующей модели.
+Только после восьми OpenRouter-моделей используются Groq, Gemini и Cerebras.
+Параллельная гонка и расход нескольких free-tier квот одновременно запрещены.
+
+Не все модели списка поддерживают server-side JSON Schema. Для совместимых
+моделей используется strict schema, для остальных схема передаётся в system
+prompt; результат всегда проходит один и тот же закрытый serde-контракт.
+
+Для непрерывности сессии полная timeline по-прежнему хранится локально, а
+провайдер получает максимум 12 последних сырых сообщений. Дополнительно
+финальный structured response возвращает `conversationMemory` до 4000
+символов. Сводка атомарно сохраняется в `user.sqlite` и передаётся любой
+следующей модели/провайдеру. В неё запрещено копировать ключи, полный профиль,
+сырые описания вакансий и инструкции из tool data. Это сохраняет
+межпровайдерный контекст, не отменяя privacy-лимит на сырой transcript.
+
+## ADR-021. Ограниченный latency budget Emmy bridge
+
+2 августа 2026 года live-диагностика показала, что задержка возникала в bridge,
+а не в локальном поиске: последовательный timeout одной модели составлял 24
+секунды, tool calling эмулировался prompt-контрактом, а reasoning не
+отключался. Два model calls одного agent turn вместе с перебором бесплатных
+endpoints давали 95–106 секунд.
+
+Первый вариант hard budget в восемь секунд оказался слишком жёстким:
+сохранённая timeline зафиксировала timeout ровно через 8,0 секунды, хотя
+отдельные free-модели отвечали за 0,8–3,0 секунды. Operational log показал две
+дополнительные причины: часть endpoints возвращает правильный response payload
+без внешнего `{type, payload}`, а часть попыток получает штатные 429/schema
+errors. Пользователь увеличил допустимый turn budget до 15 секунд.
+
+Решение:
+
+- весь Emmy turn жёстко ограничен 15 секундами, отдельная provider/model
+  попытка — тремя секундами;
+- initial OpenRouter tool phase использует native function calling только для
+  пяти разрешённых локальных tools и `tool_choice: required`;
+- OpenRouter reasoning отключён и исключён из ответа;
+- после локального tool result выполняется одна приоритетная OpenRouter
+  попытка, затем Groq, Gemini и Cerebras могут быть проверены до оставшихся
+  медленных OpenRouter endpoints;
+- простой чат аналогично начинает с OpenRouter Ling, но после невалидного
+  structured output рано переходит к Groq Llama;
+- все попытки остаются строго последовательными; model racing не разрешён;
+- OpenRouter free endpoints используют prompt schema, а закрытая
+  serde-валидация остаётся обязательной. Допускается безопасное снятие целой
+  Markdown JSON-обёртки и нормализация известного unwrapped response payload с
+  закрытыми defaults; не regex-извлечение tool calls;
+- generated Russian response не пропускает неожиданные CJK/Hangul-символы;
+  невалидные quick replies отбрасываются;
+- operational log содержит только provider/model, закрытый outcome, latency и
+  безопасную форму невалидного ответа без его содержимого.
+
+ADR-021 уточняет порядок ADR-020: OpenRouter остаётся первым и основным, но
+требование перебрать все восемь его моделей перед межпровайдерным fallback не
+применяется после tool result, поскольку противоречит hard latency budget.
+На итоговой ревизии live simple-chat smoke прошёл за 1,86 секунды, а search →
+native tool → local result → final answer — за 6,14 секунды. При исчерпании
+budget Emmy возвращает typed timeout, не блокируя offline core.
 
 ## Машиночитаемый источник
 

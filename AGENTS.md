@@ -163,11 +163,17 @@ GiveMeJob! — локальное Windows-приложение, которое:
 
 ### AI
 
-- провайдеры первой версии: Groq, Gemini, OpenRouter, Cerebras;
-- простые запросы предпочитают Groq Llama 3.1 8B;
-- tool-calling и сравнения предпочитают Groq Qwen 3.6 27B;
-- Gemini Flash-Lite — межпровайдерный fallback;
-- OpenRouter free — аварийный fallback;
+- провайдеры первой версии: OpenRouter, Groq, Gemini, Cerebras;
+- OpenRouter — основной провайдер с восемью явно заданными free-моделями и
+  последовательным внутрипровайдерным fallback;
+- initial tool-call использует native function calling OpenRouter; reasoning
+  отключён, попытка одной модели ограничена тремя секундами;
+- весь Emmy turn имеет жёсткий budget 15 секунд; после локального tool
+  result router делает быструю OpenRouter-попытку и может раньше перейти к
+  Groq Qwen 3.6 27B, Gemini и Cerebras, не перебирая медленные free endpoints;
+- простые запросы начинают с OpenRouter Ling и при невалидном/медленном ответе
+  рано переходят на Groq Llama 3.1 8B;
+- Gemini Flash-Lite — следующий межпровайдерный fallback;
 - Cerebras GPT OSS 120B — последний последовательный fallback;
 - выбор учитывает capability, EWMA latency, ошибки, 429 и cooldown;
 - параллельная гонка моделей запрещена: она расходует бесплатные квоты;
@@ -374,7 +380,9 @@ Agent loop:
 5. Завершить максимум за четыре tool-итерации.
 
 Локально хранится вся история; провайдеру передаются максимум последние
-12 сообщений.
+12 сообщений и ограниченная переносимая memory-сводка без ключей, полного
+профиля и сырых описаний вакансий. Memory сохраняется между сменами модели и
+провайдера.
 
 ---
 

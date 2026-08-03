@@ -98,14 +98,41 @@ Manager находятся в `apps/desktop/src-tauri/src/emmy`. Сетевые 
 unit/integration tests не выполняются: вертикаль search → tool result → второй
 model turn проверяется через fake provider.
 
-Адаптер учитывает реальные возможности API: Groq Llama/Qwen вызываются в JSON
-Object Mode со схемой в system prompt и последующей serde-валидацией; Gemini
-использует `responseJsonSchema`; OpenRouter/Cerebras — совместимую строгую
-JSON Schema. Ошибка инициализации AI runtime переводит только Emmy в offline и
-не блокирует запуск каталога.
+Адаптер учитывает реальные возможности API: OpenRouter остаётся основным
+провайдером и для первого tool-шага использует native function calling по
+ровно пяти разрешённым схемам. Reasoning для OpenRouter отключён. Бесплатные
+OpenRouter endpoints получают схему в system prompt, а каждый ответ в любом
+случае проходит закрытую serde-валидацию. Известный unwrapped response payload
+получает закрытые defaults и снова валидируется; CJK/Hangul в generated text
+не пропускается, а невалидная quick reply удаляется. Простой чат начинает с OpenRouter
+Ling и при невалидном ответе рано переходит к Groq Llama. После tool result
+router также сначала делает быструю OpenRouter-попытку, затем может перейти к
+Groq, Gemini и Cerebras раньше оставшихся медленных free endpoints. Groq
+Llama/Qwen используют JSON Object Mode, Gemini — `responseJsonSchema`,
+Cerebras — строгую JSON Schema.
+
+Одна provider/model попытка ограничена тремя секундами, а весь Emmy turn,
+включая последовательные model calls и локальные tools, — 15 секундами.
+Параллельной гонки нет. В лог попадают только provider, model, закрытый outcome
+и latency; prompt, ключи и raw response не логируются. Ошибка инициализации AI
+runtime переводит только Emmy в offline и не блокирует запуск каталога.
+
+Полная timeline остаётся в `user.sqlite`. На сетевой запрос уходят последние
+12 сообщений и memory-сводка до 4000 символов, обновляемая моделью и
+атомарно сохраняемая вместе с ответом. Сводка переносится между моделями и
+провайдерами, но не должна содержать ключи, полный профиль или сырые описания
+вакансий.
 
 ```powershell
 cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml emmy::
+```
+
+Live-smoke с настроенными BYOK запускается отдельно:
+
+```powershell
+cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml live_openrouter_bridge_answers_within_fifteen_seconds -- --ignored
+cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml live_openrouter_native_tool_call_answers_within_fifteen_seconds -- --ignored
+cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml live_openrouter_search_turn_completes_within_fifteen_seconds -- --ignored
 ```
 
 Для локального live smoke добавьте собственный, предварительно ротированный

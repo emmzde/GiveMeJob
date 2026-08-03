@@ -21,8 +21,19 @@ export function MatchBadge({
     );
   }
   if (breakdown === undefined) return null;
+  const tone = breakdown.score >= 70
+    ? "strong"
+    : breakdown.score >= 40
+      ? "medium"
+      : breakdown.score >= 25
+        ? "weak"
+        : "low";
   return (
-    <span className="inline-flex h-5 shrink-0 items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--accent-border)] bg-[var(--accent-muted)] px-1.5 text-[10px] font-semibold tabular-nums text-[var(--accent)]">
+    <span
+      aria-label={`${breakdown.score}% ${t("matchLabel")}`}
+      className="match-badge ui-mono inline-flex h-5 shrink-0 items-center gap-1 rounded-[var(--radius-sm)] px-1.5 text-[10px] font-semibold"
+      data-tone={tone}
+    >
       {breakdown.score}% <span className="font-medium">{t("matchLabel")}</span>
     </span>
   );

@@ -1,4 +1,10 @@
-import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import {
+  BriefcaseBusiness,
+  Database,
+  ListFilter,
+  Rows3,
+  Search,
+} from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { InfiniteData } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -135,8 +141,10 @@ export function SearchScreen({
     catalog.status?.state === "ready"
       ? formatSnapshotDate(catalog.status.sourceFrozenAt)
       : null;
-  const detailVisible =
-    selectedId !== null && (panel === "job_detail" || panel === "emmy");
+  const totalResults = firstPage?.total ?? jobs.length;
+  const catalogTotal =
+    catalog.status?.state === "ready" ? catalog.status.totalJobs : jobs.length;
+  const detailVisible = selectedId !== null && panel === "job_detail";
 
   function commit(nextDraft: SearchDraft, refetchEqualQuery: boolean): void {
     const nextQuery = searchDraftToQuery(nextDraft);
@@ -182,42 +190,94 @@ export function SearchScreen({
         visible={filtersVisible}
       />
 
-      <section className="flex min-h-0 min-w-0 flex-col border-r border-[var(--border)] bg-[var(--bg)]">
-        <div className="shrink-0 border-b border-[var(--border)] px-5 py-4">
+      <section className="job-workbench flex min-h-0 min-w-0 flex-col border-r border-[var(--border)] bg-[var(--bg)]">
+        <div className="shrink-0 px-4 pb-4 pt-4">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="text-lg font-semibold leading-6 tracking-[-0.025em]">
+              <h1 className="text-[24px] font-normal leading-7 tracking-[-0.03em]">
                 {t("searchTitle")}
               </h1>
-              <p className="mt-1 truncate text-xs text-[var(--text-secondary)]">
+              <p className="mt-1 truncate text-[12px] leading-5 text-[var(--text-secondary)]">
                 {t("appDescription")}
               </p>
             </div>
-            <div className="flex items-center gap-1">
-              <Button
-                aria-controls="search-filters"
-                aria-expanded={filtersVisible}
-                aria-label={filtersVisible ? t("hideFilters") : t("showFilters")}
-                className="size-9 px-0"
-                onClick={toggleFilters}
-                type="button"
-                variant="ghost"
-              >
-                {filtersVisible ? (
-                  <PanelLeftClose aria-hidden="true" className="size-4" />
-                ) : (
-                  <PanelLeftOpen aria-hidden="true" className="size-4" />
-                )}
-              </Button>
-            </div>
+            <Button
+              aria-controls="search-filters"
+              aria-expanded={filtersVisible}
+              aria-label={filtersVisible ? t("hideFilters") : t("showFilters")}
+              className="h-8 shrink-0 px-2.5"
+              onClick={toggleFilters}
+              type="button"
+              variant="outline"
+            >
+              <ListFilter aria-hidden="true" className="size-4" />
+              {filtersVisible ? t("hideFilters") : t("showFilters")}
+            </Button>
           </div>
-          <form className="mt-4 flex gap-2" onSubmit={submitSearch}>
+
+          <div className="search-overview mt-4" aria-label={t("searchOverview")}>
+            <article className="search-metric search-metric-primary">
+              <div className="search-metric-header">
+                <p className="truncate text-[12px] font-semibold text-[var(--text)]">
+                  {t("resultMetric")}
+                </p>
+                <ListFilter aria-hidden="true" className="size-4 text-[var(--text-secondary)]" />
+              </div>
+              <p className="search-metric-value">{formatCount(totalResults)}</p>
+              <p className="mt-2 truncate text-[11px] leading-4 text-[var(--text-secondary)]">
+                {t("resultMetricHint")}
+              </p>
+            </article>
+            <article className="search-metric search-metric-context">
+              <span className="sr-only">
+                {t("catalogTotal")}: {formatCount(catalogTotal)} {t("jobsFound")}
+              </span>
+              <div className="search-metric-header">
+                <p className="truncate text-[11px] font-medium text-[var(--text-secondary)]">
+                  {t("catalogMetric")}
+                </p>
+                <Database aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />
+              </div>
+              <p className="search-metric-value">{formatCount(catalogTotal)}</p>
+              <p className="mt-2 truncate text-[10px] leading-4 text-[var(--text-tertiary)]">
+                {snapshotDate ? `${t("catalogSnapshot")}: ${snapshotDate}` : t("localCatalog")}
+              </p>
+            </article>
+            <article className="search-metric search-metric-secondary">
+              <div className="search-metric-header">
+                <p className="truncate text-[11px] font-medium text-[var(--text-tertiary)]">
+                  {t("loadedMetric")}
+                </p>
+                <Rows3 aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />
+              </div>
+              <p className="search-metric-value">{formatCount(jobs.length)}</p>
+              <p className="mt-2 truncate text-[10px] leading-4 text-[var(--text-tertiary)]">
+                {t("loadedMetricHint")}
+              </p>
+            </article>
+          </div>
+        </div>
+
+        <div className="dashboard-panel job-results-panel mx-4 mb-4 flex min-h-0 flex-1 flex-col">
+          <div className="dashboard-panel-header shrink-0">
+            <h2 className="flex min-w-0 items-center gap-2 text-[12px] font-normal">
+              <BriefcaseBusiness aria-hidden="true" className="size-4 text-[var(--text-secondary)]" />
+              {t("searchResults")}
+            </h2>
+            <span className="text-[11px] text-[var(--text-tertiary)]">
+              {t("localCatalog")}
+            </span>
+          </div>
+
+          <div className="dashboard-panel-body flex min-h-0 flex-1 flex-col">
+            <div className="shrink-0 border-b border-[var(--border)] px-3 py-3">
+              <form className="flex gap-2" onSubmit={submitSearch}>
             <label className="flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--sidebar-field)] px-3 focus-within:border-[var(--focus)]">
               <Search aria-hidden="true" className="size-4 text-[var(--text-secondary)]" />
               <span className="sr-only">{t("searchPlaceholder")}</span>
               <input
                 aria-describedby="search-syntax-hint"
-                className="h-10 min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-[var(--text-placeholder)]"
+                className="h-8 min-w-0 flex-1 bg-transparent text-[12px] outline-none placeholder:text-[var(--text-placeholder)]"
                 disabled={!catalogReady}
                 id="catalog-search-input"
                 onChange={(event) => setDraft({ ...draft, text: event.target.value })}
@@ -229,14 +289,14 @@ export function SearchScreen({
             <Button
               disabled={search.isFetching || !catalogReady}
               type="submit"
-              variant="accent"
+              variant="default"
             >
               {t("search")}
             </Button>
-          </form>
-          <p className="mt-1.5 text-[10px] leading-4 text-[var(--text-tertiary)]" id="search-syntax-hint">
-            {t("searchSyntaxHint")}
-          </p>
+              </form>
+              <p className="mt-1.5 text-[11px] leading-4 text-[var(--text-tertiary)]" id="search-syntax-hint">
+                {t("searchSyntaxHint")}
+              </p>
 
           <ActiveFilterChips draft={draft} onChange={changeFilters} />
 
@@ -280,12 +340,12 @@ export function SearchScreen({
             </p>
           ) : null}
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-3">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-3">
             <div>
               <p
                 aria-atomic="true"
                 aria-live="polite"
-                className="text-xs font-semibold"
+                className="ui-mono text-[11px] font-semibold leading-4"
                 role="status"
               >
                 {catalogWorking || (search.isPending && jobs.length === 0)
@@ -293,18 +353,8 @@ export function SearchScreen({
                   : `${formatCount(firstPage?.total ?? jobs.length)} ${t("resultsFound")}`}
               </p>
               {search.isFetching && !search.isFetchingNextPage && jobs.length > 0 ? (
-                <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                <p className="mt-0.5 text-[11px] leading-4 text-[var(--text-secondary)]">
                   {t("resultsLoading")}
-                </p>
-              ) : null}
-              {catalog.status?.state === "ready" ? (
-                <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                  {t("catalogTotal")}: {formatCount(catalog.status.totalJobs)} {t("jobsFound")}
-                </p>
-              ) : null}
-              {snapshotDate ? (
-                <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                  {t("catalogSnapshot")}: {snapshotDate}
                 </p>
               ) : null}
             </div>
@@ -328,24 +378,26 @@ export function SearchScreen({
               </Button>
             </div>
           ) : null}
-        </div>
+            </div>
 
-        <Feed
-          canLoadNextPage={
-            catalogReady &&
-            nextCursor !== null &&
-            !search.isFetching &&
-            !search.isFetchingNextPage
-          }
-          errorMessage={searchError}
-          isCatalogReady={catalogReady}
-          isFetching={search.isFetching}
-          isFetchingNextPage={search.isFetchingNextPage}
-          isInitialLoading={isInitialSearchLoading}
-          jobs={jobs}
-          nextCursor={nextCursor}
-          onLoadMore={loadMore}
-        />
+            <Feed
+              canLoadNextPage={
+                catalogReady &&
+                nextCursor !== null &&
+                !search.isFetching &&
+                !search.isFetchingNextPage
+              }
+              errorMessage={searchError}
+              isCatalogReady={catalogReady}
+              isFetching={search.isFetching}
+              isFetchingNextPage={search.isFetchingNextPage}
+              isInitialLoading={isInitialSearchLoading}
+              jobs={jobs}
+              nextCursor={nextCursor}
+              onLoadMore={loadMore}
+            />
+          </div>
+        </div>
       </section>
 
       <JobDetail

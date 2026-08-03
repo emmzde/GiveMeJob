@@ -32,6 +32,8 @@ pub(crate) struct ProviderRequest {
     pub(crate) system_prompt: String,
     pub(crate) messages: Vec<ModelMessage>,
     pub(crate) response_schema: Value,
+    pub(crate) native_tools: bool,
+    pub(crate) native_tool_required: bool,
 }
 
 pub(crate) type ProviderFuture<'a> =
@@ -73,15 +75,7 @@ impl HttpProviderTransport {
         }
         let response = builder.send().await.map_err(map_reqwest_error)?;
         let response = checked_response(response).await?;
-        let envelope: OpenAiEnvelope =
-            serde_json::from_slice(&response).map_err(|_| LlmError::Schema)?;
-        envelope
-            .choices
-            .into_iter()
-            .next()
-            .and_then(|choice| choice.message.content)
-            .filter(|content| !content.trim().is_empty())
-            .ok_or(LlmError::Schema)
+        parse_openai_response(&response)
     }
 
     async fn gemini(&self, request: &ProviderRequest, api_key: &str) -> Result<String, LlmError> {
@@ -111,6 +105,7 @@ impl HttpProviderTransport {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum OpenAiOutputMode {
+    PromptSchema,
     JsonObject,
     StrictJsonSchema,
 }
@@ -121,14 +116,18 @@ fn openai_output_mode(provider: EmmyProvider, model: &str) -> Result<OpenAiOutpu
             Ok(OpenAiOutputMode::StrictJsonSchema)
         }
         EmmyProvider::Groq => Ok(OpenAiOutputMode::JsonObject),
-        EmmyProvider::Openrouter | EmmyProvider::Cerebras => Ok(OpenAiOutputMode::StrictJsonSchema),
+        EmmyProvider::Openrouter => Ok(OpenAiOutputMode::PromptSchema),
+        EmmyProvider::Cerebras => Ok(OpenAiOutputMode::StrictJsonSchema),
         EmmyProvider::Gemini => Err(LlmError::Unavailable),
     }
 }
 
 fn openai_body(request: &ProviderRequest) -> Result<Value, LlmError> {
     let output_mode = openai_output_mode(request.provider, request.model)?;
-    let system_prompt = if output_mode == OpenAiOutputMode::JsonObject {
+    let system_prompt = if matches!(
+        output_mode,
+        OpenAiOutputMode::PromptSchema | OpenAiOutputMode::JsonObject
+    ) {
         let schema =
             serde_json::to_string(&request.response_schema).map_err(|_| LlmError::Schema)?;
         format!(
@@ -152,29 +151,167 @@ fn openai_body(request: &ProviderRequest) -> Result<Value, LlmError> {
             "content": message.content,
         })
     }));
-    let response_format = match output_mode {
-        OpenAiOutputMode::JsonObject => json!({ "type": "json_object" }),
-        OpenAiOutputMode::StrictJsonSchema => json!({
-            "type": "json_schema",
-            "json_schema": {
-                "name": "emmy_model_output",
-                "strict": true,
-                "schema": request.response_schema,
-            }
-        }),
+    let response_format = if request.native_tool_required {
+        None
+    } else {
+        match output_mode {
+            OpenAiOutputMode::PromptSchema => None,
+            OpenAiOutputMode::JsonObject => Some(json!({ "type": "json_object" })),
+            OpenAiOutputMode::StrictJsonSchema => Some(json!({
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "emmy_model_output",
+                    "strict": true,
+                    "schema": request.response_schema,
+                }
+            })),
+        }
     };
     let mut body = json!({
         "model": request.model,
         "messages": messages,
         "temperature": 0.2,
-        "max_completion_tokens": 1200,
         "stream": false,
-        "response_format": response_format,
     });
     if request.provider == EmmyProvider::Openrouter {
-        body["provider"] = json!({ "require_parameters": true });
+        body["max_tokens"] = json!(1200);
+    } else {
+        body["max_completion_tokens"] = json!(1200);
+    }
+    if let Some(response_format) = response_format {
+        body["response_format"] = response_format;
+    }
+    if request.provider == EmmyProvider::Openrouter {
+        body["reasoning"] = json!({ "enabled": false, "exclude": true });
+        if request.native_tools {
+            body["tools"] = native_openai_tools(&request.response_schema)?;
+            body["tool_choice"] = json!(if request.native_tool_required {
+                "required"
+            } else {
+                "auto"
+            });
+        }
+        if output_mode != OpenAiOutputMode::PromptSchema || request.native_tools {
+            body["provider"] = json!({ "require_parameters": true });
+        }
     }
     Ok(body)
+}
+
+fn native_openai_tools(response_schema: &Value) -> Result<Value, LlmError> {
+    let definitions = response_schema
+        .get("$defs")
+        .and_then(Value::as_object)
+        .ok_or(LlmError::Schema)?;
+    let parameters = |name: &str| {
+        let mut schema = definitions.get(name).cloned().ok_or(LlmError::Schema)?;
+        inline_local_references(&mut schema, definitions, 0)?;
+        Ok::<Value, LlmError>(schema)
+    };
+    Ok(json!([
+        {
+            "type": "function",
+            "function": {
+                "name": "search_jobs",
+                "description": "Search the local read-only vacancy catalog.",
+                "parameters": parameters("SearchQuery")?
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_job",
+                "description": "Load one local vacancy by its job ID.",
+                "parameters": parameters("JobToolArgs")?
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "compare_jobs",
+                "description": "Compare two to four local vacancies.",
+                "parameters": parameters("CompareJobsArgs")?
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_match_breakdown",
+                "description": "Load the deterministic local match breakdown for one vacancy.",
+                "parameters": parameters("JobToolArgs")?
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "set_shortlist",
+                "description": "Create a shortlist change preview that still requires UI confirmation.",
+                "parameters": parameters("SetShortlistArgs")?
+            }
+        }
+    ]))
+}
+
+fn inline_local_references(
+    value: &mut Value,
+    definitions: &serde_json::Map<String, Value>,
+    depth: usize,
+) -> Result<(), LlmError> {
+    if depth > 32 {
+        return Err(LlmError::Schema);
+    }
+    match value {
+        Value::Array(items) => {
+            for item in items {
+                inline_local_references(item, definitions, depth + 1)?;
+            }
+        }
+        Value::Object(object) => {
+            if let Some(name) = object
+                .get("$ref")
+                .and_then(Value::as_str)
+                .and_then(|reference| reference.strip_prefix("#/$defs/"))
+            {
+                *value = definitions.get(name).cloned().ok_or(LlmError::Schema)?;
+                inline_local_references(value, definitions, depth + 1)?;
+                return Ok(());
+            }
+            for child in object.values_mut() {
+                inline_local_references(child, definitions, depth + 1)?;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn parse_openai_response(response: &[u8]) -> Result<String, LlmError> {
+    let message = serde_json::from_slice::<OpenAiEnvelope>(response)
+        .map_err(|_| LlmError::Schema)?
+        .choices
+        .into_iter()
+        .next()
+        .map(|choice| choice.message)
+        .ok_or(LlmError::Schema)?;
+    match message.tool_calls.as_slice() {
+        [] => message
+            .content
+            .filter(|content| !content.trim().is_empty())
+            .ok_or(LlmError::Schema),
+        [tool_call] => {
+            let args = serde_json::from_str::<Value>(&tool_call.function.arguments)
+                .map_err(|_| LlmError::Schema)?;
+            serde_json::to_string(&json!({
+                "type": "tool_call",
+                "payload": {
+                    "name": tool_call.function.name,
+                    "args": args
+                }
+            }))
+            .map_err(|_| LlmError::Schema)
+        }
+        _ => Err(LlmError::Schema),
+    }
 }
 
 fn gemini_body(request: &ProviderRequest) -> Value {
@@ -297,6 +434,19 @@ struct OpenAiChoice {
 #[derive(Deserialize)]
 struct OpenAiResponseMessage {
     content: Option<String>,
+    #[serde(default)]
+    tool_calls: Vec<OpenAiToolCall>,
+}
+
+#[derive(Deserialize)]
+struct OpenAiToolCall {
+    function: OpenAiFunctionCall,
+}
+
+#[derive(Deserialize)]
+struct OpenAiFunctionCall {
+    name: String,
+    arguments: String,
 }
 
 #[derive(Deserialize)]
@@ -328,8 +478,9 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        gemini_body, openai_body, openai_endpoint, parse_retry_after, status_error, EmmyProvider,
-        LlmError, ModelMessage, ModelMessageRole, ProviderRequest, StatusCode, CEREBRAS_ENDPOINT,
+        gemini_body, openai_body, openai_endpoint, parse_openai_response, parse_retry_after,
+        status_error, EmmyProvider, LlmError, ModelMessage, ModelMessageRole, ProviderRequest,
+        StatusCode, CEREBRAS_ENDPOINT,
     };
 
     fn request(provider: EmmyProvider, model: &'static str) -> ProviderRequest {
@@ -342,11 +493,25 @@ mod tests {
                 content: "hello".to_owned(),
             }],
             response_schema: json!({
+                "$defs": {
+                    "SearchQuery": {
+                        "type": "object",
+                        "properties": {
+                            "text": { "$ref": "#/$defs/SharedText" }
+                        }
+                    },
+                    "JobToolArgs": { "type": "object" },
+                    "CompareJobsArgs": { "type": "object" },
+                    "SetShortlistArgs": { "type": "object" },
+                    "SharedText": { "type": "string" }
+                },
                 "type": "object",
                 "properties": { "answer": { "type": "string" } },
                 "required": ["answer"],
                 "additionalProperties": false
             }),
+            native_tools: false,
+            native_tool_required: false,
         }
     }
 
@@ -370,14 +535,63 @@ mod tests {
             .as_str()
             .is_some_and(|prompt| prompt.contains("JSON Schema")));
 
-        for (provider, model) in [
-            (EmmyProvider::Openrouter, "openrouter/free"),
-            (EmmyProvider::Cerebras, "gpt-oss-120b"),
+        for model in [
+            "inclusionai/ling-3.0-flash:free",
+            "google/gemma-4-26b-a4b-it:free",
+            "google/gemma-4-31b-it:free",
+            "openai/gpt-oss-20b:free",
         ] {
-            let body = openai_body(&request(provider, model)).expect("strict body should build");
-            assert_eq!(body["response_format"]["type"], "json_schema");
-            assert_eq!(body["response_format"]["json_schema"]["strict"], true);
+            let body = openai_body(&request(EmmyProvider::Openrouter, model))
+                .expect("OpenRouter prompt-schema body should build");
+            assert!(body.get("response_format").is_none());
+            assert!(body.get("provider").is_none());
+            assert!(body["messages"][0]["content"]
+                .as_str()
+                .is_some_and(|prompt| prompt.contains("JSON Schema")));
         }
+
+        let strict = openai_body(&request(EmmyProvider::Cerebras, "gpt-oss-120b"))
+            .expect("strict body should build");
+        assert_eq!(strict["response_format"]["type"], "json_schema");
+        assert_eq!(strict["response_format"]["json_schema"]["strict"], true);
+        assert_eq!(strict["max_completion_tokens"], 1200);
+
+        let openrouter = openai_body(&request(
+            EmmyProvider::Openrouter,
+            "inclusionai/ling-3.0-flash:free",
+        ))
+        .expect("OpenRouter body should build");
+        assert_eq!(openrouter["max_tokens"], 1200);
+        assert!(openrouter.get("max_completion_tokens").is_none());
+
+        let mut native_request =
+            request(EmmyProvider::Openrouter, "inclusionai/ling-3.0-flash:free");
+        native_request.native_tools = true;
+        native_request.native_tool_required = true;
+        let native = openai_body(&native_request).expect("native tools body should build");
+        assert_eq!(native["reasoning"]["enabled"], false);
+        assert_eq!(native["reasoning"]["exclude"], true);
+        assert_eq!(native["tool_choice"], "required");
+        assert!(native.get("response_format").is_none());
+        assert_eq!(
+            native["tools"]
+                .as_array()
+                .expect("native tools should be an array")
+                .iter()
+                .map(|tool| tool["function"]["name"].as_str().expect("tool name"))
+                .collect::<Vec<_>>(),
+            vec![
+                "search_jobs",
+                "get_job",
+                "compare_jobs",
+                "get_match_breakdown",
+                "set_shortlist"
+            ]
+        );
+        assert_eq!(native["provider"]["require_parameters"], true);
+        assert!(!serde_json::to_string(&native["tools"])
+            .expect("tools should encode")
+            .contains("\"$ref\""));
     }
 
     #[test]
@@ -405,6 +619,42 @@ mod tests {
             Some(LlmError::Timeout)
         );
         assert_eq!(status_error(StatusCode::OK, None), None);
+    }
+
+    #[test]
+    fn native_tool_call_is_converted_without_regex_or_raw_response_leakage() {
+        let raw = json!({
+            "choices": [{
+                "message": {
+                    "content": null,
+                    "tool_calls": [{
+                        "id": "call-1",
+                        "type": "function",
+                        "function": {
+                            "name": "get_job",
+                            "arguments": "{\"jobId\":\"42\"}"
+                        }
+                    }]
+                }
+            }]
+        });
+        let parsed = parse_openai_response(
+            serde_json::to_vec(&raw)
+                .expect("fixture should encode")
+                .as_slice(),
+        )
+        .expect("native tool call should parse");
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&parsed)
+                .expect("synthetic output should remain JSON"),
+            json!({
+                "type": "tool_call",
+                "payload": {
+                    "name": "get_job",
+                    "args": { "jobId": "42" }
+                }
+            })
+        );
     }
 }
 

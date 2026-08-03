@@ -229,6 +229,15 @@ CREATE TABLE conversations (
   updated_at TEXT NOT NULL
 ) STRICT;
 
+CREATE TABLE conversation_memory (
+  conversation_id  TEXT PRIMARY KEY
+                     REFERENCES conversations(id) ON DELETE CASCADE,
+  memory            TEXT NOT NULL,
+  updated_at        TEXT NOT NULL,
+
+  CHECK (length(trim(memory)) BETWEEN 1 AND 4000)
+) STRICT;
+
 CREATE TABLE chat_messages (
   id               TEXT PRIMARY KEY,
   conversation_id  TEXT NOT NULL

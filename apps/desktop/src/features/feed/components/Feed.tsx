@@ -1,6 +1,5 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
-  Building2,
   CalendarDays,
   ChartNoAxesColumnIncreasing,
   CircleDollarSign,
@@ -24,7 +23,7 @@ import { useJobMatches } from "@/features/match/hooks";
 import { ShortlistButton } from "@/features/shortlist/ShortlistButton";
 import type { JobSummary, SearchCursor } from "@/lib/catalog";
 import { isEditableTarget } from "@/lib/keyboard";
-import { getLocaleTag, t } from "@/lib/i18n";
+import { t } from "@/lib/i18n";
 
 interface FeedProps {
   jobs: readonly JobSummary[];
@@ -43,10 +42,11 @@ const nextPageSkeletonRows = 3;
 const feedOverscan = 4;
 const loadMoreThreshold = 4;
 const virtualizationThreshold = 50;
+const jobRowEstimate = 86;
 
 function SkeletonRow({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`space-y-2 px-5 ${compact ? "py-3" : "py-4"}`}>
+    <div className={`space-y-2 px-4 ${compact ? "py-2.5" : "py-3"}`}>
       <div className="h-4 w-2/3 animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-active)]" />
       <div className="h-3 w-1/3 animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-active)]" />
       <div className="h-3 w-1/2 animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-active)]" />
@@ -58,7 +58,7 @@ function JobListSkeleton() {
   return (
     <div aria-hidden="true" data-testid="initial-search-skeleton">
       {initialSkeletonRows.map((row) => (
-        <div className="border-b border-[var(--border)]" key={row}>
+        <div className="px-1.5 py-px" key={row}>
           <SkeletonRow />
         </div>
       ))}
@@ -101,7 +101,7 @@ export function Feed({
   const virtualizer = useVirtualizer({
     count: rowCount,
     enabled: shouldVirtualize,
-    estimateSize: () => 128,
+    estimateSize: () => jobRowEstimate,
     getItemKey: (index) => jobs[index]?.id ?? `next-page-skeleton-${index - jobs.length}`,
     getScrollElement: () => scrollRef.current,
     initialRect: { height: 640, width: 520 },
@@ -135,7 +135,7 @@ export function Feed({
       const remaining =
         element.scrollHeight - element.scrollTop - element.clientHeight;
       if (
-        remaining > 128 * loadMoreThreshold ||
+        remaining > jobRowEstimate * loadMoreThreshold ||
         requestedCursor.current === nextCursor
       ) {
         return;
@@ -198,12 +198,12 @@ export function Feed({
       <div
         aria-posinset={index + 1}
         aria-setsize={jobs.length}
-        className="relative min-h-[112px] border-b border-[var(--border)] bg-[var(--panel-card)]"
+        className="job-feed-item relative px-1.5 py-px"
         role="listitem"
       >
         <button
           aria-current={isSelected ? "true" : undefined}
-          className={`group block min-h-[112px] w-full border px-5 py-3.5 pr-12 text-left transition-[background-color,border-color] duration-150 ease-[var(--ease)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] ${
+          className={`job-feed-row group block w-full border px-3 py-2.5 pr-12 text-left transition-[background-color,border-color,transform] duration-150 ease-[var(--ease)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] active:scale-[0.995] ${
             isSelected
               ? "border-[var(--border-strong)] bg-[var(--surface-active)]"
               : "border-transparent hover:bg-[var(--bg-hover)]"
@@ -214,63 +214,55 @@ export function Feed({
           tabIndex={selectedId === job.id || (selectedId === null && index === 0) ? 0 : -1}
           type="button"
         >
-          <span className="flex items-start gap-3">
-          <span
-            aria-hidden="true"
-            className="grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--sidebar-field)] text-[11px] font-semibold text-[var(--text-secondary)] group-hover:border-[var(--border-strong)]"
-          >
-            {job.company.slice(0, 1).toLocaleUpperCase(getLocaleTag()) || (
-              <Building2 className="size-4" />
-            )}
-          </span>
-            <span className="min-w-0 flex-1">
-              <span className="flex min-w-0 flex-wrap items-start gap-2">
+          <span className="min-w-0 flex-1">
+            <span className="flex min-w-0 items-start gap-2">
+              <span className="min-w-0 flex-1">
                 <span
-                  className={`min-w-0 flex-1 break-words text-[13px] leading-5 text-[var(--text)] ${isSelected ? "font-semibold" : "font-medium"}`}
+                  className="block truncate text-[13px] font-semibold leading-5 tracking-[-0.012em] text-[var(--text)]"
                 >
                   {normalizeJobTitle(job.title)}
                 </span>
-                <MatchBadge
-                  breakdown={matches.byJobId.get(job.id)}
-                  hasProfile={matches.hasProfile}
-                  isLoading={matches.isPending}
-                />
+                <span className="block truncate text-[11px] font-medium leading-4 text-[var(--text-secondary)]">
+                  {job.company}
+                </span>
               </span>
-              <span className="mt-0.5 block truncate text-[11px] font-medium text-[var(--text-secondary)]">
-                {job.company}
+              <MatchBadge
+                breakdown={matches.byJobId.get(job.id)}
+                hasProfile={matches.hasProfile}
+                isLoading={matches.isPending}
+              />
+            </span>
+            <span className="job-feed-secondary mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] leading-4 text-[var(--text-tertiary)]">
+              <span className="inline-flex min-w-0 items-center gap-1">
+                <MapPin aria-hidden="true" className="size-3.5 shrink-0" />
+                <span className="max-w-44 truncate">{job.locationText || "—"}</span>
               </span>
+              {job.remoteMode ? (
+                <span className="inline-flex items-center gap-1">
+                  <Wifi aria-hidden="true" className="size-3.5 shrink-0" />
+                  {remoteModeLabels[job.remoteMode]}
+                </span>
+              ) : null}
+              {job.seniority ? (
+                <span className="inline-flex items-center gap-1">
+                  <ChartNoAxesColumnIncreasing aria-hidden="true" className="size-3.5 shrink-0" />
+                  {seniorityLabels[job.seniority]}
+                </span>
+              ) : null}
+              <span className="ui-mono inline-flex items-center gap-1 text-[10px] text-[var(--text-secondary)]">
+                <CircleDollarSign aria-hidden="true" className="size-3.5 shrink-0" />
+                {salary ?? t("salaryNotSpecified")}
+              </span>
+              {postedDate ? (
+                <span className="ui-mono inline-flex items-center gap-1 text-[10px]">
+                  <CalendarDays aria-hidden="true" className="size-3.5 shrink-0" />
+                  {t("posted")} {postedDate}
+                </span>
+              ) : null}
             </span>
-          </span>
-          <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 pl-11 text-[11px] text-[var(--text-secondary)]">
-          <span className="inline-flex min-w-0 items-center gap-1">
-            <MapPin aria-hidden="true" className="size-4 shrink-0" />
-            <span className="max-w-48 truncate">{job.locationText || "—"}</span>
-          </span>
-          {job.remoteMode ? (
-            <span className="inline-flex items-center gap-1">
-              <Wifi aria-hidden="true" className="size-4 shrink-0" />
-              {remoteModeLabels[job.remoteMode]}
-            </span>
-          ) : null}
-          {job.seniority ? (
-            <span className="inline-flex items-center gap-1">
-              <ChartNoAxesColumnIncreasing aria-hidden="true" className="size-4 shrink-0" />
-              {seniorityLabels[job.seniority]}
-            </span>
-          ) : null}
-          <span className="inline-flex items-center gap-1">
-            <CircleDollarSign aria-hidden="true" className="size-4 shrink-0" />
-            {salary ?? t("salaryNotSpecified")}
-          </span>
-          {postedDate ? (
-            <span className="inline-flex items-center gap-1">
-              <CalendarDays aria-hidden="true" className="size-4 shrink-0" />
-              {t("posted")} {postedDate}
-            </span>
-          ) : null}
           </span>
         </button>
-        <span className="absolute right-2 top-2">
+        <span className="absolute right-3 top-2.5">
           <ShortlistButton compact jobId={job.id} />
         </span>
       </div>
@@ -335,7 +327,7 @@ export function Feed({
             {Array.from({ length: skeletonCount }, (_, index) => (
               <div
                 aria-hidden="true"
-                className="border-b border-[var(--border)]"
+                className="px-1.5 py-px"
                 data-testid="next-page-skeleton"
                 key={`fallback-skeleton-${index}`}
               >

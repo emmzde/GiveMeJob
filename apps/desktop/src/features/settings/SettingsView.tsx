@@ -1,5 +1,6 @@
-import { Bot, Database, MonitorCog } from "lucide-react";
+import { Bot, Database, Languages, MonitorCog } from "lucide-react";
 
+import { LanguageControl } from "@/app/LanguageControl";
 import { ThemeControl } from "@/app/ThemeControl";
 import { EmmyProviderSettings } from "@/features/emmy/EmmyProviderSettings";
 import type { CatalogViewState } from "@/features/catalog/catalogStatus";
@@ -7,46 +8,82 @@ import { formatCount, formatSnapshotDate } from "@/features/feed/jobPresentation
 import { t } from "@/lib/i18n";
 
 function SettingRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return <div className="flex min-h-12 items-center justify-between gap-4 border-b border-[var(--border)] px-4 last:border-b-0"><dt className="text-xs text-[var(--text-secondary)]">{label}</dt><dd className="text-right text-xs font-medium text-[var(--text)]">{value}</dd></div>;
+  return <div className="settings-data-row"><dt className="text-xs text-[var(--text-secondary)]">{label}</dt><dd className="ui-mono text-right text-[11px] font-medium text-[var(--text)]">{value}</dd></div>;
 }
 
 export function SettingsView({ catalog }: { catalog: CatalogViewState }) {
   const status = catalog.status;
   const unavailable = t("catalogUnavailableValue");
   return (
-    <div className="surface-page scroll-region h-full overflow-y-auto">
-      <section className="mx-auto max-w-3xl px-8 py-8">
-        <div className="border-b border-dashed border-[var(--border)] pb-6">
-        <h1 className="text-[22px] font-semibold tracking-[-0.025em]">{t("settingsTitle")}</h1>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">{t("settingsDescription")}</p>
-        </div>
-
-        <section className="mt-8" aria-labelledby="appearance-heading">
-          <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]" id="appearance-heading"><MonitorCog aria-hidden="true" className="size-4" />{t("appearance")}</h2>
-          <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--panel-card)] p-3"><ThemeControl /></div>
-        </section>
-
-        <section className="mt-8" aria-labelledby="catalog-heading">
-          <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]" id="catalog-heading"><Database aria-hidden="true" className="size-4" />{t("localCatalog")}</h2>
-          <dl className="mt-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--panel-card)]">
-            <SettingRow label={t("jobsIndexed")} value={status?.state === "ready" ? formatCount(status.totalJobs) : unavailable} />
-            <SettingRow label={t("catalogVersion")} value={status?.catalogVersion ?? unavailable} />
-            <SettingRow label={t("catalogSnapshotDate")} value={status?.sourceFrozenAt ? formatSnapshotDate(status.sourceFrozenAt) : unavailable} />
-          </dl>
-        </section>
-
-        <section className="mt-8" aria-labelledby="emmy-settings-heading">
-          <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]" id="emmy-settings-heading">
-            <Bot aria-hidden="true" className="size-4" />
-            {t("emmyCredentials")}
-          </h2>
-          <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-            {t("emmyCredentialsDescription")}
-          </p>
-          <div className="mt-3">
-            <EmmyProviderSettings />
+    <div className="workspace-page">
+      <section className="workspace-frame">
+        <header className="workspace-header">
+          <div>
+            <h1 className="workspace-title">{t("settingsTitle")}</h1>
+            <p className="workspace-description">{t("settingsDescription")}</p>
           </div>
-        </section>
+        </header>
+
+        <div className="settings-layout">
+          <nav aria-label={t("settingsTitle")} className="settings-nav">
+            <p className="settings-nav-label">{t("settingsTitle")}</p>
+            <a className="settings-nav-link" href="#appearance-heading">
+              <MonitorCog aria-hidden="true" className="size-4" />
+              {t("appearance")}
+            </a>
+            <a className="settings-nav-link" href="#language-heading">
+              <Languages aria-hidden="true" className="size-4" />
+              {t("language")}
+            </a>
+            <a className="settings-nav-link" href="#catalog-heading">
+              <Database aria-hidden="true" className="size-4" />
+              {t("localCatalog")}
+            </a>
+            <a className="settings-nav-link" href="#emmy-settings-heading">
+              <Bot aria-hidden="true" className="size-4" />
+              {t("emmyCredentials")}
+            </a>
+          </nav>
+
+          <div className="settings-content scroll-region">
+          <section className="workspace-section" aria-labelledby="appearance-heading">
+            <div className="workspace-section-header">
+              <h2 className="workspace-section-title" id="appearance-heading"><MonitorCog aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />{t("appearance")}</h2>
+              <p className="workspace-section-copy">{t("theme")}</p>
+            </div>
+            <ThemeControl />
+          </section>
+
+          <section className="workspace-section" aria-labelledby="language-heading">
+            <div className="workspace-section-header">
+              <h2 className="workspace-section-title" id="language-heading"><Languages aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />{t("language")}</h2>
+              <p className="workspace-section-copy">{t("languageDescription")}</p>
+            </div>
+            <LanguageControl />
+          </section>
+
+          <section className="workspace-section" aria-labelledby="catalog-heading">
+            <div className="workspace-section-header">
+              <h2 className="workspace-section-title" id="catalog-heading"><Database aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />{t("localCatalog")}</h2>
+              <p className="workspace-section-copy">{t("catalogSnapshotDate")}: {status?.sourceFrozenAt ? formatSnapshotDate(status.sourceFrozenAt) : unavailable}</p>
+            </div>
+            <dl className="settings-data-list">
+              <SettingRow label={t("jobsIndexed")} value={status?.state === "ready" ? formatCount(status.totalJobs) : unavailable} />
+              <SettingRow label={t("catalogVersion")} value={status?.catalogVersion ?? unavailable} />
+            </dl>
+          </section>
+
+          <section className="workspace-section" aria-labelledby="emmy-settings-heading">
+            <div className="workspace-section-header">
+              <h2 className="workspace-section-title" id="emmy-settings-heading"><Bot aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />{t("emmyCredentials")}</h2>
+              <p className="workspace-section-copy">
+                {t("emmyCredentialsDescription")}
+              </p>
+            </div>
+            <EmmyProviderSettings />
+          </section>
+          </div>
+        </div>
       </section>
     </div>
   );

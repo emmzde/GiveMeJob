@@ -5,7 +5,7 @@ export function JobDescription({ description }: { description: string }) {
   const blocks = parseJobDescription(description);
   return (
     <div
-      className="mt-4 max-w-[75ch] space-y-5 break-words text-[15px] leading-7 text-[var(--text-secondary)]"
+      className="mt-3 max-w-[75ch] space-y-4 break-words text-[13px] leading-6 text-[var(--text-secondary)]"
       data-testid="job-description"
     >
       {blocks.map((block, index) => {
@@ -30,10 +30,10 @@ export function JobDescription({ description }: { description: string }) {
         if (block.kind === "note") {
           return (
             <aside
-              className="rounded-[var(--radius-md)] border border-[var(--accent-border)] bg-[var(--accent-muted)] px-4 py-3"
+              className="rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-[var(--bg-secondary)] px-3 py-2.5"
               key={index}
             >
-              <strong className="block text-xs font-semibold uppercase tracking-wide text-[var(--accent)]">
+              <strong className="block text-[11px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
                 {t("note")}
               </strong>
               <p className="mt-1 text-[var(--text)]">{block.text}</p>

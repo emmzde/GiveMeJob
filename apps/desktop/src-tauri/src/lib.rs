@@ -10,6 +10,7 @@ mod ipc;
 mod match_score;
 mod original;
 mod search;
+mod support;
 mod user;
 
 use catalog::{readonly_connection, CatalogHandle, CatalogManager, CatalogStatus};
@@ -31,6 +32,7 @@ use search::{
     autocomplete_skills as search_skill_suggestions, get_facets,
     get_filter_options as load_filter_options, get_job_detail, search_catalog,
 };
+use support::{open_support_with, SupportLink};
 use user::{
     ProfileInput, SetShortlistInput, ShortlistRecord, ShortlistState, UserProfile, UserStore,
 };
@@ -116,6 +118,11 @@ async fn open_original(job_id: Value, state: State<'_, CatalogManager>) -> Resul
         })
     })
     .await
+}
+
+#[tauri::command]
+fn open_support_link(link: SupportLink) -> Result<(), IpcError> {
+    open_support_with(link, |url| tauri_plugin_opener::open_url(url, None::<&str>))
 }
 
 fn parse_job_id(id: Value) -> Result<JobId, IpcError> {
@@ -425,6 +432,7 @@ pub fn run() {
             search_jobs,
             get_job,
             open_original,
+            open_support_link,
             get_search_facets,
             get_filter_options,
             autocomplete_skills,

@@ -61,6 +61,7 @@ describe("Emmy strict contracts", () => {
         jobCards: ["1", "2"],
         quickReplies: ["Сравни их"],
         mascotState: "success",
+        conversationMemory: "Пользователь ищет Rust-вакансии.",
       },
     };
     expect(emmyModelOutputSchema.safeParse(valid).success).toBe(true);

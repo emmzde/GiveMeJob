@@ -35,6 +35,7 @@ function ScreenSkeleton({ label }: { label: string }) {
 export function App() {
   const screen = useAppUiStore((state) => state.screen);
   const profileVisited = useAppUiStore((state) => state.profileVisited);
+  useAppUiStore((state) => state.language);
   const catalogStatus = useCatalogStatus();
   const catalog = {
     status: catalogStatus.data,
@@ -44,7 +45,7 @@ export function App() {
 
   return (
     <AppShell catalog={catalog}>
-      <div className="h-full" hidden={screen !== "search"}>
+      <div className="app-screen-motion h-full" data-active={screen === "search"} hidden={screen !== "search"}>
         <SearchScreen
           catalog={catalog}
           isRecovering={catalogStatus.isRecovering}
@@ -52,21 +53,25 @@ export function App() {
         />
       </div>
       {screen === "shortlist" ? (
-        <Suspense fallback={<ScreenSkeleton label={t("shortlistTitle")} />}>
-          <ShortlistView catalogVersion={catalog.status?.catalogVersion ?? null} />
-        </Suspense>
+        <div className="app-screen-motion h-full" data-active="true">
+          <Suspense fallback={<ScreenSkeleton label={t("shortlistTitle")} />}>
+            <ShortlistView catalogVersion={catalog.status?.catalogVersion ?? null} />
+          </Suspense>
+        </div>
       ) : null}
       {profileVisited || screen === "profile" ? (
-        <div className="h-full" hidden={screen !== "profile"}>
+        <div className="app-screen-motion h-full" data-active={screen === "profile"} hidden={screen !== "profile"}>
           <Suspense fallback={<ScreenSkeleton label={t("profileTitle")} />}>
             <ProfileView />
           </Suspense>
         </div>
       ) : null}
       {screen === "settings" ? (
-        <Suspense fallback={<ScreenSkeleton label={t("settingsTitle")} />}>
-          <SettingsView catalog={catalog} />
-        </Suspense>
+        <div className="app-screen-motion h-full" data-active="true">
+          <Suspense fallback={<ScreenSkeleton label={t("settingsTitle")} />}>
+            <SettingsView catalog={catalog} />
+          </Suspense>
+        </div>
       ) : null}
       <ShortlistShortcut />
     </AppShell>

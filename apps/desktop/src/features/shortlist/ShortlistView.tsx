@@ -19,7 +19,7 @@ import type { JobId } from "@/lib/catalog";
 import { getLocaleTag, t } from "@/lib/i18n";
 
 const VIRTUALIZATION_THRESHOLD = 50;
-const ROW_ESTIMATE = 116;
+const ROW_ESTIMATE = 92;
 
 export function ShortlistView({ catalogVersion }: { catalogVersion: string | null }) {
   const setScreen = useAppUiStore((state) => state.setScreen);
@@ -69,10 +69,7 @@ export function ShortlistView({ catalogVersion }: { catalogVersion: string | nul
     const isCurrentCatalog = record.catalogVersion === catalogVersion;
     const job = isCurrentCatalog ? query?.data : undefined;
     return (
-      <div className="flex min-h-[112px] items-start gap-3 px-5 py-4">
-        <div className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] text-xs font-semibold text-[var(--text-secondary)]">
-          {job?.company.slice(0, 1).toLocaleUpperCase(getLocaleTag()) ?? "G"}
-        </div>
+      <div className="flex min-h-[88px] items-start gap-3 px-4 py-3">
         <div className="min-w-0 flex-1">
           {query?.isPending && isCurrentCatalog ? (
             <div aria-label={t("openShortlistJob")} className="space-y-2" role="status">
@@ -86,14 +83,14 @@ export function ShortlistView({ catalogVersion }: { catalogVersion: string | nul
                 onClick={() => openJob(job.id)}
                 type="button"
               >
-                <span className="block break-words text-sm font-semibold leading-5">
+                <span className="block break-words text-[13px] font-semibold leading-5">
                   {normalizeJobTitle(job.title)}
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-[var(--text-secondary)]">
                   {job.company}
                 </span>
               </button>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-[var(--text-tertiary)]">
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--text-tertiary)]">
                 {job.locationText ? (
                   <span className="inline-flex min-w-0 items-center gap-1">
                     <MapPin aria-hidden="true" className="size-3.5 shrink-0" />
@@ -109,8 +106,8 @@ export function ShortlistView({ catalogVersion }: { catalogVersion: string | nul
             </>
           ) : (
             <div>
-              <p className="text-sm font-medium">{t("shortlistJobUnavailable")}</p>
-              <p className="mt-1 text-[10px] text-[var(--text-tertiary)]">
+              <p className="text-[13px] font-medium">{t("shortlistJobUnavailable")}</p>
+              <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">
                 ID {record.jobId} · catalog {record.catalogVersion}
               </p>
             </div>
@@ -131,33 +128,30 @@ export function ShortlistView({ catalogVersion }: { catalogVersion: string | nul
   }
 
   return (
-    <div className="surface-page flex h-full min-h-0 flex-col">
-      <header className="shrink-0 border-b border-dashed border-[var(--border)] px-8 py-7">
-        <div className="flex items-start gap-3">
-          <div className="grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--panel-card)]">
-            <Bookmark aria-hidden="true" className="size-4 text-[var(--text-secondary)]" />
-          </div>
+    <div className="workspace-page">
+      <section className="workspace-frame">
+      <header className="workspace-header">
           <div className="min-w-0">
-            <h1 className="text-[22px] font-semibold tracking-[-0.025em]">{t("shortlistTitle")}</h1>
-            <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
+            <h1 className="workspace-title">{t("shortlistTitle")}</h1>
+            <p className="workspace-description">
               {t("shortlistDescription")}
             </p>
           </div>
           {!shortlist.isPending && !shortlist.isError ? (
-            <span className="ml-auto text-xs tabular-nums text-[var(--text-tertiary)]">
+            <span className="ui-mono mt-1 text-xs text-[var(--text-secondary)]">
               {records.length}
             </span>
           ) : null}
-        </div>
       </header>
       {shortlist.isPending ? (
-        <div className="space-y-3 p-6" role="status" aria-label={t("shortlistTitle")}>
-          <div className="h-24 animate-pulse rounded-[var(--radius-md)] bg-[var(--surface-1)]" />
-          <div className="h-24 animate-pulse rounded-[var(--radius-md)] bg-[var(--surface-1)]" />
+        <div className="divide-y divide-[var(--border)]" role="status" aria-label={t("shortlistTitle")}>
+          <div className="h-[88px] animate-pulse bg-[var(--surface-1)]" />
+          <div className="h-[88px] animate-pulse bg-[var(--surface-1)]" />
+          <div className="h-[88px] animate-pulse bg-[var(--surface-1)]" />
         </div>
       ) : null}
       {shortlist.isError ? (
-        <div className="m-6 alert-card" role="alert">
+        <div className="m-4 alert-card" role="alert">
           <p>{t("shortlistLoadError")}</p>
           <Button className="mt-3" onClick={() => void shortlist.refetch()} type="button" variant="outline">
             {t("shortlistRetry")}
@@ -171,7 +165,7 @@ export function ShortlistView({ catalogVersion }: { catalogVersion: string | nul
           <p className="mt-2 max-w-sm text-xs leading-5 text-[var(--text-secondary)]">
             {t("shortlistEmptyHint")}
           </p>
-          <Button className="mx-auto mt-5" onClick={() => setScreen("search")} type="button" variant="accent">
+          <Button className="mx-auto mt-5" onClick={() => setScreen("search")} type="button">
             {t("jobs")}
           </Button>
         </div>
@@ -203,6 +197,7 @@ export function ShortlistView({ catalogVersion }: { catalogVersion: string | nul
           )}
         </div>
       ) : null}
+      </section>
     </div>
   );
 }

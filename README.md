@@ -40,9 +40,11 @@ GiveMeJob! — open-source portfolio pet-project: локальное Windows-п�
   `s`;
 - детерминированный on-demand match-score с пятью компонентами, strengths и
   gaps;
-- Rust `LLMRouter` с последовательным Groq → Gemini → OpenRouter → Cerebras
-  fallback, timeout, `Retry-After`, cooldown и in-memory health metrics;
-- закрытые Rust/zod-схемы Emmy, максимум 12 сообщений и четыре tool-шага;
+- Rust `LLMRouter` с OpenRouter-first native tool calling, последовательным
+  failover без model racing, трёхсекундным attempt timeout и 15-секундным
+  budget всего Emmy turn;
+- закрытые Rust/zod-схемы Emmy, максимум 12 сырых сообщений, переносимая
+  memory-сводка разговора и четыре tool-шага;
 - ровно пять локальных tools: `search_jobs`, `get_job`, `compare_jobs`,
   `get_match_breakdown`, `set_shortlist` с отдельным подтверждением записи;
 - настоящий Emmy chat с timeline, tool activity, job cards, comparison table,

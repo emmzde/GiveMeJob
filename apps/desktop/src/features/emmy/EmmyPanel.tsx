@@ -1,20 +1,20 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowRight,
+  ArrowUpRight,
+  Bookmark,
+  ChevronDown,
+  ChevronsRight,
+  CircleGauge,
+  FileSearch,
   GitCompareArrows,
   History,
-  Lock,
   Plus,
   RotateCcw,
-  Search,
-  Send,
   Settings,
-  Target,
-  X,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
-import type { LucideIcon } from "lucide-react";
 
 import { useAppUiStore } from "@/app/store/appUiStore";
 import { Button } from "@/components/ui/button";
@@ -35,12 +35,14 @@ import type {
   ShortlistPreview,
 } from "@/lib/emmy";
 import { t } from "@/lib/i18n";
+import type { MessageKey } from "@/lib/i18n";
 
-const starterReplies: readonly { icon: LucideIcon; reply: string }[] = [
-  { icon: Search, reply: t("emmyStarterFind") },
-  { icon: GitCompareArrows, reply: t("emmyStarterCompare") },
-  { icon: Target, reply: t("emmyStarterMatch") },
-] as const;
+const starterReplies = [
+  { icon: FileSearch, labelKey: "emmyToolSearch", replyKey: "emmyStarterFind" },
+  { icon: GitCompareArrows, labelKey: "emmyToolCompare", replyKey: "emmyStarterCompare" },
+  { icon: CircleGauge, labelKey: "emmyToolMatch", replyKey: "emmyStarterMatch" },
+  { icon: Bookmark, labelKey: "shortlist", replyKey: "emmyStarterShortlist" },
+] as const satisfies ReadonlyArray<{ icon: LucideIcon; labelKey: MessageKey; replyKey: MessageKey }>;
 
 export function EmmyPanel({ onClose }: { onClose(): void }) {
   const configuration = useEmmyConfiguration();
@@ -51,6 +53,7 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
   const [draft, setDraft] = useState("");
   const [optimisticText, setOptimisticText] = useState<string | null>(null);
   const [liveEvent, setLiveEvent] = useState<EmmyStateEvent | null>(null);
+  const [revealMessageId, setRevealMessageId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [confirmationPending, setConfirmationPending] = useState<string | null>(null);
@@ -65,7 +68,7 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
     retry: false,
     staleTime: 15_000,
   });
-  const resolvedActiveId = activeId ?? conversations.data?.[0]?.id ?? null;
+  const resolvedActiveId = activeId;
   const conversation = useQuery({
     enabled: resolvedActiveId !== null && configuration.data?.available === true,
     queryFn: () => emmyApi.loadConversation(resolvedActiveId ?? ""),
@@ -159,6 +162,10 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
         text,
       });
       setActiveId(result.conversationId);
+      const latestAssistant = [...result.messages]
+        .reverse()
+        .find((message) => message.content.type === "assistant");
+      setRevealMessageId(latestAssistant?.id ?? null);
       updateConversationCache(result);
       setLiveEvent({ state: result.state, tool: null, step: 0 });
       await Promise.all([
@@ -185,13 +192,15 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
     void sendText(draft);
   }
 
-  async function createConversation(): Promise<void> {
-    if (!available || busy) return;
+  function startNewConversation(): void {
+    if (busy) return;
     setHistoryOpen(false);
-    const created = await emmyApi.createConversation();
-    queryClient.setQueryData(emmyConversationQueryKey(created.conversation.id), created);
-    setActiveId(created.conversation.id);
-    await queryClient.invalidateQueries({ queryKey: emmyConversationsQueryKey });
+    setActiveId(null);
+    setDraft("");
+    setOptimisticText(null);
+    setRevealMessageId(null);
+    setLiveEvent(available ? { state: "idle", tool: null, step: 0 } : null);
+    setConfirmationPending(null);
     requestAnimationFrame(() => composerRef.current?.focus());
   }
 
@@ -232,13 +241,13 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
   return (
     <aside
       aria-label={t("emmyPanelLabel")}
-      className="emmy-panel relative flex h-full min-w-0 flex-col bg-[var(--surface-0)]"
+      className="emmy-panel relative flex h-full min-w-0 flex-col bg-[var(--emmy-bg)]"
     >
       <header className="relative flex h-12 shrink-0 items-center gap-2 px-4">
-        <EmmyMascot className="size-7" state={mascotState} />
-        <div className="min-w-0 flex-1 leading-tight">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
           <p className="truncate text-[13px] font-semibold leading-4">{conversationTitle}</p>
-          <p className="text-[11px] leading-4 text-[var(--text-tertiary)]">{stateLabel}</p>
+          <ChevronDown aria-hidden="true" className="size-3.5 shrink-0 text-[var(--text-tertiary)]" />
+          <span className="sr-only">{stateLabel}</span>
         </div>
         <Button
           aria-controls="emmy-history-popover"
@@ -256,7 +265,7 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
           aria-label={t("emmyNewConversation")}
           className="size-7 px-0"
           disabled={!available || busy}
-          onClick={() => void createConversation()}
+          onClick={startNewConversation}
           type="button"
           variant="ghost"
         >
@@ -269,12 +278,12 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
           type="button"
           variant="ghost"
         >
-          <X aria-hidden="true" className="size-4" />
+          <ChevronsRight aria-hidden="true" className="size-4" />
         </Button>
         {historyOpen ? (
           <div
             aria-label={t("emmyRecentConversations")}
-            className="absolute left-2 right-2 top-10 z-20 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--surface-1)] shadow-[var(--shadow-md)]"
+            className="emmy-history-popover absolute left-2 right-2 top-10 z-20 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--surface-1)] shadow-[var(--shadow-md)]"
             id="emmy-history-popover"
             onBlur={(event) => {
               const next = event.relatedTarget;
@@ -297,6 +306,7 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
                   key={item.id}
                   onClick={() => {
                     setActiveId(item.id);
+                    setRevealMessageId(null);
                     setHistoryOpen(false);
                     requestAnimationFrame(() => historyButtonRef.current?.focus());
                   }}
@@ -346,18 +356,22 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
           onConfirm={(preview, confirmed) => void confirmShortlist(preview, confirmed)}
           onOpenJob={openJob}
           onQuickReply={(reply) => void sendText(reply)}
+          onRevealComplete={(messageId) => {
+            setRevealMessageId((current) => current === messageId ? null : current);
+          }}
           optimisticText={optimisticText}
+          revealMessageId={revealMessageId}
         />
       ) : (
         <WelcomeState onReply={(reply) => void sendText(reply)} />
       )}
 
-      <form className="p-3" onSubmit={submit}>
-        <div className="emmy-composer-shell rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--panel-card)] p-3 shadow-[var(--shadow-sm)]">
+      <form className="px-4 pb-4 pt-2" onSubmit={submit}>
+        <div className="emmy-composer-shell flex min-h-[96px] flex-col rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-[var(--surface-2)] px-3 pb-2 pt-2.5">
           <label className="sr-only" htmlFor="emmy-composer">{available ? t("emmyInputPlaceholder") : t("emmyUnavailable")}</label>
           <textarea
             aria-label={available ? t("emmyInputPlaceholder") : t("emmyUnavailable")}
-            className="emmy-composer block h-16 w-full resize-none bg-transparent px-0.5 text-[13px] leading-5 text-[var(--text)] outline-none placeholder:text-[var(--text-placeholder)] disabled:text-[var(--text-disabled)]"
+            className="emmy-composer block min-h-10 w-full flex-1 resize-none bg-transparent px-0.5 text-[13px] leading-5 text-[var(--text)] outline-none placeholder:text-[var(--text-placeholder)] disabled:text-[var(--text-disabled)]"
             disabled={!available || busy}
             id="emmy-composer"
             maxLength={4_000}
@@ -373,18 +387,16 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
             ref={composerRef}
             value={draft}
           />
-          <div className="mt-1 flex items-center justify-between gap-2">
-            <span className="flex min-w-0 items-center gap-1 truncate text-[11px] leading-4 text-[var(--text-tertiary)]">
-              {!available ? <Lock aria-hidden="true" className="size-3 shrink-0" /> : null}
-              {available ? t("emmySendHint") : t("emmyUnavailable")}
-            </span>
+          <div className="mt-1 flex items-center justify-end border-t border-[var(--border)] pt-1.5">
             <button
               aria-label={busy ? t("emmyWorking") : t("emmySend")}
-              className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--text)] text-[var(--bg)] transition-[transform,opacity,background-color] duration-150 ease-[var(--ease)] active:scale-[0.96] hover:opacity-90 disabled:bg-[var(--surface-3)] disabled:text-[var(--text-disabled)] disabled:active:scale-100"
+              className="emmy-send-button group grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--text)] bg-[var(--text)] text-[var(--bg)] transition-[transform,opacity,background-color,border-color] duration-150 ease-[var(--ease)] active:scale-[0.95] hover:opacity-90 disabled:border-[var(--border)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-disabled)] disabled:active:scale-100"
               disabled={!available || busy || draft.trim().length === 0}
               type="submit"
             >
-              <Send aria-hidden="true" className="size-3.5" />
+              <svg aria-hidden="true" className="size-4" fill="none" viewBox="0 0 20 20">
+                <path d="M4 10 10 4l6 6M10 5v11" stroke="currentColor" strokeLinecap="square" strokeLinejoin="miter" strokeWidth="1.6" />
+              </svg>
             </button>
           </div>
         </div>
@@ -396,7 +408,7 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
 function OfflineState({ onSettings }: { onSettings(): void }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col justify-end px-5 pb-5">
-      <EmmyMascot className="size-24" state="offline" />
+      <EmmyMascot className="size-24" interactive state="offline" trackPointer />
       <h2 className="mt-3 max-w-64 text-[21px] font-bold leading-7 tracking-[-0.025em]">{t("emmyOfflineTitle")}</h2>
       <p className="mt-2 max-w-72 text-[13px] leading-5 text-[var(--text-secondary)]">{t("emmyOfflineDescription")}</p>
       <Button className="mt-4 self-start" onClick={onSettings} type="button" variant="outline">
@@ -409,28 +421,31 @@ function OfflineState({ onSettings }: { onSettings(): void }) {
 
 function WelcomeState({ onReply }: { onReply(reply: string): void }) {
   return (
-    <div className="scroll-region flex min-h-0 flex-1 flex-col justify-end overflow-y-auto px-5 pb-5">
-      <EmmyMascot className="size-24" state="idle" />
-      <h2 className="mt-3 max-w-64 text-[21px] font-bold leading-7 tracking-[-0.025em]">{t("emmyWelcomeTitle")}</h2>
-      <p className="mt-2 max-w-72 text-[13px] leading-5 text-[var(--text-secondary)]">{t("emmyWelcomeDescription")}</p>
-      <div className="mt-5 grid gap-2">
-        {starterReplies.map(({ icon: StarterIcon, reply }) => (
-          <button
-            className="group flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--panel-card)] px-3 py-2.5 text-left text-[13px] leading-5 text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
-            key={reply}
-            onClick={() => onReply(reply)}
-            type="button"
-          >
-            <span className="grid size-7 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-[var(--bg-secondary)] text-[var(--text)]">
-              <StarterIcon aria-hidden="true" className="size-4" />
-            </span>
-            <span className="min-w-0 flex-1">{reply}</span>
-            <ArrowRight
-              aria-hidden="true"
-              className="size-4 shrink-0 text-[var(--text-tertiary)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--accent)]"
-            />
-          </button>
-        ))}
+    <div className="scroll-region flex min-h-0 flex-1 flex-col justify-end overflow-y-auto px-5 pb-4">
+      <div className="emmy-welcome">
+        <EmmyMascot className="emmy-welcome-mascot size-20" interactive state="idle" trackPointer />
+        <h2 className="emmy-welcome-title mt-3 text-[18px] font-bold leading-6 tracking-[-0.025em]">
+          {t("emmyWelcomeTitle")}
+        </h2>
+        <div aria-label={t("emmyWelcomeTitle")} className="emmy-starter-list mt-4" role="group">
+          {starterReplies.map(({ icon: Icon, labelKey, replyKey }) => {
+            const label = t(labelKey);
+            const reply = t(replyKey);
+            return (
+              <button
+                aria-label={reply}
+                className="emmy-starter-row group flex h-9 w-full items-center gap-3 rounded-[var(--radius-md)] px-1.5 text-left text-[13px] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] active:scale-[0.99]"
+                key={replyKey}
+                onClick={() => onReply(reply)}
+                type="button"
+              >
+                <Icon aria-hidden="true" className="size-4 shrink-0 text-[var(--text-tertiary)] transition-transform duration-150 ease-[var(--ease)] group-hover:-translate-y-px group-hover:text-[var(--text)]" />
+                <span className="min-w-0 flex-1 truncate font-medium">{label}</span>
+                <ArrowUpRight aria-hidden="true" className="size-3.5 shrink-0 translate-x-1 text-[var(--text-disabled)] opacity-0 transition-[transform,opacity] duration-150 ease-[var(--ease)] group-hover:translate-x-0 group-hover:opacity-100" />
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

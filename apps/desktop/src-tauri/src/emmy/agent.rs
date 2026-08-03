@@ -1,4 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
+
+use tokio::time::{timeout, Instant};
 
 use crate::{
     catalog::CatalogHandle,
@@ -18,6 +20,8 @@ use super::{
     tools::ToolExecutor,
 };
 
+const MAX_TURN_DURATION: Duration = Duration::from_secs(15);
+
 pub(crate) async fn run_turn<F>(
     request: EmmySendRequest,
     catalog: CatalogHandle,
@@ -28,6 +32,21 @@ pub(crate) async fn run_turn<F>(
 where
     F: Fn(EmmyStateEvent) + Send + Sync,
 {
+    run_turn_with_budget(request, catalog, user, router, MAX_TURN_DURATION, emit).await
+}
+
+async fn run_turn_with_budget<F>(
+    request: EmmySendRequest,
+    catalog: CatalogHandle,
+    user: UserStore,
+    router: &LlmRouter,
+    turn_budget: Duration,
+    emit: F,
+) -> Result<EmmyTurnResult, LlmError>
+where
+    F: Fn(EmmyStateEvent) + Send + Sync,
+{
+    let turn_deadline = Instant::now() + turn_budget;
     let request = request.validate_and_normalize()?;
     let initial_capability = classify_capability(&request.text);
     let conversation = run_user(user.clone(), {
@@ -49,6 +68,11 @@ where
     })
     .await?;
     let stored = load_conversation(conversation.id.clone(), user.clone()).await?;
+    let conversation_memory = run_user(user.clone(), {
+        let conversation_id = conversation.id.clone();
+        move |store| store.load_conversation_memory(&conversation_id)
+    })
+    .await?;
     let mut model_messages = to_model_context(&stored.messages)?;
     let (mut known_jobs, mut latest_comparison) = collect_artifacts(&stored.messages);
     let executor = ToolExecutor::new(catalog, user.clone());
@@ -64,10 +88,44 @@ where
     });
 
     loop {
-        let routed = match router.complete(capability, &model_messages).await {
-            Ok(routed) => routed,
-            Err(error) => {
+        let remaining = turn_deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            eprintln!(
+                "[emmy-agent] outcome=turn_timeout budget_ms={}",
+                turn_budget.as_millis()
+            );
+            return finish_with_error(
+                &conversation.id,
+                user,
+                new_messages,
+                LlmError::Timeout,
+                &emit,
+            )
+            .await;
+        }
+        let routed = match timeout(
+            remaining,
+            router.complete(capability, &model_messages, conversation_memory.as_deref()),
+        )
+        .await
+        {
+            Ok(Ok(routed)) => routed,
+            Ok(Err(error)) => {
                 return finish_with_error(&conversation.id, user, new_messages, error, &emit).await;
+            }
+            Err(_) => {
+                eprintln!(
+                    "[emmy-agent] outcome=turn_timeout budget_ms={}",
+                    turn_budget.as_millis()
+                );
+                return finish_with_error(
+                    &conversation.id,
+                    user,
+                    new_messages,
+                    LlmError::Timeout,
+                    &emit,
+                )
+                .await;
             }
         };
         match routed.output {
@@ -86,6 +144,7 @@ where
                 };
                 let assistant = run_user(user, {
                     let conversation_id = conversation.id.clone();
+                    let conversation_memory = response.conversation_memory.trim().to_owned();
                     let content = EmmyMessageContent::Assistant {
                         text: response.message.trim().to_owned(),
                         job_cards,
@@ -93,11 +152,7 @@ where
                         comparison: latest_comparison,
                     };
                     move |store| {
-                        store.append_emmy_message(
-                            &conversation_id,
-                            EmmyMessageRole::Assistant,
-                            content,
-                        )
+                        store.append_emmy_response(&conversation_id, content, &conversation_memory)
                     }
                 })
                 .await?;
@@ -390,8 +445,11 @@ mod tests {
     use crate::{
         catalog::CatalogHandle,
         emmy::{
-            credentials::tests_support::FakeCredentials,
-            providers::tests_support::FakeProviderTransport,
+            credentials::{tests_support::FakeCredentials, CredentialManager},
+            providers::{
+                tests_support::FakeProviderTransport, ProviderFuture, ProviderRequest,
+                ProviderTransport,
+            },
         },
         user::UserStore,
     };
@@ -402,6 +460,21 @@ mod tests {
         _directory: TempDir,
         catalog: CatalogHandle,
         user: UserStore,
+    }
+
+    struct SlowProviderTransport;
+
+    impl ProviderTransport for SlowProviderTransport {
+        fn complete<'a>(
+            &'a self,
+            _request: &'a ProviderRequest,
+            _api_key: &'a str,
+        ) -> ProviderFuture<'a> {
+            Box::pin(async move {
+                tokio::time::sleep(Duration::from_secs(1)).await;
+                Ok(final_response())
+            })
+        }
     }
 
     impl Fixture {
@@ -483,7 +556,8 @@ mod tests {
                 "message": "Нашла локальную вакансию.",
                 "jobCards": ["1"],
                 "quickReplies": ["Покажи совпадение"],
-                "mascotState": "success"
+                "mascotState": "success",
+                "conversationMemory": "Пользователь ищет Rust-вакансии и рассматривает вакансию 1."
             }
         })
         .to_string()
@@ -494,6 +568,8 @@ mod tests {
         let fixture = Fixture::new();
         let transport = Arc::new(FakeProviderTransport::new(vec![
             Ok(search_call()),
+            Ok(final_response()),
+            Err(LlmError::Timeout),
             Ok(final_response()),
         ]));
         let router = LlmRouter::with_dependencies(
@@ -507,8 +583,8 @@ mod tests {
                 conversation_id: None,
                 text: "Найди Rust вакансии".to_owned(),
             },
-            fixture.catalog,
-            fixture.user,
+            fixture.catalog.clone(),
+            fixture.user.clone(),
             &router,
             |_| {},
         )
@@ -529,6 +605,101 @@ mod tests {
             .expect("tool context")
             .content
             .contains("UNTRUSTED VACANCY DATA"));
+        assert_eq!(
+            fixture
+                .user
+                .load_conversation_memory(&result.conversation_id)
+                .expect("memory should remain readable")
+                .as_deref(),
+            Some("Пользователь ищет Rust-вакансии и рассматривает вакансию 1.")
+        );
+
+        let second_turn = run_turn(
+            EmmySendRequest {
+                conversation_id: Some(result.conversation_id),
+                text: "Какие навыки мне подтянуть?".to_owned(),
+            },
+            fixture.catalog,
+            fixture.user,
+            &router,
+            |_| {},
+        )
+        .await
+        .expect("second turn should survive a model switch");
+        assert_eq!(
+            second_turn.provider,
+            Some(super::super::contracts::EmmyProvider::Groq)
+        );
+        let requests = transport.requests();
+        assert_eq!(requests.len(), 4);
+        assert_eq!(requests[2].model, "inclusionai/ling-3.0-flash:free");
+        assert_eq!(requests[3].model, "llama-3.1-8b-instant");
+        assert!(requests[2..].iter().all(|request| request
+            .system_prompt
+            .contains("Пользователь ищет Rust-вакансии и рассматривает вакансию 1.")));
+    }
+
+    #[tokio::test]
+    async fn whole_turn_stops_at_the_configured_budget() {
+        let fixture = Fixture::new();
+        let router = LlmRouter::with_dependencies(
+            Arc::new(SlowProviderTransport),
+            Arc::new(FakeCredentials::configured()),
+            Duration::from_secs(1),
+        )
+        .expect("provider schema should build");
+        let started = Instant::now();
+        let result = run_turn_with_budget(
+            EmmySendRequest {
+                conversation_id: None,
+                text: "Привет".to_owned(),
+            },
+            fixture.catalog,
+            fixture.user,
+            &router,
+            Duration::from_millis(10),
+            |_| {},
+        )
+        .await
+        .expect("timeout should be a typed turn result");
+
+        assert_eq!(result.error, Some(LlmError::Timeout));
+        assert!(started.elapsed() < Duration::from_millis(250));
+        assert!(matches!(
+            result.messages.last().map(|message| &message.content),
+            Some(EmmyMessageContent::Notice {
+                error: LlmError::Timeout
+            })
+        ));
+    }
+
+    #[tokio::test]
+    #[ignore = "uses configured provider credentials and performs live model requests"]
+    async fn live_openrouter_search_turn_completes_within_fifteen_seconds() {
+        let fixture = Fixture::new();
+        let router = LlmRouter::new(Arc::new(CredentialManager))
+            .expect("live provider router should initialize");
+        let started = Instant::now();
+        let result = run_turn(
+            EmmySendRequest {
+                conversation_id: None,
+                text: "Найди одну удалённую вакансию Rust.".to_owned(),
+            },
+            fixture.catalog,
+            fixture.user,
+            &router,
+            |_| {},
+        )
+        .await
+        .expect("live turn should return a typed result");
+
+        assert!(started.elapsed() < Duration::from_secs(15));
+        assert_eq!(result.error, None);
+        assert!(result.provider.is_some());
+        assert!(matches!(
+            result.messages.last().map(|message| &message.content),
+            Some(EmmyMessageContent::Assistant { .. })
+        ));
     }
 
     #[tokio::test]
@@ -588,7 +759,8 @@ mod tests {
                 "message": "Подтвердите сохранение.",
                 "jobCards": ["1"],
                 "quickReplies": [],
-                "mascotState": "success"
+                "mascotState": "success",
+                "conversationMemory": "Пользователь хочет сохранить вакансию 1."
             }
         })
         .to_string();

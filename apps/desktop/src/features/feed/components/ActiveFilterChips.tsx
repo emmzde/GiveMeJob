@@ -17,23 +17,23 @@ export function ActiveFilterChips({ draft, onChange }: ActiveFilterChipsProps) {
   return (
     <div
       aria-label={t("selectedFilters")}
-      className="mt-3 flex flex-wrap items-center gap-1.5"
+      className="mt-2.5 flex flex-wrap items-center gap-1.5"
       role="group"
     >
       {chips.map((chip) => (
         <button
           aria-label={`${t("removeFilter")}: ${chip.label}`}
-          className="inline-flex min-h-8 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-2.5 text-xs hover:bg-[var(--bg-hover)]"
+          className="inline-flex min-h-7 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-0)] px-2 text-[11px] hover:bg-[var(--bg-hover)]"
           key={chip.id}
           onClick={() => onChange(chip.remove(draft))}
           type="button"
         >
           <span>{chip.label}</span>
-          <X aria-hidden="true" className="size-4" />
+          <X aria-hidden="true" className="size-3.5" />
         </button>
       ))}
       <button
-        className="min-h-8 px-2 text-xs text-[var(--text-secondary)] underline-offset-2 hover:underline"
+        className="min-h-7 px-2 text-[11px] text-[var(--text-secondary)] underline-offset-2 hover:underline"
         onClick={() => onChange(resetSearchFilters(draft))}
         title={t("clearAllFiltersHint")}
         type="button"

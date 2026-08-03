@@ -60,13 +60,13 @@ export function MatchBreakdownCard({ breakdown }: { breakdown: MatchBreakdown })
   return (
     <section
       aria-labelledby="match-breakdown-heading"
-      className="surface-card mt-5 p-5"
+      className="surface-card mt-4 p-4"
     >
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="text-base font-semibold" id="match-breakdown-heading">
           {t("matchBreakdown")}
         </h3>
-        <p className="text-sm font-semibold tabular-nums text-[var(--accent)]">
+        <p className="text-sm font-semibold tabular-nums text-[var(--text)]">
           {breakdown.score}% {t("matchLabel")}
         </p>
       </div>
@@ -78,7 +78,7 @@ export function MatchBreakdownCard({ breakdown }: { breakdown: MatchBreakdown })
               {score === null ? null : (
                 <span
                   aria-hidden="true"
-                  className="block h-full bg-[var(--accent)]"
+                  className="block h-full bg-[var(--text-secondary)]"
                   style={{ width: `${score}%` }}
                 />
               )}

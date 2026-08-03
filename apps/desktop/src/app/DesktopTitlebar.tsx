@@ -1,9 +1,8 @@
-import { ChevronRight, Minus, Search, Settings, Square, X } from "lucide-react";
-import type { ReactNode, RefObject } from "react";
+import { Minus, Settings, Square, X } from "lucide-react";
+import type { ReactNode } from "react";
 
 import type { AppScreen } from "@/app/store/appUiStore";
 import { useAppUiStore } from "@/app/store/appUiStore";
-import { Kbd } from "@/components/ui/kbd";
 import { catalogStateLabel, isCatalogError } from "@/features/catalog/catalogStatus";
 import type { CatalogViewState } from "@/features/catalog/catalogStatus";
 import { EmmyMascot } from "@/features/emmy/EmmyMascot";
@@ -12,16 +11,15 @@ import { t } from "@/lib/i18n";
 import { desktopWindow } from "@/lib/tauri/window";
 import { cn } from "@/lib/utils";
 
-const screenLabels: Readonly<Record<AppScreen, string>> = {
-  search: t("jobs"),
-  shortlist: t("shortlist"),
-  profile: t("profile"),
-  settings: t("settings"),
-};
+function screenLabel(screen: AppScreen): string {
+  if (screen === "shortlist") return t("shortlist");
+  if (screen === "profile") return t("profile");
+  if (screen === "settings") return t("settings");
+  return t("jobs");
+}
 
 interface DesktopTitlebarProps {
   catalog: CatalogViewState;
-  commandTriggerRef: RefObject<HTMLButtonElement | null>;
 }
 
 function WindowButton({
@@ -39,7 +37,7 @@ function WindowButton({
     <button
       aria-label={label}
       className={cn(
-        "grid h-14 w-11 place-items-center text-[var(--text-tertiary)] focus-visible:z-10",
+        "grid h-[var(--titlebar-height)] w-10 place-items-center text-[var(--text-tertiary)] focus-visible:z-10",
         danger
           ? "hover:bg-[var(--danger)] hover:text-[var(--on-danger)]"
           : "hover:bg-[var(--surface-hover)] hover:text-[var(--text)]",
@@ -52,11 +50,10 @@ function WindowButton({
   );
 }
 
-export function DesktopTitlebar({ catalog, commandTriggerRef }: DesktopTitlebarProps) {
+export function DesktopTitlebar({ catalog }: DesktopTitlebarProps) {
   const panel = useAppUiStore((state) => state.panel);
   const screen = useAppUiStore((state) => state.screen);
   const selectedId = useAppUiStore((state) => state.selectedId);
-  const setCommandPaletteOpen = useAppUiStore((state) => state.setCommandPaletteOpen);
   const setPanel = useAppUiStore((state) => state.setPanel);
   const setScreen = useAppUiStore((state) => state.setScreen);
   const catalogError = isCatalogError(catalog);
@@ -76,51 +73,32 @@ export function DesktopTitlebar({ catalog, commandTriggerRef }: DesktopTitlebarP
   }
 
   const currentLabel =
-    screen === "search" && selectedId !== null ? t("description") : screenLabels[screen];
+    screen === "search" && panel === "job_detail" && selectedId !== null
+      ? t("description")
+      : screenLabel(screen);
 
   return (
     <header
-      className="desktop-titlebar flex h-14 shrink-0 select-none items-center border-b border-[var(--border)] bg-[var(--surface-0)]"
+      className="desktop-titlebar flex h-[var(--titlebar-height)] shrink-0 select-none items-center border-b border-[var(--border)] bg-[var(--surface-0)]"
       data-tauri-drag-region
     >
       <div
-        className="flex h-full w-[260px] shrink-0 items-center gap-2.5 border-r border-[var(--border)] bg-[var(--sidebar)] px-5"
+        className="flex h-full w-[var(--sidebar-width)] shrink-0 items-center gap-2 border-r border-[var(--border)] bg-[var(--sidebar)] px-4"
         data-tauri-drag-region
       >
-        <img
-          alt=""
-          aria-hidden="true"
-          className="size-6 rounded-[5px]"
-          src="/givemejob-mark.svg"
-        />
-        <span className="text-[15px] font-bold tracking-[-0.02em] text-[var(--text)]">
-          GiveMeJob!
+        <span aria-hidden="true" className="brand-mark" />
+        <span className="brand-wordmark whitespace-nowrap text-[var(--text)]">
+          <span>GiveMe</span><span className="brand-wordmark-strong">Job!</span>
         </span>
       </div>
 
-      <div className="flex min-w-0 flex-1 items-center gap-2 px-8" data-tauri-drag-region>
-        <span className="text-xs text-[var(--text-secondary)]">{t("jobs")}</span>
-        <ChevronRight aria-hidden="true" className="size-3 text-[var(--text-disabled)]" />
+      <div className="flex min-w-0 flex-1 items-center gap-2 px-5" data-tauri-drag-region>
+        <span className="text-[12px] text-[var(--text-secondary)]">{t("jobs")}</span>
+        <span aria-hidden="true" className="px-1 text-[12px] text-[var(--text-disabled)]">/</span>
         <span className="truncate text-xs font-medium text-[var(--text)]">
           {currentLabel}
         </span>
         <span className="flex-1" data-tauri-drag-region />
-        <button
-          aria-label={t("openCommandPalette")}
-          className="flex h-8 w-full max-w-[280px] items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--sidebar-field)] px-2.5 text-left hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]"
-          onClick={() => setCommandPaletteOpen(true)}
-          ref={commandTriggerRef}
-          type="button"
-        >
-          <Search aria-hidden="true" className="size-3.5 text-[var(--text-tertiary)]" />
-          <span className="min-w-0 flex-1 truncate text-xs text-[var(--text-placeholder)]">
-            {t("commandPlaceholder")}
-          </span>
-          <span className="hidden items-center gap-0.5 sm:flex">
-            <Kbd>Ctrl</Kbd>
-            <Kbd>K</Kbd>
-          </span>
-        </button>
       </div>
 
       <div className="flex h-full shrink-0 items-center gap-1">
@@ -130,14 +108,14 @@ export function DesktopTitlebar({ catalog, commandTriggerRef }: DesktopTitlebarP
           className={cn(
             "emmy-titlebar-trigger flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] border px-2 text-[11px] font-medium",
             emmyOpen
-              ? "border-[var(--accent-border)] bg-[var(--accent-muted)] text-[var(--text)]"
+              ? "border-[var(--border-strong)] bg-[var(--surface-active)] text-[var(--text)]"
               : "border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]",
           )}
           onClick={toggleEmmy}
           title={emmyButtonLabel}
           type="button"
         >
-          <EmmyMascot className="size-5" state={mascotState} />
+          <EmmyMascot className="size-5" state={mascotState} trackPointer={emmyOpen} />
           <span className="hidden sm:inline">Emmy</span>
         </button>
         <button

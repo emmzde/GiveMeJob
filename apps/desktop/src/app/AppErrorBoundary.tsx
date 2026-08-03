@@ -35,13 +35,20 @@ export class AppErrorBoundary extends Component<
         >
           <section
             aria-live="assertive"
-            className="max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-raised)] p-6"
+            className="w-full max-w-md overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--panel-card)]"
             role="alert"
           >
-            <h1 className="text-lg font-semibold">{t("unexpectedErrorTitle")}</h1>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              {t("unexpectedErrorDescription")}
-            </p>
+            <header className="flex h-12 items-center gap-2 border-b border-[var(--border)] bg-[var(--panel-frame)] px-4">
+              <span aria-hidden="true" className="brand-mark size-5" />
+              <span className="brand-wordmark"><span>GiveMe</span><span className="brand-wordmark-strong">Job!</span></span>
+            </header>
+            <div className="p-5">
+              <p className="ui-mono text-[10px] uppercase tracking-[0.08em] text-[var(--danger)]">Error</p>
+              <h1 className="mt-2 text-lg font-semibold tracking-[-0.02em]">{t("unexpectedErrorTitle")}</h1>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                {t("unexpectedErrorDescription")}
+              </p>
+            </div>
           </section>
         </main>
       );

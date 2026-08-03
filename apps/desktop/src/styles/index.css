@@ -722,31 +722,97 @@ summary {
   padding: 0.875rem;
 }
 .profile-form-actions:not(:first-child) { border-top: 1px solid var(--border); }
-.provider-route { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-md); }
-.provider-route-row {
-  display: grid;
-  grid-template-columns: 42px minmax(142px, 0.72fr) minmax(220px, 1.4fr) auto;
+.custom-api-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--panel-card);
+  box-shadow: inset 0 1px color-mix(in srgb, white 4%, transparent), var(--shadow-sm);
+}
+.custom-api-card::before {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: var(--border-strong);
+  content: "";
+  transition: background-color 160ms var(--ease), box-shadow 160ms var(--ease);
+}
+.custom-api-card[data-configured="true"]::before {
+  background: var(--positive);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--positive) 45%, transparent);
+}
+.custom-api-card-header {
+  display: flex;
+  min-height: 64px;
   align-items: center;
   gap: 0.75rem;
   border-bottom: 1px solid var(--border);
-  padding: 0.75rem;
-  transition: background-color 140ms var(--ease);
-}
-.provider-route-row[data-primary="true"] {
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 38%),
+    repeating-linear-gradient(-55deg, transparent 0 6px, color-mix(in srgb, var(--border) 13%, transparent) 6px 7px),
     var(--panel-frame);
+  padding: 0.75rem 0.875rem;
 }
-.provider-route-index {
-  align-self: stretch;
+.custom-api-glyph {
   display: grid;
+  width: 34px;
+  height: 34px;
+  flex: none;
   place-items: center;
-  border-right: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--panel-card);
+  color: var(--text-secondary);
+  box-shadow: inset 0 1px color-mix(in srgb, white 4%, transparent);
+}
+.custom-api-protocol {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  padding: 0.15rem 0.35rem;
+  color: var(--text-tertiary);
+  font-size: 0.5625rem;
+  letter-spacing: 0.025em;
+}
+.custom-api-status {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.25rem;
   color: var(--text-tertiary);
   font-size: 0.625rem;
+  font-weight: 600;
 }
-.provider-route-controls { display: flex; min-width: 0; align-items: center; gap: 0.5rem; }
-.provider-route-status { min-width: 6rem; text-align: right; }
+.custom-api-card[data-configured="true"] .custom-api-status { color: var(--positive); }
+.custom-api-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(180px, 0.65fr);
+  gap: 0.75rem;
+  padding: 0.875rem;
+}
+.custom-api-field { display: grid; min-width: 0; gap: 0.35rem; }
+.custom-api-field > span {
+  color: var(--text-secondary);
+  font-size: 0.625rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.custom-api-field-key { grid-column: 1 / -1; }
+.custom-api-footer {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid var(--border);
+  background: var(--panel-frame);
+  padding: 0.625rem 0.875rem;
+}
+.custom-api-error { border-top: 1px solid var(--danger-border); padding: 0.55rem 0.875rem; }
 .search-overview {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 0.72fr);
@@ -1280,9 +1346,6 @@ summary {
 }
 
 @media (max-width: 899px) {
-  .provider-route-row { grid-template-columns: 34px minmax(0, 1fr) auto; }
-  .provider-route-controls { grid-column: 2 / -1; grid-row: 2; }
-  .provider-route-status { grid-column: 3; grid-row: 1; align-self: start; }
   .detail-panel[data-visible="true"] {
     position: fixed;
     z-index: 30;
@@ -1302,9 +1365,12 @@ summary {
   .profile-summary { margin: 0.5rem; }
   .profile-field { grid-template-columns: minmax(0, 1fr); }
   .profile-field-label { border-right: 0; border-bottom: 1px solid var(--border); padding-block: 0.5rem; }
-  .provider-route-row { grid-template-columns: 30px minmax(0, 1fr); }
-  .provider-route-status { grid-column: 2; grid-row: 2; min-width: 0; text-align: left; }
-  .provider-route-controls { grid-column: 1 / -1; grid-row: 3; }
+  .custom-api-card-header { align-items: flex-start; }
+  .custom-api-status { margin-top: 0.25rem; }
+  .custom-api-fields { grid-template-columns: minmax(0, 1fr); }
+  .custom-api-field-key { grid-column: auto; }
+  .custom-api-footer { align-items: flex-start; flex-direction: column; }
+  .custom-api-footer > :last-child { align-self: flex-end; }
   .app-stage { padding-bottom: 58px; }
   .navigation-sidebar {
     position: fixed;

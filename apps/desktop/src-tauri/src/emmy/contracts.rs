@@ -1,5 +1,6 @@
 use std::collections::BTreeSet;
 
+use reqwest::Url;
 use schemars::JsonSchema;
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize};
 
@@ -38,6 +39,7 @@ pub(crate) enum EmmyProvider {
     Gemini,
     Openrouter,
     Cerebras,
+    Custom,
 }
 
 impl EmmyProvider {
@@ -49,6 +51,7 @@ impl EmmyProvider {
             Self::Gemini => "gemini",
             Self::Openrouter => "openrouter",
             Self::Cerebras => "cerebras",
+            Self::Custom => "custom",
         }
     }
 }
@@ -481,6 +484,45 @@ pub(crate) struct EmmyProviderConfiguration {
 pub(crate) struct EmmyConfiguration {
     pub(crate) available: bool,
     pub(crate) providers: Vec<EmmyProviderConfiguration>,
+    pub(crate) custom_api: Option<CustomApiConfiguration>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct CustomApiConfiguration {
+    pub(crate) base_url: String,
+    pub(crate) model: String,
+    pub(crate) key_configured: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct SetCustomApiRequest {
+    pub(crate) base_url: String,
+    pub(crate) model: String,
+    pub(crate) key: String,
+    pub(crate) replace_key: bool,
+}
+
+impl SetCustomApiRequest {
+    pub(crate) fn validate(&self) -> Result<(), LlmError> {
+        let base_url = self.base_url.trim();
+        let model = self.model.trim();
+        let key = self.key.trim();
+        let url = Url::parse(base_url).map_err(|_| LlmError::InvalidRequest)?;
+        let valid_url = matches!(url.scheme(), "http" | "https")
+            && url.host_str().is_some()
+            && url.username().is_empty()
+            && url.password().is_none()
+            && base_url.chars().count() <= 2_048;
+        let valid_model = (1..=200).contains(&model.chars().count());
+        let valid_key = key.chars().count() <= 512;
+        if valid_url && valid_model && valid_key {
+            Ok(())
+        } else {
+            Err(LlmError::InvalidRequest)
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]

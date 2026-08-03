@@ -28,7 +28,8 @@ pub(crate) struct ModelMessage {
 #[derive(Debug, Clone)]
 pub(crate) struct ProviderRequest {
     pub(crate) provider: EmmyProvider,
-    pub(crate) model: &'static str,
+    pub(crate) model: String,
+    pub(crate) custom_base_url: Option<String>,
     pub(crate) system_prompt: String,
     pub(crate) messages: Vec<ModelMessage>,
     pub(crate) response_schema: Value,
@@ -52,7 +53,6 @@ pub(crate) struct HttpProviderTransport {
 impl HttpProviderTransport {
     pub(crate) fn new() -> Result<Self, LlmError> {
         let client = Client::builder()
-            .https_only(true)
             .user_agent("GiveMeJob!/0.1.0")
             .build()
             .map_err(|_| LlmError::Unavailable)?;
@@ -64,10 +64,17 @@ impl HttpProviderTransport {
         request: &ProviderRequest,
         api_key: &str,
     ) -> Result<String, LlmError> {
-        let endpoint = openai_endpoint(request.provider)?;
+        let endpoint = match request.custom_base_url.as_deref() {
+            Some(base_url) => custom_chat_endpoint(base_url)?,
+            None => reqwest::Url::parse(openai_endpoint(request.provider)?)
+                .map_err(|_| LlmError::Unavailable)?,
+        };
         let body = openai_body(request)?;
 
-        let mut builder = self.client.post(endpoint).bearer_auth(api_key).json(&body);
+        let mut builder = self.client.post(endpoint).json(&body);
+        if !api_key.is_empty() {
+            builder = builder.bearer_auth(api_key);
+        }
         if request.provider == EmmyProvider::Openrouter {
             builder = builder
                 .header("HTTP-Referer", "https://github.com/givemejob-app/givemejob")
@@ -119,11 +126,12 @@ fn openai_output_mode(provider: EmmyProvider, model: &str) -> Result<OpenAiOutpu
         EmmyProvider::Openrouter => Ok(OpenAiOutputMode::PromptSchema),
         EmmyProvider::Cerebras => Ok(OpenAiOutputMode::StrictJsonSchema),
         EmmyProvider::Gemini => Err(LlmError::Unavailable),
+        EmmyProvider::Custom => Ok(OpenAiOutputMode::PromptSchema),
     }
 }
 
 fn openai_body(request: &ProviderRequest) -> Result<Value, LlmError> {
-    let output_mode = openai_output_mode(request.provider, request.model)?;
+    let output_mode = openai_output_mode(request.provider, &request.model)?;
     let system_prompt = if matches!(
         output_mode,
         OpenAiOutputMode::PromptSchema | OpenAiOutputMode::JsonObject
@@ -173,7 +181,10 @@ fn openai_body(request: &ProviderRequest) -> Result<Value, LlmError> {
         "temperature": 0.2,
         "stream": false,
     });
-    if request.provider == EmmyProvider::Openrouter {
+    if matches!(
+        request.provider,
+        EmmyProvider::Openrouter | EmmyProvider::Custom
+    ) {
         body["max_tokens"] = json!(1200);
     } else {
         body["max_completion_tokens"] = json!(1200);
@@ -343,8 +354,21 @@ fn openai_endpoint(provider: EmmyProvider) -> Result<&'static str, LlmError> {
         EmmyProvider::Groq => Ok(GROQ_ENDPOINT),
         EmmyProvider::Openrouter => Ok(OPENROUTER_ENDPOINT),
         EmmyProvider::Cerebras => Ok(CEREBRAS_ENDPOINT),
-        EmmyProvider::Gemini => Err(LlmError::Unavailable),
+        EmmyProvider::Gemini | EmmyProvider::Custom => Err(LlmError::Unavailable),
     }
+}
+
+fn custom_chat_endpoint(base_url: &str) -> Result<reqwest::Url, LlmError> {
+    let mut url = reqwest::Url::parse(base_url).map_err(|_| LlmError::InvalidRequest)?;
+    if !url
+        .path()
+        .trim_end_matches('/')
+        .ends_with("/chat/completions")
+    {
+        let path = format!("{}/chat/completions", url.path().trim_end_matches('/'));
+        url.set_path(&path);
+    }
+    Ok(url)
 }
 
 impl ProviderTransport for HttpProviderTransport {
@@ -355,9 +379,10 @@ impl ProviderTransport for HttpProviderTransport {
     ) -> ProviderFuture<'a> {
         Box::pin(async move {
             match request.provider {
-                EmmyProvider::Groq | EmmyProvider::Openrouter | EmmyProvider::Cerebras => {
-                    self.openai_compatible(request, api_key).await
-                }
+                EmmyProvider::Groq
+                | EmmyProvider::Openrouter
+                | EmmyProvider::Cerebras
+                | EmmyProvider::Custom => self.openai_compatible(request, api_key).await,
                 EmmyProvider::Gemini => self.gemini(request, api_key).await,
             }
         })
@@ -478,15 +503,16 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        gemini_body, openai_body, openai_endpoint, parse_openai_response, parse_retry_after,
-        status_error, EmmyProvider, LlmError, ModelMessage, ModelMessageRole, ProviderRequest,
-        StatusCode, CEREBRAS_ENDPOINT,
+        custom_chat_endpoint, gemini_body, openai_body, openai_endpoint, parse_openai_response,
+        parse_retry_after, status_error, EmmyProvider, LlmError, ModelMessage, ModelMessageRole,
+        ProviderRequest, StatusCode, CEREBRAS_ENDPOINT,
     };
 
     fn request(provider: EmmyProvider, model: &'static str) -> ProviderRequest {
         ProviderRequest {
             provider,
-            model,
+            model: model.to_owned(),
+            custom_base_url: None,
             system_prompt: "system".to_owned(),
             messages: vec![ModelMessage {
                 role: ModelMessageRole::User,
@@ -522,6 +548,19 @@ mod tests {
             Ok(CEREBRAS_ENDPOINT)
         );
         assert!(CEREBRAS_ENDPOINT.starts_with("https://api.cerebras.ai/"));
+    }
+
+    #[test]
+    fn custom_base_url_accepts_local_servers_and_appends_the_chat_path() {
+        let endpoint = custom_chat_endpoint("http://127.0.0.1:1234/v1")
+            .expect("local OpenAI-compatible endpoints should be accepted");
+        assert_eq!(
+            endpoint.as_str(),
+            "http://127.0.0.1:1234/v1/chat/completions"
+        );
+        let complete = custom_chat_endpoint("https://example.com/v1/chat/completions")
+            .expect("a complete endpoint should remain valid");
+        assert_eq!(complete.as_str(), "https://example.com/v1/chat/completions");
     }
 
     #[test]

@@ -23,7 +23,8 @@ const emmyStateSchema = z.enum([
   "error",
   "offline",
 ]);
-export const emmyProviderSchema = z.enum(["groq", "gemini", "openrouter", "cerebras"]);
+const emmyBuiltInProviderSchema = z.enum(["groq", "gemini", "openrouter", "cerebras"]);
+export const emmyProviderSchema = z.enum(["groq", "gemini", "openrouter", "cerebras", "custom"]);
 const emmyMessageRoleSchema = z.enum(["user", "assistant", "tool"]);
 const llmErrorSchema = z.discriminatedUnion("code", [
   z.object({ code: z.literal("rate_limit"), retryAfterSeconds: z.number().int().nonnegative().nullable() }).strict(),
@@ -190,7 +191,7 @@ const emmyTurnResultSchema = z
 
 const emmyProviderConfigurationSchema = z
   .object({
-    provider: emmyProviderSchema,
+    provider: emmyBuiltInProviderSchema,
     configured: z.boolean(),
     byokConfigured: z.boolean(),
     demoAvailable: z.boolean(),
@@ -200,6 +201,11 @@ export const emmyConfigurationSchema = z
   .object({
     available: z.boolean(),
     providers: z.array(emmyProviderConfigurationSchema).length(4),
+    customApi: z.object({
+      baseUrl: z.string().url().max(2_048),
+      model: z.string().trim().min(1).max(200),
+      keyConfigured: z.boolean(),
+    }).strict().nullable(),
   })
   .strict();
 const emmyStateEventSchema = z
@@ -240,6 +246,12 @@ const confirmationRequestSchema = z.object({
   confirmed: z.boolean(),
 }).strict();
 const providerKeySchema = z.string().trim().min(8).max(512);
+const customApiRequestSchema = z.object({
+  baseUrl: z.string().trim().url().max(2_048).refine((value) => /^https?:\/\//u.test(value)),
+  model: z.string().trim().min(1).max(200),
+  key: z.string().trim().max(512),
+  replaceKey: z.boolean(),
+}).strict();
 
 function closedError(error: unknown): LlmError {
   const parsed = llmErrorSchema.safeParse(error);
@@ -250,6 +262,8 @@ interface EmmyApi {
   getConfiguration(): Promise<EmmyConfiguration>;
   setProviderKey(provider: EmmyProvider, key: string): Promise<EmmyConfiguration>;
   clearProviderKey(provider: EmmyProvider): Promise<EmmyConfiguration>;
+  setCustomApi(input: { baseUrl: string; model: string; key: string; replaceKey: boolean }): Promise<EmmyConfiguration>;
+  clearCustomApi(): Promise<EmmyConfiguration>;
   listConversations(): Promise<EmmyConversationSummary[]>;
   createConversation(): Promise<EmmyConversation>;
   loadConversation(conversationId: string): Promise<EmmyConversation>;
@@ -281,12 +295,13 @@ export function createEmmyApi(adapter: TauriAdapter): EmmyApi {
       if (!adapter.isAvailable()) {
         return emmyConfigurationSchema.parse({
           available: false,
-          providers: emmyProviderSchema.options.map((provider) => ({
+          providers: emmyBuiltInProviderSchema.options.map((provider) => ({
             provider,
             configured: false,
             byokConfigured: false,
             demoAvailable: false,
           })),
+          customApi: null,
         });
       }
       return invokeValidated("emmy_configuration", emmyConfigurationSchema);
@@ -300,6 +315,15 @@ export function createEmmyApi(adapter: TauriAdapter): EmmyApi {
       const request = { provider: emmyProviderSchema.parse(provider) };
       if (!adapter.isAvailable()) throw { code: "unavailable" } satisfies LlmError;
       return invokeValidated("emmy_clear_provider_key", emmyConfigurationSchema, { request });
+    },
+    async setCustomApi(input) {
+      const request = customApiRequestSchema.parse(input);
+      if (!adapter.isAvailable()) throw { code: "unavailable" } satisfies LlmError;
+      return invokeValidated("emmy_set_custom_api", emmyConfigurationSchema, { request });
+    },
+    async clearCustomApi() {
+      if (!adapter.isAvailable()) throw { code: "unavailable" } satisfies LlmError;
+      return invokeValidated("emmy_clear_custom_api", emmyConfigurationSchema);
     },
     async listConversations() {
       if (!adapter.isAvailable()) return [];

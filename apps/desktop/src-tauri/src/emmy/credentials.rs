@@ -1,12 +1,37 @@
+use serde::{Deserialize, Serialize};
 use zeroize::Zeroizing;
 
-use super::contracts::{EmmyConfiguration, EmmyProvider, EmmyProviderConfiguration, LlmError};
+use super::contracts::{
+    CustomApiConfiguration, EmmyConfiguration, EmmyProvider, EmmyProviderConfiguration, LlmError,
+    SetCustomApiRequest,
+};
 
 include!(concat!(env!("OUT_DIR"), "/demo_keys.rs"));
+
+const CUSTOM_API_KEY_TARGET: &str = "custom";
+const CUSTOM_API_CONFIG_TARGET: &str = "custom-config";
+
+#[derive(Debug)]
+pub(crate) struct CustomApiCredentials {
+    pub(crate) base_url: String,
+    pub(crate) model: String,
+    pub(crate) key: Zeroizing<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct StoredCustomApi {
+    base_url: String,
+    model: String,
+}
 
 pub(crate) trait CredentialSource: Send + Sync {
     fn key_for(&self, provider: EmmyProvider) -> Result<Option<Zeroizing<String>>, LlmError>;
     fn configuration(&self) -> Result<EmmyConfiguration, LlmError>;
+
+    fn custom_api(&self) -> Result<Option<CustomApiCredentials>, LlmError> {
+        Ok(None)
+    }
 }
 
 #[derive(Clone, Default)]
@@ -25,8 +50,35 @@ impl CredentialManager {
         <Self as CredentialSource>::configuration(self)
     }
 
+    pub(crate) fn set_custom_api(&self, request: &SetCustomApiRequest) -> Result<(), LlmError> {
+        let stored = StoredCustomApi {
+            base_url: request.base_url.trim().trim_end_matches('/').to_owned(),
+            model: request.model.trim().to_owned(),
+        };
+        let encoded = serde_json::to_string(&stored).map_err(|_| LlmError::Local)?;
+        if request.replace_key {
+            if request.key.trim().is_empty() {
+                platform::delete_named(CUSTOM_API_KEY_TARGET)?;
+            } else {
+                platform::write_named(CUSTOM_API_KEY_TARGET, request.key.trim())?;
+            }
+        }
+        platform::write_named(CUSTOM_API_CONFIG_TARGET, &encoded)
+    }
+
+    pub(crate) fn clear_custom_api(&self) -> Result<(), LlmError> {
+        platform::delete_named(CUSTOM_API_CONFIG_TARGET)?;
+        platform::delete_named(CUSTOM_API_KEY_TARGET)
+    }
+
     fn byok(&self, provider: EmmyProvider) -> Result<Option<Zeroizing<String>>, LlmError> {
         platform::read(provider)
+    }
+
+    fn stored_custom_api(&self) -> Result<Option<StoredCustomApi>, LlmError> {
+        platform::read_named(CUSTOM_API_CONFIG_TARGET)?
+            .map(|encoded| serde_json::from_str(encoded.as_str()).map_err(|_| LlmError::Local))
+            .transpose()
     }
 
     fn demo(provider: EmmyProvider) -> Option<Zeroizing<String>> {
@@ -59,6 +111,9 @@ impl CredentialManager {
 
 impl CredentialSource for CredentialManager {
     fn key_for(&self, provider: EmmyProvider) -> Result<Option<Zeroizing<String>>, LlmError> {
+        if provider == EmmyProvider::Custom {
+            return Ok(self.custom_api()?.map(|custom| custom.key));
+        }
         if let Some(byok) = self.byok(provider)? {
             return Ok(Some(byok));
         }
@@ -79,10 +134,36 @@ impl CredentialSource for CredentialManager {
                 })
             })
             .collect::<Result<Vec<_>, LlmError>>()?;
+        let custom_api = self
+            .stored_custom_api()?
+            .map(|stored| {
+                let key_configured = platform::read_named(CUSTOM_API_KEY_TARGET)?.is_some();
+                Ok(CustomApiConfiguration {
+                    base_url: stored.base_url,
+                    model: stored.model,
+                    key_configured,
+                })
+            })
+            .transpose()?;
         Ok(EmmyConfiguration {
-            available: providers.iter().any(|provider| provider.configured),
+            available: custom_api.is_some() || providers.iter().any(|provider| provider.configured),
             providers,
+            custom_api,
         })
+    }
+
+    fn custom_api(&self) -> Result<Option<CustomApiCredentials>, LlmError> {
+        self.stored_custom_api()?
+            .map(|stored| {
+                let key = platform::read_named(CUSTOM_API_KEY_TARGET)?
+                    .unwrap_or_else(|| Zeroizing::new(String::new()));
+                Ok(CustomApiCredentials {
+                    base_url: stored.base_url,
+                    model: stored.model,
+                    key,
+                })
+            })
+            .transpose()
     }
 }
 
@@ -109,9 +190,18 @@ mod platform {
         wide(&format!("GiveMeJob!/Emmy/{}", provider.as_str()))
     }
 
+    fn named_target(name: &str) -> Vec<u16> {
+        wide(&format!("GiveMeJob!/Emmy/{name}"))
+    }
+
     pub(super) fn write(provider: EmmyProvider, key: &str) -> Result<(), LlmError> {
         let mut target_name = target(provider);
         write_target(&mut target_name, key)
+    }
+
+    pub(super) fn write_named(name: &str, value: &str) -> Result<(), LlmError> {
+        let mut target_name = named_target(name);
+        write_target(&mut target_name, value)
     }
 
     fn write_target(target_name: &mut [u16], key: &str) -> Result<(), LlmError> {
@@ -139,6 +229,10 @@ mod platform {
     pub(super) fn read(provider: EmmyProvider) -> Result<Option<Zeroizing<String>>, LlmError> {
         let target_name = target(provider);
         read_target(&target_name)
+    }
+
+    pub(super) fn read_named(name: &str) -> Result<Option<Zeroizing<String>>, LlmError> {
+        read_target(&named_target(name))
     }
 
     fn read_target(target_name: &[u16]) -> Result<Option<Zeroizing<String>>, LlmError> {
@@ -197,6 +291,10 @@ mod platform {
     pub(super) fn delete(provider: EmmyProvider) -> Result<(), LlmError> {
         let target_name = target(provider);
         delete_target(&target_name)
+    }
+
+    pub(super) fn delete_named(name: &str) -> Result<(), LlmError> {
+        delete_target(&named_target(name))
     }
 
     fn delete_target(target_name: &[u16]) -> Result<(), LlmError> {
@@ -271,6 +369,18 @@ mod platform {
     pub(super) fn delete(_provider: EmmyProvider) -> Result<(), LlmError> {
         Ok(())
     }
+
+    pub(super) fn write_named(_name: &str, _value: &str) -> Result<(), LlmError> {
+        Err(LlmError::Unavailable)
+    }
+
+    pub(super) fn read_named(_name: &str) -> Result<Option<Zeroizing<String>>, LlmError> {
+        Ok(None)
+    }
+
+    pub(super) fn delete_named(_name: &str) -> Result<(), LlmError> {
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -280,12 +390,14 @@ pub(crate) mod tests_support {
     use zeroize::Zeroizing;
 
     use super::{
-        CredentialSource, EmmyConfiguration, EmmyProvider, EmmyProviderConfiguration, LlmError,
+        CredentialSource, CustomApiConfiguration, CustomApiCredentials, EmmyConfiguration,
+        EmmyProvider, EmmyProviderConfiguration, LlmError,
     };
 
     #[derive(Default)]
     pub(crate) struct FakeCredentials {
         keys: Mutex<HashMap<EmmyProvider, String>>,
+        custom: Mutex<Option<(String, String, String)>>,
     }
 
     impl FakeCredentials {
@@ -297,6 +409,18 @@ pub(crate) mod tests_support {
                     (EmmyProvider::Openrouter, "fake-openrouter-key".to_owned()),
                     (EmmyProvider::Cerebras, "fake-cerebras-key".to_owned()),
                 ])),
+                custom: Mutex::new(None),
+            }
+        }
+
+        pub(crate) fn with_custom(base_url: &str, model: &str, key: &str) -> Self {
+            Self {
+                keys: Mutex::new(HashMap::new()),
+                custom: Mutex::new(Some((
+                    base_url.to_owned(),
+                    model.to_owned(),
+                    key.to_owned(),
+                ))),
             }
         }
     }
@@ -319,9 +443,33 @@ pub(crate) mod tests_support {
                 })
                 .collect::<Vec<_>>();
             Ok(EmmyConfiguration {
-                available: providers.iter().any(|provider| provider.configured),
+                available: self.custom.lock().map_err(|_| LlmError::Local)?.is_some()
+                    || providers.iter().any(|provider| provider.configured),
                 providers,
+                custom_api: self
+                    .custom
+                    .lock()
+                    .map_err(|_| LlmError::Local)?
+                    .as_ref()
+                    .map(|(base_url, model, key)| CustomApiConfiguration {
+                        base_url: base_url.clone(),
+                        model: model.clone(),
+                        key_configured: !key.is_empty(),
+                    }),
             })
+        }
+
+        fn custom_api(&self) -> Result<Option<CustomApiCredentials>, LlmError> {
+            Ok(self
+                .custom
+                .lock()
+                .map_err(|_| LlmError::Local)?
+                .as_ref()
+                .map(|(base_url, model, key)| CustomApiCredentials {
+                    base_url: base_url.clone(),
+                    model: model.clone(),
+                    key: Zeroizing::new(key.clone()),
+                }))
         }
     }
 }

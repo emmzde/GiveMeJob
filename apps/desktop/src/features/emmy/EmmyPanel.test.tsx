@@ -56,6 +56,7 @@ describe("EmmyPanel vertical", () => {
   it("sends a user message and renders the persisted assistant timeline", async () => {
     vi.spyOn(emmyApi, "getConfiguration").mockResolvedValue({
       available: true,
+      customApi: null,
       providers: ["groq", "gemini", "openrouter", "cerebras"].map((provider) => ({
         provider: provider as "groq" | "gemini" | "openrouter" | "cerebras",
         configured: provider === "cerebras",
@@ -74,7 +75,7 @@ describe("EmmyPanel vertical", () => {
       </QueryClientProvider>,
     );
 
-    const composer = await screen.findByRole("textbox", { name: "Спросите Emmy о вакансиях…" });
+    const composer = await screen.findByRole("textbox", { name: "Спросите Emmy о чём угодно…" });
     const starters = screen.getByRole("group", { name: t("emmyWelcomeTitle") });
     expect(within(starters).getAllByRole("button")).toHaveLength(4);
     expect(starters.querySelector(".ui-mono")).toBeNull();
@@ -93,6 +94,7 @@ describe("EmmyPanel vertical", () => {
   it("manages focus and Escape for the recent-conversation popover", async () => {
     vi.spyOn(emmyApi, "getConfiguration").mockResolvedValue({
       available: true,
+      customApi: null,
       providers: ["groq", "gemini", "openrouter", "cerebras"].map((provider) => ({
         provider: provider as "groq" | "gemini" | "openrouter" | "cerebras",
         configured: provider === "groq",
@@ -140,6 +142,7 @@ describe("EmmyPanel vertical", () => {
   it("returns to an unsaved blank conversation without creating backend state", async () => {
     vi.spyOn(emmyApi, "getConfiguration").mockResolvedValue({
       available: true,
+      customApi: null,
       providers: ["groq", "gemini", "openrouter", "cerebras"].map((provider) => ({
         provider: provider as "groq" | "gemini" | "openrouter" | "cerebras",
         configured: provider === "groq",

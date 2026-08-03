@@ -11,6 +11,11 @@ vi.mock("@/features/emmy/hooks", () => ({
   useEmmyConfiguration: () => ({
     data: {
       available: true,
+      customApi: {
+        baseUrl: "http://127.0.0.1:1234/v1",
+        keyConfigured: false,
+        model: "local-model",
+      },
       providers: [
         { byokConfigured: true, configured: true, demoAvailable: false, provider: "openrouter" },
         { byokConfigured: false, configured: false, demoAvailable: false, provider: "groq" },
@@ -23,18 +28,19 @@ vi.mock("@/features/emmy/hooks", () => ({
 }));
 
 describe("EmmyProviderSettings", () => {
-  it("renders the real sequential provider route", () => {
+  it("renders one universal API connection instead of provider-specific forms", () => {
     render(
       <QueryClientProvider client={createAppQueryClient()}>
         <EmmyProviderSettings />
       </QueryClientProvider>,
     );
 
-    for (const index of ["01", "02", "03", "04"]) {
-      expect(screen.getByText(index)).toBeInTheDocument();
-    }
-    expect(screen.getByText(t("emmyPrimaryProvider"))).toBeInTheDocument();
-    expect(screen.getAllByLabelText(/API key$/u)).toHaveLength(4);
-    expect(screen.getAllByRole("button", { name: t("emmySaveKey") })).toHaveLength(4);
+    expect(screen.getByText(t("emmyCustomApiTitle"))).toBeInTheDocument();
+    expect(screen.getByLabelText(t("emmyBaseUrl"))).toHaveValue("http://127.0.0.1:1234/v1");
+    expect(screen.getByLabelText(t("emmyModel"))).toHaveValue("local-model");
+    expect(screen.getByLabelText(t("emmyApiKey"))).toHaveAttribute("placeholder", t("emmyOptionalKey"));
+    expect(screen.getByRole("button", { name: t("emmyUpdateApi") })).toBeInTheDocument();
+    expect(screen.queryByText("OpenRouter")).not.toBeInTheDocument();
+    expect(screen.queryByText("Groq")).not.toBeInTheDocument();
   });
 });

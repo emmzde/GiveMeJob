@@ -18,7 +18,8 @@ use emmy::{
     confirm_shortlist as confirm_emmy_shortlist, load_conversation as load_emmy_conversation,
     run_turn as run_emmy_turn, ClearProviderKeyRequest, CredentialManager, EmmyConfiguration,
     EmmyConfirmationRequest, EmmyConversation, EmmyConversationRequest, EmmyConversationSummary,
-    EmmySendRequest, EmmyTurnResult, LlmError, LlmRouter, SetProviderKeyRequest,
+    EmmySendRequest, EmmyTurnResult, LlmError, LlmRouter, SetCustomApiRequest,
+    SetProviderKeyRequest,
 };
 use ipc::IpcError;
 use match_score::{compute_match, JobMatch, MatchBatchRequest, MatchBreakdown};
@@ -327,6 +328,28 @@ fn emmy_clear_provider_key(
 }
 
 #[tauri::command]
+fn emmy_set_custom_api(
+    request: Value,
+    credentials_state: State<'_, CredentialManager>,
+    router_state: State<'_, EmmyRouterState>,
+) -> Result<EmmyConfiguration, LlmError> {
+    let request: SetCustomApiRequest =
+        serde_json::from_value(request).map_err(|_| LlmError::InvalidRequest)?;
+    request.validate()?;
+    credentials_state.set_custom_api(&request)?;
+    emmy_configuration(credentials_state, router_state)
+}
+
+#[tauri::command]
+fn emmy_clear_custom_api(
+    credentials_state: State<'_, CredentialManager>,
+    router_state: State<'_, EmmyRouterState>,
+) -> Result<EmmyConfiguration, LlmError> {
+    credentials_state.clear_custom_api()?;
+    emmy_configuration(credentials_state, router_state)
+}
+
+#[tauri::command]
 async fn emmy_list_conversations(
     state: State<'_, UserStore>,
 ) -> Result<Vec<EmmyConversationSummary>, LlmError> {
@@ -447,6 +470,8 @@ pub fn run() {
             emmy_configuration,
             emmy_set_provider_key,
             emmy_clear_provider_key,
+            emmy_set_custom_api,
+            emmy_clear_custom_api,
             emmy_list_conversations,
             emmy_create_conversation,
             emmy_load_conversation,

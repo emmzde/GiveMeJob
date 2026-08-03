@@ -365,14 +365,21 @@ fn to_model_message(message: &EmmyMessage) -> Result<Option<ModelMessage>, LlmEr
         })),
         EmmyMessageContent::Assistant {
             text, job_cards, ..
-        } => Ok(Some(ModelMessage {
-            role: ModelMessageRole::Assistant,
-            content: serde_json::json!({
-                "message": text,
-                "jobCards": job_cards.iter().map(|job| job.id.as_str()).collect::<Vec<_>>()
-            })
-            .to_string(),
-        })),
+        } => {
+            let mut content = text.clone();
+            if !job_cards.is_empty() {
+                let ids = job_cards
+                    .iter()
+                    .map(|job| job.id.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                content.push_str(&format!("\nReferenced local job IDs: {ids}"));
+            }
+            Ok(Some(ModelMessage {
+                role: ModelMessageRole::Assistant,
+                content,
+            }))
+        }
         EmmyMessageContent::Notice { .. } => Ok(None),
         EmmyMessageContent::Tool { call, result } => {
             let payload = serde_json::to_string(&serde_json::json!({

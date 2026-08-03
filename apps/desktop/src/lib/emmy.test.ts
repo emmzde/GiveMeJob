@@ -12,7 +12,8 @@ import type { TauriAdapter } from "@/lib/tauri/adapter";
 
 const configuration = {
   available: true,
-  providers: emmyProviderSchema.options.map((provider) => ({
+  customApi: null,
+  providers: (["groq", "gemini", "openrouter", "cerebras"] as const).map((provider) => ({
     provider,
     configured: provider === "groq",
     byokConfigured: provider === "groq",
@@ -31,8 +32,8 @@ function adapterReturning(value: unknown): TauriAdapter {
 describe("Emmy strict contracts", () => {
   it("keeps the four-provider configuration closed without key material", () => {
     expect(emmyConfigurationSchema.parse(configuration)).toEqual(configuration);
-    expect(emmyProviderSchema.options).toEqual(["groq", "gemini", "openrouter", "cerebras"]);
-    expect(JSON.stringify(configuration)).not.toContain("key");
+    expect(emmyProviderSchema.options).toEqual(["groq", "gemini", "openrouter", "cerebras", "custom"]);
+    expect(JSON.stringify(configuration)).not.toContain("apiKey");
     expect(emmyConfigurationSchema.safeParse({ ...configuration, apiKey: "not-allowed" }).success)
       .toBe(false);
   });
@@ -94,6 +95,37 @@ describe("Emmy strict contracts", () => {
     expect(calls).toEqual([{
       command: "emmy_set_provider_key",
       args: { request: { provider: "cerebras", key: "unit-test-key" } },
+    }]);
+  });
+
+  it("sends a universal API configuration through one provider-independent command", async () => {
+    const calls: Array<{ command: string; args: Record<string, unknown> | undefined }> = [];
+    const adapter: TauriAdapter = {
+      isAvailable: () => true,
+      invoke(command, args) {
+        calls.push({ command, args });
+        return Promise.resolve({
+          ...configuration,
+          customApi: { baseUrl: "http://127.0.0.1:1234/v1", keyConfigured: false, model: "local-model" },
+        });
+      },
+      listen: () => Promise.resolve(() => undefined),
+    };
+    const api = createEmmyApi(adapter);
+    await api.setCustomApi({
+      baseUrl: "http://127.0.0.1:1234/v1",
+      key: "",
+      model: "local-model",
+      replaceKey: true,
+    });
+    expect(calls).toEqual([{
+      command: "emmy_set_custom_api",
+      args: { request: {
+        baseUrl: "http://127.0.0.1:1234/v1",
+        key: "",
+        model: "local-model",
+        replaceKey: true,
+      } },
     }]);
   });
 

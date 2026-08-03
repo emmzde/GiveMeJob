@@ -1,120 +1,14 @@
 {
-  "current": {
-    "stage": "M4",
-    "repositoryVisibility": "private",
-    "releaseStatus": "hold",
-    "publishedVersions": [],
-    "distribution": "private-rc-artifacts-only",
-    "search": {
-      "backendFilters": true,
-      "backendSorts": ["relevance", "newest", "salary"],
-      "cursor": true,
-      "uiFilters": true,
-      "shortlist": true,
-      "matchOnDemand": true,
-      "matchSort": false
-    }
-  },
-  "target": {
-    "stage": "M5",
-    "repositoryVisibility": "public",
-    "firstStableVersion": "0.1.0",
-    "artifacts": ["nsis-installer", "portable-zip"],
-    "publicPreview": false,
-    "publicPrereleaseRequiresAdr": true
-  },
-  "product": {
-    "mode": "pet-project",
-    "releaseType": "public-portfolio-mvp",
-    "mascot": "Emmy",
-    "mascotForm": "animated-svg-dog"
-  },
-  "market": {
-    "strategy": "remote-first",
-    "geographies": ["global-remote", "cis"],
-    "vertical": "it-digital"
-  },
-  "platform": {
-    "targets": ["windows-x86_64"],
-    "minimum": "windows-10",
-    "authenticodeV1": false
-  },
-  "runtime": {
-    "architecture": "offline-first",
-    "catalog": "sqlite-fts5",
-    "requiresDocker": false,
-    "requiresPython": false,
-    "requiresBackend": false,
-    "legacyBackendPresent": false,
-    "optionalNetworkFunctions": ["emmy", "open-original-job", "update-check"],
-    "updateCheckBlocksStartup": false
-  },
   "dataset": {
-    "mode": "frozen-snapshot",
     "manifestVersion": 1,
     "catalogVersion": "1",
     "schemaVersion": 1,
     "canonicalJobs": 78719,
     "descriptionFormat": "plain_text",
     "sourceFrozenAt": "2026-07-29T20:30:03.846872Z",
-    "manifest": "config/catalog-manifest.json",
-    "allowIngestion": false,
-    "useEmbeddings": false,
-    "includeFullNormalizedDescriptions": true,
-    "timestampFields": ["source_frozen_at", "exported_at", "published_at"],
-    "uiSnapshotDateField": "source_frozen_at"
-  },
-  "wire": {
-    "sqliteJobId": "integer",
-    "jobId": "branded-positive-decimal-string"
+    "manifest": "config/catalog-manifest.json"
   },
   "localization": {
-    "uiDefaultLocale": "ru",
-    "uiArchitecture": "i18n",
-    "indexLanguages": "multilingual"
-  },
-  "skills": {
-    "canonicalLanguage": "en",
-    "taxonomy": "ESCO"
-  },
-  "ai": {
-    "router": "rust-local",
-    "providers": ["openrouter", "groq", "gemini", "cerebras"],
-    "primaryProvider": "openrouter",
-    "openrouterModels": [
-      "inclusionai/ling-3.0-flash:free",
-      "nvidia/nemotron-3-ultra-550b-a55b:free",
-      "google/gemma-4-31b-it:free",
-      "google/gemma-4-26b-a4b-it:free",
-      "openai/gpt-oss-20b:free",
-      "nvidia/nemotron-3-nano-30b-a3b:free",
-      "poolside/laguna-s-2.1:free",
-      "cohere/north-mini-code:free"
-    ],
-    "rawContextMessages": 12,
-    "conversationMemoryCharacters": 4000,
-    "providerAttemptTimeoutSeconds": 3,
-    "turnTimeoutSeconds": 15,
-    "openrouterNativeTools": true,
-    "openrouterReasoningEnabled": false,
-    "structuredOutputOnly": true,
-    "builtInDemoKeys": true,
-    "demoKeysAreExtractable": true,
-    "byok": true,
-    "byokStorage": "windows-credential-manager",
-    "implementation": {
-      "core": true,
-      "credentialManagerNativeRoundTrip": true,
-      "liveProviderSmoke": false,
-      "byokRestartSmoke": false,
-      "nativeOfflineSmoke": false,
-      "protectedReleaseBuildSmoke": false
-    }
-  },
-  "release": {
-    "decision": "docs/RELEASE_STATUS.md",
-    "requiredStage": "M5",
-    "preStableDistribution": "private-rc-artifact",
-    "publicChannel": "stable-only"
+    "uiDefaultLocale": "ru"
   }
 }

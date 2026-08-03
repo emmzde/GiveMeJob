@@ -14,12 +14,14 @@ export type AppTheme = "system" | "light" | "dark";
 interface AppUiState {
   screen: AppScreen;
   profileVisited: boolean;
+  welcomeCompleted: boolean;
   selectedId: JobId | null;
   panel: AppPanel;
   theme: AppTheme;
   language: AppLocale;
   commandPaletteOpen: boolean;
   filtersVisible: boolean;
+  completeWelcome(): void;
   setScreen(screen: AppScreen): void;
   selectJob(selectedId: JobId | null): void;
   setPanel(panel: AppPanel): void;
@@ -31,6 +33,7 @@ interface AppUiState {
 }
 
 const languageStorageKey = "givemejob.ui-language";
+const welcomeStorageKey = "givemejob.welcome-completed";
 
 function readStoredLanguage(): AppLocale {
   if (typeof window === "undefined") return defaultLocale;
@@ -51,15 +54,34 @@ function persistLanguage(language: AppLocale): void {
   }
 }
 
+function readWelcomeCompleted(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(welcomeStorageKey) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function persistWelcomeCompleted(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(welcomeStorageKey, "1");
+  } catch {
+    // The welcome screen still closes for the current session when storage is unavailable.
+  }
+}
+
 const initialLanguage = readStoredLanguage();
 setActiveLocale(initialLanguage);
 
 const initialUiState: Pick<
   AppUiState,
-  "screen" | "profileVisited" | "selectedId" | "panel" | "theme" | "language" | "commandPaletteOpen" | "filtersVisible"
+  "screen" | "profileVisited" | "welcomeCompleted" | "selectedId" | "panel" | "theme" | "language" | "commandPaletteOpen" | "filtersVisible"
 > = {
   screen: "search",
   profileVisited: false,
+  welcomeCompleted: readWelcomeCompleted(),
   selectedId: null,
   panel: null,
   theme: "system",
@@ -70,6 +92,10 @@ const initialUiState: Pick<
 
 export const useAppUiStore = create<AppUiState>((set) => ({
   ...initialUiState,
+  completeWelcome: () => {
+    persistWelcomeCompleted();
+    set({ welcomeCompleted: true });
+  },
   setScreen: (screen) =>
     set((state) => ({
       screen,
@@ -89,7 +115,7 @@ export const useAppUiStore = create<AppUiState>((set) => ({
   toggleFilters: () => set((state) => ({ filtersVisible: !state.filtersVisible })),
 }));
 
-export function resetAppUiStore(): void {
+export function resetAppUiStore({ welcomeCompleted = true }: { welcomeCompleted?: boolean } = {}): void {
   setActiveLocale(defaultLocale);
-  useAppUiStore.setState({ ...initialUiState, language: defaultLocale });
+  useAppUiStore.setState({ ...initialUiState, language: defaultLocale, welcomeCompleted });
 }

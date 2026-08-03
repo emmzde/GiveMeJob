@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CatalogViewState } from "@/features/catalog/catalogStatus";
@@ -24,18 +24,10 @@ const readyCatalog: CatalogViewState = {
 };
 
 describe("SettingsView", () => {
-  it("uses a navigation rail and flat semantic sections", () => {
+  it("uses one scrolling canvas with flat semantic sections", () => {
     render(<SettingsView catalog={readyCatalog} />);
 
-    const navigation = screen.getByRole("navigation", { name: t("settingsTitle") });
-    expect(within(navigation).getByRole("link", { name: t("appearance") })).toHaveAttribute(
-      "href",
-      "#appearance-heading",
-    );
-    expect(within(navigation).getByRole("link", { name: t("language") })).toHaveAttribute(
-      "href",
-      "#language-heading",
-    );
+    expect(screen.queryByRole("navigation", { name: t("settingsTitle") })).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: t("appearance") })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: t("language") })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: t("localCatalog") })).toBeInTheDocument();

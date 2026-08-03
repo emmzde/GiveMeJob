@@ -122,9 +122,9 @@ export function AppShell({ catalog, children }: AppShellProps) {
   }
 
   return (
-    <main className="flex h-screen min-h-[620px] min-w-[320px] flex-col overflow-hidden bg-[var(--bg)] text-[var(--text)]">
+    <main className="app-shell flex h-screen min-h-[620px] min-w-[320px] flex-col overflow-hidden bg-[var(--bg)] text-[var(--text)]">
       <DesktopTitlebar catalog={catalog} />
-      <div className="flex min-h-0 flex-1">
+      <div className="app-stage flex min-h-0 flex-1">
         <NavigationSidebar commandTriggerRef={commandTriggerRef} />
         <div className="min-w-0 flex-1 overflow-hidden bg-[var(--bg)]">{children}</div>
         {emmyDockMounted ? (

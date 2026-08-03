@@ -49,6 +49,20 @@ interface SearchScreenProps {
   isRecovering: boolean;
 }
 
+function MetricSparkline({ variant }: { variant: "primary" | "steady" | "signal" }) {
+  const paths = {
+    primary: "M2 29 10 12 18 20 27 6 36 25 46 13 56 21 66 9 78 18",
+    steady: "M2 24 12 25 21 16 31 19 40 10 51 13 60 8 69 17 78 7",
+    signal: "M2 27 12 22 22 24 32 13 42 18 52 10 63 14 70 8 78 12",
+  } as const;
+  return (
+    <svg aria-hidden="true" className="metric-sparkline" fill="none" viewBox="0 0 80 34">
+      <path className="metric-sparkline-base" d="M2 30H78" />
+      <path className="metric-sparkline-value" d={paths[variant]} />
+    </svg>
+  );
+}
+
 function queriesEqual(left: SearchQuery, right: SearchQuery): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
@@ -191,15 +205,15 @@ export function SearchScreen({
       />
 
       <section className="job-workbench flex min-h-0 min-w-0 flex-col border-r border-[var(--border)] bg-[var(--bg)]">
-        <div className="shrink-0 px-4 pb-4 pt-4">
+        <div className="search-page-header shrink-0 px-4 pb-4 pt-4">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="text-[24px] font-normal leading-7 tracking-[-0.03em]">
+              <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+                {t("localCatalog")}
+              </p>
+              <h1 className="search-title text-[25px] font-medium leading-7 tracking-[-0.04em]">
                 {t("searchTitle")}
               </h1>
-              <p className="mt-1 truncate text-[12px] leading-5 text-[var(--text-secondary)]">
-                {t("appDescription")}
-              </p>
             </div>
             <Button
               aria-controls="search-filters"
@@ -216,7 +230,7 @@ export function SearchScreen({
           </div>
 
           <div className="search-overview mt-4" aria-label={t("searchOverview")}>
-            <article className="search-metric search-metric-primary">
+            <article className="search-metric search-metric-primary" data-tone="primary">
               <div className="search-metric-header">
                 <p className="truncate text-[12px] font-semibold text-[var(--text)]">
                   {t("resultMetric")}
@@ -224,11 +238,12 @@ export function SearchScreen({
                 <ListFilter aria-hidden="true" className="size-4 text-[var(--text-secondary)]" />
               </div>
               <p className="search-metric-value">{formatCount(totalResults)}</p>
+              <MetricSparkline variant="primary" />
               <p className="mt-2 truncate text-[11px] leading-4 text-[var(--text-secondary)]">
                 {t("resultMetricHint")}
               </p>
             </article>
-            <article className="search-metric search-metric-context">
+            <article className="search-metric search-metric-context" data-tone="steady">
               <span className="sr-only">
                 {t("catalogTotal")}: {formatCount(catalogTotal)} {t("jobsFound")}
               </span>
@@ -239,11 +254,12 @@ export function SearchScreen({
                 <Database aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />
               </div>
               <p className="search-metric-value">{formatCount(catalogTotal)}</p>
+              <MetricSparkline variant="steady" />
               <p className="mt-2 truncate text-[10px] leading-4 text-[var(--text-tertiary)]">
                 {snapshotDate ? `${t("catalogSnapshot")}: ${snapshotDate}` : t("localCatalog")}
               </p>
             </article>
-            <article className="search-metric search-metric-secondary">
+            <article className="search-metric search-metric-secondary" data-tone="signal">
               <div className="search-metric-header">
                 <p className="truncate text-[11px] font-medium text-[var(--text-tertiary)]">
                   {t("loadedMetric")}
@@ -251,6 +267,7 @@ export function SearchScreen({
                 <Rows3 aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />
               </div>
               <p className="search-metric-value">{formatCount(jobs.length)}</p>
+              <MetricSparkline variant="signal" />
               <p className="mt-2 truncate text-[10px] leading-4 text-[var(--text-tertiary)]">
                 {t("loadedMetricHint")}
               </p>
@@ -260,8 +277,8 @@ export function SearchScreen({
 
         <div className="dashboard-panel job-results-panel mx-4 mb-4 flex min-h-0 flex-1 flex-col">
           <div className="dashboard-panel-header shrink-0">
-            <h2 className="flex min-w-0 items-center gap-2 text-[12px] font-normal">
-              <BriefcaseBusiness aria-hidden="true" className="size-4 text-[var(--text-secondary)]" />
+            <h2 className="flex min-w-0 items-center gap-2 text-[12px] font-medium">
+              <span className="panel-glyph"><BriefcaseBusiness aria-hidden="true" className="size-3.5" /></span>
               {t("searchResults")}
             </h2>
             <span className="text-[11px] text-[var(--text-tertiary)]">
@@ -272,7 +289,7 @@ export function SearchScreen({
           <div className="dashboard-panel-body flex min-h-0 flex-1 flex-col">
             <div className="shrink-0 border-b border-[var(--border)] px-3 py-3">
               <form className="flex gap-2" onSubmit={submitSearch}>
-            <label className="flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--sidebar-field)] px-3 focus-within:border-[var(--focus)]">
+            <label className="search-input-shell flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--sidebar-field)] px-3 focus-within:border-[var(--focus)]">
               <Search aria-hidden="true" className="size-4 text-[var(--text-secondary)]" />
               <span className="sr-only">{t("searchPlaceholder")}</span>
               <input

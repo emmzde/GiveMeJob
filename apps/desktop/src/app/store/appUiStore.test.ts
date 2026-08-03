@@ -12,6 +12,7 @@ describe("app UI store", () => {
     expect(state).toMatchObject({
       screen: "search",
       profileVisited: false,
+      welcomeCompleted: true,
       selectedId: null,
       panel: null,
       theme: "system",

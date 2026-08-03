@@ -2,7 +2,6 @@ import productConfig from "../../../../config/product.json";
 
 const messages = {
   ru: {
-    appDescription: "Локальный поиск по замороженному каталогу вакансий",
     jobs: "Вакансии",
     shortlist: "Избранное",
     profile: "Профиль",
@@ -19,6 +18,11 @@ const messages = {
     languageDescription: "Язык интерфейса приложения",
     languageRussian: "Русский",
     languageEnglish: "English",
+    welcomeLanguageLabel: "Язык приветственного экрана",
+    welcomeTitle: "Добро пожаловать.",
+    welcomeDescription: "Ищите вакансии, сохраняйте лучшие варианты и находите работу, которая подходит именно вам.",
+    welcomeStart: "Начать работу",
+    welcomeGithub: "Профиль на GitHub",
     current: "Текущая",
     commandPalette: "Палитра команд",
     openCommandPalette: "Открыть палитру команд",
@@ -333,7 +337,6 @@ const messages = {
 export type MessageKey = keyof (typeof messages)["ru"];
 
 const englishMessages = {
-  appDescription: "Local search across a frozen job catalog",
   jobs: "Jobs",
   shortlist: "Shortlist",
   profile: "Profile",
@@ -350,6 +353,11 @@ const englishMessages = {
   languageDescription: "Application interface language",
   languageRussian: "Русский",
   languageEnglish: "English",
+  welcomeLanguageLabel: "Welcome screen language",
+  welcomeTitle: "Welcome.",
+  welcomeDescription: "Search jobs, save the best opportunities, and find work that truly fits you.",
+  welcomeStart: "Get started",
+  welcomeGithub: "GitHub profile",
   current: "Current",
   commandPalette: "Command palette",
   openCommandPalette: "Open command palette",

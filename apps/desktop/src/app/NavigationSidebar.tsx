@@ -21,14 +21,15 @@ interface NavItem {
   icon: LucideIcon;
   key: "search" | "shortlist" | "profile" | "emmy" | "settings";
   labelKey: MessageKey;
+  shortcut: string;
 }
 
 const items: readonly NavItem[] = [
-  { key: "search", labelKey: "jobs", icon: BriefcaseBusiness },
-  { key: "shortlist", labelKey: "shortlist", icon: Bookmark },
-  { key: "profile", labelKey: "profile", icon: UserRound },
-  { key: "emmy", labelKey: "emmy", icon: Bot },
-  { key: "settings", labelKey: "settings", icon: Settings },
+  { key: "search", labelKey: "jobs", icon: BriefcaseBusiness, shortcut: "1" },
+  { key: "shortlist", labelKey: "shortlist", icon: Bookmark, shortcut: "2" },
+  { key: "profile", labelKey: "profile", icon: UserRound, shortcut: "3" },
+  { key: "emmy", labelKey: "emmy", icon: Bot, shortcut: "4" },
+  { key: "settings", labelKey: "settings", icon: Settings, shortcut: "5" },
 ];
 
 export function NavigationSidebar({
@@ -53,16 +54,17 @@ export function NavigationSidebar({
 
   return (
     <aside className="navigation-sidebar flex w-[var(--sidebar-width)] shrink-0 flex-col border-r border-[var(--border)] bg-[var(--sidebar)]">
-      <div className="px-3 pb-4 pt-3">
+      <div className="px-3 pb-5 pt-3">
         <button
           aria-label={t("openCommandPalette")}
-          className="flex h-[30px] w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--sidebar-field)] px-2.5 text-left text-[12px] text-[var(--text-placeholder)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] active:scale-[0.99]"
+          className="sidebar-command flex h-9 w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--sidebar-field)] px-2.5 text-left text-[12px] text-[var(--text-placeholder)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] active:scale-[0.99]"
           onClick={() => setCommandPaletteOpen(true)}
           ref={commandTriggerRef}
           type="button"
         >
           <Search aria-hidden="true" className="size-4 shrink-0" />
           <span className="min-w-0 flex-1 truncate">{t("commandSearch")}</span>
+          <kbd aria-hidden="true" className="sidebar-key">Ctrl K</kbd>
         </button>
       </div>
 
@@ -71,7 +73,7 @@ export function NavigationSidebar({
           {t("navigationPrimary")}
         </p>
         <nav aria-label={t("navigationPrimary")} className="space-y-0.5">
-          {items.map(({ icon: Icon, key, labelKey }) => {
+          {items.map(({ icon: Icon, key, labelKey, shortcut }) => {
             const active = key !== "emmy" && key === screen;
             const pressed = key === "emmy" && panel === "emmy";
             const label = t(labelKey);
@@ -81,7 +83,7 @@ export function NavigationSidebar({
                 aria-current={key !== "emmy" && active ? "page" : undefined}
                 aria-pressed={key === "emmy" ? pressed : undefined}
                 className={cn(
-                  "group flex h-[30px] w-full items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 text-[12px] active:scale-[0.99]",
+                  "sidebar-nav-item group flex h-9 w-full items-center gap-2.5 rounded-[var(--radius-md)] px-2 text-[12px] active:scale-[0.99]",
                   active
                     ? "bg-[var(--surface-active)] text-[var(--text)]"
                     : pressed
@@ -92,14 +94,17 @@ export function NavigationSidebar({
                 onClick={() => select(key)}
                 type="button"
               >
-                <Icon
-                  aria-hidden="true"
-                  className={cn(
-                    "size-4 shrink-0",
-                    active || pressed ? "text-[var(--text)]" : "text-[var(--text-tertiary)]",
-                  )}
-                />
+                <span className="sidebar-nav-icon">
+                  <Icon
+                    aria-hidden="true"
+                    className={cn(
+                      "size-4 shrink-0",
+                      active || pressed ? "text-[var(--text)]" : "text-[var(--text-tertiary)]",
+                    )}
+                  />
+                </span>
                 <span className="min-w-0 flex-1 truncate text-left font-normal">{label}</span>
+                <kbd aria-hidden="true" className="sidebar-nav-shortcut">{shortcut}</kbd>
               </button>
             );
           })}
@@ -112,7 +117,7 @@ export function NavigationSidebar({
         </p>
         <nav aria-label={t("supportSection")} className="space-y-0.5">
           <button
-            className="group flex h-[30px] w-full items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 text-[12px] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] active:scale-[0.99]"
+            className="sidebar-support-item group flex h-9 w-full items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 text-[12px] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] active:scale-[0.99]"
             onClick={() => void openSupportLink("feedback").catch(() => undefined)}
             type="button"
           >
@@ -120,7 +125,7 @@ export function NavigationSidebar({
             <span className="min-w-0 flex-1 truncate text-left">{t("feedback")}</span>
           </button>
           <button
-            className="group flex h-[30px] w-full items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 text-[12px] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] active:scale-[0.99]"
+            className="sidebar-support-item group flex h-9 w-full items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 text-[12px] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] active:scale-[0.99]"
             onClick={() => void openSupportLink("github").catch(() => undefined)}
             type="button"
           >

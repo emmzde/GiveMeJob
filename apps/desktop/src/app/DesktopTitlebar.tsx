@@ -86,16 +86,16 @@ export function DesktopTitlebar({ catalog }: DesktopTitlebarProps) {
         className="flex h-full w-[var(--sidebar-width)] shrink-0 items-center gap-2 border-r border-[var(--border)] bg-[var(--sidebar)] px-4"
         data-tauri-drag-region
       >
-        <span aria-hidden="true" className="brand-mark" />
+        <span aria-hidden="true" className="brand-mark-shell"><span className="brand-mark" /></span>
         <span className="brand-wordmark whitespace-nowrap text-[var(--text)]">
           <span>GiveMe</span><span className="brand-wordmark-strong">Job!</span>
         </span>
       </div>
 
       <div className="flex min-w-0 flex-1 items-center gap-2 px-5" data-tauri-drag-region>
-        <span className="text-[12px] text-[var(--text-secondary)]">{t("jobs")}</span>
+        <span className="titlebar-breadcrumb text-[11px] text-[var(--text-secondary)]">{t("jobs")}</span>
         <span aria-hidden="true" className="px-1 text-[12px] text-[var(--text-disabled)]">/</span>
-        <span className="truncate text-xs font-medium text-[var(--text)]">
+        <span className="truncate text-[11px] font-semibold text-[var(--text)]">
           {currentLabel}
         </span>
         <span className="flex-1" data-tauri-drag-region />
@@ -106,7 +106,7 @@ export function DesktopTitlebar({ catalog }: DesktopTitlebarProps) {
           aria-label={emmyButtonLabel}
           aria-pressed={emmyOpen}
           className={cn(
-            "emmy-titlebar-trigger flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] border px-2 text-[11px] font-medium",
+            "emmy-titlebar-trigger flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] border px-2.5 text-[11px] font-medium",
             emmyOpen
               ? "border-[var(--border-strong)] bg-[var(--surface-active)] text-[var(--text)]"
               : "border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]",

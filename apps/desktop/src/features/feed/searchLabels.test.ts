@@ -8,6 +8,7 @@ import {
   searchSortLabels,
   seniorityLabels,
 } from "@/features/feed/searchLabels";
+import { defaultLocale, setActiveLocale } from "@/lib/i18n";
 
 describe("localized search labels", () => {
   it("defines user-facing labels for every closed enum value", () => {
@@ -22,5 +23,19 @@ describe("localized search labels", () => {
   it("formats opaque source identifiers without treating them as enums", () => {
     expect(formatSourceLabel("greenhouse")).toBe("Greenhouse");
     expect(formatSourceLabel("")).toBe("");
+  });
+
+  it("updates labels when the active locale changes after module initialization", () => {
+    try {
+      setActiveLocale("ru");
+      expect(searchSortLabels.relevance).toBe("По релевантности");
+      expect(searchSortLabels.newest).toBe("Сначала новые");
+      expect(searchSortLabels.salary).toBe("По зарплате");
+
+      setActiveLocale("en");
+      expect(searchSortLabels.relevance).toBe("Most relevant");
+    } finally {
+      setActiveLocale(defaultLocale);
+    }
   });
 });

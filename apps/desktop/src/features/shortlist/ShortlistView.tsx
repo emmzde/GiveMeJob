@@ -69,7 +69,7 @@ export function ShortlistView({ catalogVersion }: { catalogVersion: string | nul
     const isCurrentCatalog = record.catalogVersion === catalogVersion;
     const job = isCurrentCatalog ? query?.data : undefined;
     return (
-      <div className="flex min-h-[88px] items-start gap-3 px-4 py-3">
+      <div className="shortlist-row flex min-h-[88px] items-start gap-3 px-4 py-3">
         <div className="min-w-0 flex-1">
           {query?.isPending && isCurrentCatalog ? (
             <div aria-label={t("openShortlistJob")} className="space-y-2" role="status">
@@ -128,17 +128,20 @@ export function ShortlistView({ catalogVersion }: { catalogVersion: string | nul
   }
 
   return (
-    <div className="workspace-page">
-      <section className="workspace-frame">
+    <div className="workspace-page shortlist-page">
+      <section className="workspace-frame shortlist-workspace">
       <header className="workspace-header">
-          <div className="min-w-0">
+          <div className="flex min-w-0 items-start gap-3">
+            <span aria-hidden="true" className="workspace-header-glyph"><Bookmark className="size-4" /></span>
+            <div className="min-w-0">
             <h1 className="workspace-title">{t("shortlistTitle")}</h1>
             <p className="workspace-description">
               {t("shortlistDescription")}
             </p>
+            </div>
           </div>
           {!shortlist.isPending && !shortlist.isError ? (
-            <span className="ui-mono mt-1 text-xs text-[var(--text-secondary)]">
+            <span className="workspace-count ui-mono mt-1 text-xs text-[var(--text-secondary)]">
               {records.length}
             </span>
           ) : null}
@@ -160,7 +163,7 @@ export function ShortlistView({ catalogVersion }: { catalogVersion: string | nul
       ) : null}
       {!shortlist.isPending && !shortlist.isError && records.length === 0 ? (
         <div className="grid min-h-0 flex-1 place-content-center px-6 text-center">
-          <Bookmark aria-hidden="true" className="mx-auto size-6 text-[var(--text-tertiary)]" />
+          <span aria-hidden="true" className="empty-state-glyph mx-auto"><Bookmark className="size-5" /></span>
           <h2 className="mt-3 text-sm font-semibold">{t("shortlistEmpty")}</h2>
           <p className="mt-2 max-w-sm text-xs leading-5 text-[var(--text-secondary)]">
             {t("shortlistEmptyHint")}
@@ -171,7 +174,7 @@ export function ShortlistView({ catalogVersion }: { catalogVersion: string | nul
         </div>
       ) : null}
       {!shortlist.isPending && !shortlist.isError && records.length > 0 ? (
-        <div className="scroll-region min-h-0 flex-1 overflow-y-auto bg-[var(--panel-card)]" ref={scrollRef}>
+        <div className="shortlist-list scroll-region min-h-0 flex-1 overflow-y-auto bg-[var(--panel-card)]" ref={scrollRef}>
           {shouldVirtualize ? (
             <div className="relative" data-virtualized="true" style={{ height: virtualizer.getTotalSize() }}>
               {virtualizer.getVirtualItems().map((row) => (

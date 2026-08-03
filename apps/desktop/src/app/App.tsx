@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 
 import { AppShell } from "@/app/AppShell";
 import { useAppUiStore } from "@/app/store/appUiStore";
+import { WelcomeScreen } from "@/app/WelcomeScreen";
 import { useCatalogStatus } from "@/features/catalog/hooks/useCatalogStatus";
 import { SearchScreen } from "@/features/feed/SearchScreen";
 import { ShortlistShortcut } from "@/features/shortlist/ShortlistShortcut";
@@ -32,7 +33,7 @@ function ScreenSkeleton({ label }: { label: string }) {
   );
 }
 
-export function App() {
+function WorkspaceApp() {
   const screen = useAppUiStore((state) => state.screen);
   const profileVisited = useAppUiStore((state) => state.profileVisited);
   useAppUiStore((state) => state.language);
@@ -76,4 +77,10 @@ export function App() {
       <ShortlistShortcut />
     </AppShell>
   );
+}
+
+export function App() {
+  const welcomeCompleted = useAppUiStore((state) => state.welcomeCompleted);
+
+  return welcomeCompleted ? <WorkspaceApp /> : <WelcomeScreen />;
 }

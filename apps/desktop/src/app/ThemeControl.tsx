@@ -25,7 +25,7 @@ export function ThemeControl() {
   return (
     <fieldset className="min-w-0">
       <legend className="sr-only">{t("theme")}</legend>
-      <div className="grid grid-cols-3 gap-1 rounded-[var(--radius-md)] bg-[var(--surface-2)] p-1">
+      <div className="theme-grid grid grid-cols-3 gap-2">
         {themeOptions.map((option) => (
           <label className="min-w-0 cursor-pointer" key={option}>
             <input
@@ -38,14 +38,20 @@ export function ThemeControl() {
             />
             <span
               className={cn(
-                "theme-option flex h-9 min-w-0 items-center justify-center gap-2 rounded-[var(--radius-sm)] border px-2 text-xs font-medium peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--focus)]",
+                "theme-option theme-card flex min-h-[82px] min-w-0 flex-col items-stretch rounded-[var(--radius-md)] border p-1.5 text-xs font-medium peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--focus)]",
                 theme === option
                   ? "border-[var(--border-strong)] bg-[var(--panel-card)] text-[var(--text)] shadow-[var(--shadow-sm)]"
                   : "border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]",
               )}
             >
-              <ThemeIcon theme={option} />
-              <span className="truncate">{themeLabel(option)}</span>
+              <span aria-hidden="true" className="theme-preview" data-preview={option}>
+                <span className="theme-preview-sidebar" />
+                <span className="theme-preview-main"><i /><i /><i /></span>
+              </span>
+              <span className="flex items-center justify-center gap-2 px-1 py-1.5">
+                <ThemeIcon theme={option} />
+                <span className="truncate">{themeLabel(option)}</span>
+              </span>
             </span>
           </label>
         ))}

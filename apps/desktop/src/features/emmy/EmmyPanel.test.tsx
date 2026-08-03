@@ -116,7 +116,10 @@ describe("EmmyPanel vertical", () => {
     expect(loadConversation).not.toHaveBeenCalled();
     expect(screen.getByText(t("emmyWelcomeTitle"))).toBeVisible();
     const trigger = screen.getByRole("button", { name: t("emmyHistory") });
+    expect(trigger).toHaveTextContent(t("emmyNewConversation"));
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
     const region = await screen.findByRole("region", { name: t("emmyRecentConversations") });
     const conversationButton = within(region).getByRole("button", { name: /Найди Rust вакансии/ });
     await waitFor(() => expect(conversationButton).toHaveFocus());

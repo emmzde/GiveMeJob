@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Banknote, Lock, MapPin, Pencil, Plus, X } from "lucide-react";
+import { Banknote, Lock, MapPin, Pencil, Plus, UserRound, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 
@@ -202,7 +202,7 @@ function ProfileForm({ initial, onCancel, onSaved }: { initial: UserProfile | nu
   }
 
   return (
-    <form className="profile-form" onSubmit={submit}>
+    <form className="profile-form profile-form-canvas" onSubmit={submit}>
       <Field error={fieldErrors.preferredRoles} errorId="profile-roles-error" label={t("preferredRoles")}>
         <div className="flex gap-2">
           <input
@@ -317,7 +317,7 @@ function ProfileForm({ initial, onCancel, onSaved }: { initial: UserProfile | nu
 function ProfileSummary({ onEdit, profile }: { onEdit(): void; profile: UserProfile }) {
   const location = [profile.city, profile.country].filter(Boolean).join(", ") || t("profileNoValue");
   return (
-    <div>
+    <div className="profile-summary">
         <Field label={t("preferredRoles")}><div className="flex flex-wrap gap-1.5">{profile.preferredRoles.length > 0 ? profile.preferredRoles.map((value) => <Badge key={value} tone="outline">{value}</Badge>) : t("profileNoValue")}</div></Field>
         <Field label={t("skills")}><div className="flex flex-wrap gap-1.5">{profile.skills.length > 0 ? profile.skills.map((value) => <Badge key={value}>{value}</Badge>) : t("profileNoValue")}</div></Field>
         <Field label={t("location")}><p className="flex items-center gap-2 text-sm"><MapPin aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />{location}</p></Field>
@@ -337,15 +337,18 @@ export function ProfileView() {
   const [editing, setEditing] = useState(false);
 
   return (
-    <div className="workspace-page">
-      <section className="workspace-frame">
+    <div className="workspace-page profile-page">
+      <section className="workspace-frame profile-workspace">
         <header className="workspace-header">
-          <div>
+          <div className="flex items-start gap-3">
+            <span aria-hidden="true" className="workspace-header-glyph"><UserRound className="size-4" /></span>
+            <div>
             <h1 className="workspace-title">{t("profileTitle")}</h1>
             <p className="workspace-description flex items-center gap-1.5"><Lock aria-hidden="true" className="size-3.5" />{t("profilePrivacy")}</p>
+            </div>
           </div>
         </header>
-        <div className="scroll-region min-h-0 flex-1 overflow-y-auto">
+        <div className="profile-content scroll-region min-h-0 flex-1 overflow-y-auto">
         {profile.isPending ? <div aria-label={t("profileTitle")} className="m-4 h-40 animate-pulse rounded-[var(--radius-md)] bg-[var(--surface-1)]" role="status" /> : null}
         {profile.isError ? (
           <div className="alert-card m-4" role="alert">
@@ -356,10 +359,11 @@ export function ProfileView() {
           </div>
         ) : null}
         {!profile.isPending && !profile.isError && profile.data === null && !editing ? (
-          <div className="grid min-h-80 place-content-center px-6 py-12 text-center">
+          <div className="profile-empty-state grid min-h-80 place-content-center px-6 py-12 text-center">
+            <span aria-hidden="true" className="empty-state-glyph mx-auto"><UserRound className="size-5" /></span>
             <h2 className="text-sm font-semibold">{t("profileEmpty")}</h2>
             <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-[var(--text-secondary)]">{t("profileEmptyHint")}</p>
-            <Button className="mt-5" onClick={() => setEditing(true)} type="button"><Plus aria-hidden="true" className="size-4" />{t("createProfile")}</Button>
+            <Button className="mx-auto mt-5" onClick={() => setEditing(true)} type="button"><Plus aria-hidden="true" className="size-4" />{t("createProfile")}</Button>
           </div>
         ) : null}
         {!profile.isPending && !profile.isError && editing ? <ProfileForm initial={profile.data ?? null} onCancel={() => setEditing(false)} onSaved={() => setEditing(false)} /> : null}

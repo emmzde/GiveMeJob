@@ -8,44 +8,26 @@ import { formatCount, formatSnapshotDate } from "@/features/feed/jobPresentation
 import { t } from "@/lib/i18n";
 
 function SettingRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return <div className="settings-data-row"><dt className="text-xs text-[var(--text-secondary)]">{label}</dt><dd className="ui-mono text-right text-[11px] font-medium text-[var(--text)]">{value}</dd></div>;
+  return <div className="settings-data-row"><dt className="text-xs font-medium text-[var(--text-secondary)]">{label}</dt><dd className="ui-mono rounded-[var(--radius-sm)] bg-[var(--surface-2)] px-2 py-1 text-right text-[10px] font-semibold text-[var(--text)]">{value}</dd></div>;
 }
 
 export function SettingsView({ catalog }: { catalog: CatalogViewState }) {
   const status = catalog.status;
   const unavailable = t("catalogUnavailableValue");
   return (
-    <div className="workspace-page">
-      <section className="workspace-frame">
+    <div className="workspace-page settings-page">
+      <section className="workspace-frame settings-workspace">
         <header className="workspace-header">
-          <div>
+          <div className="flex items-start gap-3">
+            <span aria-hidden="true" className="workspace-header-glyph"><MonitorCog className="size-4" /></span>
+            <div>
             <h1 className="workspace-title">{t("settingsTitle")}</h1>
             <p className="workspace-description">{t("settingsDescription")}</p>
+            </div>
           </div>
         </header>
 
-        <div className="settings-layout">
-          <nav aria-label={t("settingsTitle")} className="settings-nav">
-            <p className="settings-nav-label">{t("settingsTitle")}</p>
-            <a className="settings-nav-link" href="#appearance-heading">
-              <MonitorCog aria-hidden="true" className="size-4" />
-              {t("appearance")}
-            </a>
-            <a className="settings-nav-link" href="#language-heading">
-              <Languages aria-hidden="true" className="size-4" />
-              {t("language")}
-            </a>
-            <a className="settings-nav-link" href="#catalog-heading">
-              <Database aria-hidden="true" className="size-4" />
-              {t("localCatalog")}
-            </a>
-            <a className="settings-nav-link" href="#emmy-settings-heading">
-              <Bot aria-hidden="true" className="size-4" />
-              {t("emmyCredentials")}
-            </a>
-          </nav>
-
-          <div className="settings-content scroll-region">
+        <div className="settings-content scroll-region">
           <section className="workspace-section" aria-labelledby="appearance-heading">
             <div className="workspace-section-header">
               <h2 className="workspace-section-title" id="appearance-heading"><MonitorCog aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />{t("appearance")}</h2>
@@ -82,7 +64,6 @@ export function SettingsView({ catalog }: { catalog: CatalogViewState }) {
             </div>
             <EmmyProviderSettings />
           </section>
-          </div>
         </div>
       </section>
     </div>

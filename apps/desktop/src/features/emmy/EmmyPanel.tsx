@@ -7,7 +7,6 @@ import {
   CircleGauge,
   FileSearch,
   GitCompareArrows,
-  History,
   Plus,
   RotateCcw,
   Settings,
@@ -244,22 +243,23 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
       className="emmy-panel relative flex h-full min-w-0 flex-col bg-[var(--emmy-bg)]"
     >
       <header className="relative flex h-12 shrink-0 items-center gap-2 px-4">
-        <div className="flex min-w-0 flex-1 items-center gap-1.5">
-          <p className="truncate text-[13px] font-semibold leading-4">{conversationTitle}</p>
-          <ChevronDown aria-hidden="true" className="size-3.5 shrink-0 text-[var(--text-tertiary)]" />
-          <span className="sr-only">{stateLabel}</span>
-        </div>
         <Button
           aria-controls="emmy-history-popover"
           aria-expanded={historyOpen}
           aria-label={t("emmyHistory")}
-          className="size-7 px-0"
+          className="group min-w-0 flex-1 justify-start gap-1.5 px-1.5 text-[13px] font-semibold"
+          disabled={!available}
           onClick={() => setHistoryOpen((open) => !open)}
           ref={historyButtonRef}
           type="button"
           variant="ghost"
         >
-          <History aria-hidden="true" className="size-4" />
+          <span className="truncate">{conversationTitle}</span>
+          <ChevronDown
+            aria-hidden="true"
+            className="size-3.5 shrink-0 text-[var(--text-tertiary)] transition-transform duration-150 group-aria-[expanded=true]:rotate-180"
+          />
+          <span className="sr-only">{stateLabel}</span>
         </Button>
         <Button
           aria-label={t("emmyNewConversation")}
@@ -367,11 +367,11 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
       )}
 
       <form className="px-4 pb-4 pt-2" onSubmit={submit}>
-        <div className="emmy-composer-shell flex min-h-[96px] flex-col rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-[var(--surface-2)] px-3 pb-2 pt-2.5">
+        <div className="emmy-composer-shell flex min-h-12 items-end gap-2 rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-[var(--surface-2)] py-2 pl-3 pr-2">
           <label className="sr-only" htmlFor="emmy-composer">{available ? t("emmyInputPlaceholder") : t("emmyUnavailable")}</label>
           <textarea
             aria-label={available ? t("emmyInputPlaceholder") : t("emmyUnavailable")}
-            className="emmy-composer block min-h-10 w-full flex-1 resize-none bg-transparent px-0.5 text-[13px] leading-5 text-[var(--text)] outline-none placeholder:text-[var(--text-placeholder)] disabled:text-[var(--text-disabled)]"
+            className="emmy-composer block max-h-32 min-h-8 min-w-0 flex-1 resize-none overflow-y-auto bg-transparent px-0.5 py-1.5 text-[13px] leading-5 text-[var(--text)] outline-none placeholder:text-[var(--text-placeholder)] disabled:text-[var(--text-disabled)]"
             disabled={!available || busy}
             id="emmy-composer"
             maxLength={4_000}
@@ -385,20 +385,19 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
             onKeyDown={handleComposerKeyDown}
             placeholder={available ? t("emmyInputPlaceholder") : t("emmyOfflineInputPlaceholder")}
             ref={composerRef}
+            rows={1}
             value={draft}
           />
-          <div className="mt-1 flex items-center justify-end border-t border-[var(--border)] pt-1.5">
-            <button
-              aria-label={busy ? t("emmyWorking") : t("emmySend")}
-              className="emmy-send-button group grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--text)] bg-[var(--text)] text-[var(--bg)] transition-[transform,opacity,background-color,border-color] duration-150 ease-[var(--ease)] active:scale-[0.95] hover:opacity-90 disabled:border-[var(--border)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-disabled)] disabled:active:scale-100"
-              disabled={!available || busy || draft.trim().length === 0}
-              type="submit"
-            >
-              <svg aria-hidden="true" className="size-4" fill="none" viewBox="0 0 20 20">
-                <path d="M4 10 10 4l6 6M10 5v11" stroke="currentColor" strokeLinecap="square" strokeLinejoin="miter" strokeWidth="1.6" />
-              </svg>
-            </button>
-          </div>
+          <button
+            aria-label={busy ? t("emmyWorking") : t("emmySend")}
+            className="emmy-send-button group grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--text)] bg-[var(--text)] text-[var(--bg)] transition-[transform,opacity,background-color,border-color] duration-150 ease-[var(--ease)] active:scale-[0.95] hover:opacity-90 disabled:border-[var(--border)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-disabled)] disabled:active:scale-100"
+            disabled={!available || busy || draft.trim().length === 0}
+            type="submit"
+          >
+            <svg aria-hidden="true" className="size-4" fill="none" viewBox="0 0 20 20">
+              <path d="M4 10 10 4l6 6M10 5v11" stroke="currentColor" strokeLinecap="square" strokeLinejoin="miter" strokeWidth="1.6" />
+            </svg>
+          </button>
         </div>
       </form>
     </aside>

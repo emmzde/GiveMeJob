@@ -34,7 +34,7 @@ export function ShortlistButton({
       <Button
         aria-label={label}
         aria-pressed={saved}
-        className={compact ? "size-8 px-0" : undefined}
+        className={cn("group", compact && "size-8 px-0")}
         disabled={shortlist.isPending || mutation.isPending}
         onClick={toggle}
         title={mutation.isError ? t("shortlistMutationError") : label}
@@ -43,7 +43,7 @@ export function ShortlistButton({
       >
         <Bookmark
           aria-hidden="true"
-          className="size-4"
+          className="size-4 transition-[transform,fill] duration-300 ease-[var(--ease)] group-aria-pressed:scale-105"
           fill={saved ? "currentColor" : "none"}
         />
         {compact ? null : label}

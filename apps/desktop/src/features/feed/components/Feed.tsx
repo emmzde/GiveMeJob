@@ -42,7 +42,7 @@ const nextPageSkeletonRows = 3;
 const feedOverscan = 4;
 const loadMoreThreshold = 4;
 const virtualizationThreshold = 50;
-const jobRowEstimate = 86;
+const jobRowEstimate = 116;
 
 function SkeletonRow({ compact = false }: { compact?: boolean }) {
   return (
@@ -198,12 +198,12 @@ export function Feed({
       <div
         aria-posinset={index + 1}
         aria-setsize={jobs.length}
-        className="job-feed-item relative px-1.5 py-px"
+        className="job-feed-item relative"
         role="listitem"
       >
         <button
           aria-current={isSelected ? "true" : undefined}
-          className={`job-feed-row group block w-full border px-3 py-2.5 pr-12 text-left transition-[background-color,border-color,transform] duration-150 ease-[var(--ease)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] active:scale-[0.995] ${
+          className={`job-feed-row group block w-full border px-5 py-4 pr-14 text-left transition-[background-color,border-color,transform,box-shadow] duration-300 ease-[var(--ease)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] active:scale-[0.995] ${
             isSelected
               ? "border-[var(--border-strong)] bg-[var(--surface-active)]"
               : "border-transparent hover:bg-[var(--bg-hover)]"
@@ -218,11 +218,11 @@ export function Feed({
             <span className="flex min-w-0 items-start gap-2">
               <span className="min-w-0 flex-1">
                 <span
-                  className="block truncate text-[13px] font-semibold leading-5 tracking-[-0.012em] text-[var(--text)]"
+                  className="block truncate text-[15px] font-bold leading-5 tracking-[-0.015em] text-[var(--text)]"
                 >
                   {normalizeJobTitle(job.title)}
                 </span>
-                <span className="block truncate text-[11px] font-medium leading-4 text-[var(--text-secondary)]">
+                <span className="mt-0.5 block truncate text-[12px] font-medium leading-4 text-[var(--text-secondary)]">
                   {job.company}
                 </span>
               </span>
@@ -232,7 +232,7 @@ export function Feed({
                 isLoading={matches.isPending}
               />
             </span>
-            <span className="job-feed-secondary mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] leading-4 text-[var(--text-tertiary)]">
+            <span className="job-feed-secondary mt-2.5 flex min-w-0 flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[11.5px] leading-4 text-[var(--text-tertiary)]">
               <span className="inline-flex min-w-0 items-center gap-1">
                 <MapPin aria-hidden="true" className="size-3.5 shrink-0" />
                 <span className="max-w-44 truncate">{job.locationText || "—"}</span>
@@ -249,12 +249,12 @@ export function Feed({
                   {seniorityLabels[job.seniority]}
                 </span>
               ) : null}
-              <span className="ui-mono inline-flex items-center gap-1 text-[10px] text-[var(--text-secondary)]">
+              <span className="inline-flex items-center gap-1 text-[11.5px] text-[var(--text-secondary)]">
                 <CircleDollarSign aria-hidden="true" className="size-3.5 shrink-0" />
                 {salary ?? t("salaryNotSpecified")}
               </span>
               {postedDate ? (
-                <span className="ui-mono inline-flex items-center gap-1 text-[10px]">
+                <span className="inline-flex items-center gap-1 text-[11.5px]">
                   <CalendarDays aria-hidden="true" className="size-3.5 shrink-0" />
                   {t("posted")} {postedDate}
                 </span>
@@ -262,7 +262,7 @@ export function Feed({
             </span>
           </span>
         </button>
-        <span className="absolute right-3 top-2.5">
+        <span className="absolute right-4 top-4">
           <ShortlistButton compact jobId={job.id} />
         </span>
       </div>
@@ -280,7 +280,7 @@ export function Feed({
     <div
       aria-busy={isFetching}
       aria-label={t("searchResults")}
-      className="scroll-region min-h-0 flex-1 overflow-y-auto overscroll-contain"
+      className="job-feed-region scroll-region min-h-0 flex-1 overflow-y-auto overscroll-contain"
       ref={scrollRef}
       role="region"
     >

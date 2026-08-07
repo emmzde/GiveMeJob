@@ -46,10 +46,6 @@
     "shortlistLazyChunkKb": 10.02,
     "settingsLazyChunkKb": 3.73
   },
-  "impeccableDetector": {
-    "findings": 0,
-    "result": "pass"
-  },
   "nativeBuild": {
     "command": "pnpm -C apps/desktop exec tauri build --debug --no-bundle",
     "result": "pass",

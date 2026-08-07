@@ -54,10 +54,10 @@ export function NavigationSidebar({
 
   return (
     <aside className="navigation-sidebar flex w-[var(--sidebar-width)] shrink-0 flex-col border-r border-[var(--border)] bg-[var(--sidebar)]">
-      <div className="px-3 pb-5 pt-3">
+      <div className="px-4 pb-5 pt-5">
         <button
           aria-label={t("openCommandPalette")}
-          className="sidebar-command flex h-9 w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--sidebar-field)] px-2.5 text-left text-[12px] text-[var(--text-placeholder)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] active:scale-[0.99]"
+          className="sidebar-command flex h-10 w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--sidebar-field)] px-3 text-left text-[13px] text-[var(--text-placeholder)] hover:border-[var(--accent)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] active:scale-[0.99]"
           onClick={() => setCommandPaletteOpen(true)}
           ref={commandTriggerRef}
           type="button"
@@ -68,11 +68,11 @@ export function NavigationSidebar({
         </button>
       </div>
 
-      <div className="scroll-region min-h-0 flex-1 overflow-y-auto px-3 pb-4">
-        <p className="mb-1.5 px-2 text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
+      <div className="scroll-region min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+        <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
           {t("navigationPrimary")}
         </p>
-        <nav aria-label={t("navigationPrimary")} className="space-y-0.5">
+        <nav aria-label={t("navigationPrimary")} className="space-y-1">
           {items.map(({ icon: Icon, key, labelKey, shortcut }) => {
             const active = key !== "emmy" && key === screen;
             const pressed = key === "emmy" && panel === "emmy";
@@ -83,7 +83,7 @@ export function NavigationSidebar({
                 aria-current={key !== "emmy" && active ? "page" : undefined}
                 aria-pressed={key === "emmy" ? pressed : undefined}
                 className={cn(
-                  "sidebar-nav-item group flex h-9 w-full items-center gap-2.5 rounded-[var(--radius-md)] px-2 text-[12px] active:scale-[0.99]",
+                  "sidebar-nav-item group flex h-10 w-full items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 text-[13px] active:scale-[0.99]",
                   active
                     ? "bg-[var(--surface-active)] text-[var(--text)]"
                     : pressed
@@ -111,13 +111,13 @@ export function NavigationSidebar({
         </nav>
 
       </div>
-      <div className="shrink-0 px-3 pb-4 pt-2">
-        <p className="mb-1.5 px-2 text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--text-tertiary)]">
+      <div className="shrink-0 px-4 pb-5 pt-2">
+        <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
           {t("supportSection")}
         </p>
-        <nav aria-label={t("supportSection")} className="space-y-0.5">
+        <nav aria-label={t("supportSection")} className="space-y-1">
           <button
-            className="sidebar-support-item group flex h-9 w-full items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 text-[12px] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] active:scale-[0.99]"
+            className="sidebar-support-item group flex h-10 w-full items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 text-[13px] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] active:scale-[0.99]"
             onClick={() => void openSupportLink("feedback").catch(() => undefined)}
             type="button"
           >
@@ -125,7 +125,7 @@ export function NavigationSidebar({
             <span className="min-w-0 flex-1 truncate text-left">{t("feedback")}</span>
           </button>
           <button
-            className="sidebar-support-item group flex h-9 w-full items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 text-[12px] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] active:scale-[0.99]"
+            className="sidebar-support-item group flex h-10 w-full items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 text-[13px] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] active:scale-[0.99]"
             onClick={() => void openSupportLink("github").catch(() => undefined)}
             type="button"
           >

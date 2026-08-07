@@ -86,7 +86,6 @@ export function SearchScreen({
   const screen = useAppUiStore((state) => state.screen);
   const setPanel = useAppUiStore((state) => state.setPanel);
   const filtersVisible = useAppUiStore((state) => state.filtersVisible);
-  const toggleFilters = useAppUiStore((state) => state.toggleFilters);
   const catalogReady = isCatalogReady(catalog);
   const search = useSearchPage(committedQuery, catalogReady);
   const retainedData =
@@ -205,31 +204,19 @@ export function SearchScreen({
       />
 
       <section className="job-workbench flex min-h-0 min-w-0 flex-col border-r border-[var(--border)] bg-[var(--bg)]">
-        <div className="search-page-header shrink-0 px-4 pb-4 pt-4">
+        <div className="search-page-header shrink-0 px-6 pb-5 pt-5">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
                 {t("localCatalog")}
               </p>
-              <h1 className="search-title text-[25px] font-medium leading-7 tracking-[-0.04em]">
+              <h1 className="search-title text-[28px] font-extrabold leading-8 tracking-[-0.035em]">
                 {t("searchTitle")}
               </h1>
             </div>
-            <Button
-              aria-controls="search-filters"
-              aria-expanded={filtersVisible}
-              aria-label={filtersVisible ? t("hideFilters") : t("showFilters")}
-              className="h-8 shrink-0 px-2.5"
-              onClick={toggleFilters}
-              type="button"
-              variant="outline"
-            >
-              <ListFilter aria-hidden="true" className="size-4" />
-              {filtersVisible ? t("hideFilters") : t("showFilters")}
-            </Button>
           </div>
 
-          <div className="search-overview mt-4" aria-label={t("searchOverview")}>
+          <div className="search-overview mt-5" aria-label={t("searchOverview")}>
             <article className="search-metric search-metric-primary" data-tone="primary">
               <div className="search-metric-header">
                 <p className="truncate text-[12px] font-semibold text-[var(--text)]">
@@ -275,26 +262,26 @@ export function SearchScreen({
           </div>
         </div>
 
-        <div className="dashboard-panel job-results-panel mx-4 mb-4 flex min-h-0 flex-1 flex-col">
-          <div className="dashboard-panel-header shrink-0">
-            <h2 className="flex min-w-0 items-center gap-2 text-[12px] font-medium">
+        <div className="job-results-panel mx-6 mb-6 flex min-h-0 flex-1 flex-col gap-4">
+          <div className="search-controls-card shrink-0">
+          <div className="search-controls-header">
+            <h2 className="flex min-w-0 items-center gap-2 text-[14px] font-bold">
               <span className="panel-glyph"><BriefcaseBusiness aria-hidden="true" className="size-3.5" /></span>
               {t("searchResults")}
             </h2>
-            <span className="text-[11px] text-[var(--text-tertiary)]">
+            <span className="text-[12px] text-[var(--text-tertiary)]">
               {t("localCatalog")}
             </span>
           </div>
 
-          <div className="dashboard-panel-body flex min-h-0 flex-1 flex-col">
-            <div className="shrink-0 border-b border-[var(--border)] px-3 py-3">
+            <div className="search-controls-body">
               <form className="flex gap-2" onSubmit={submitSearch}>
-            <label className="search-input-shell flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--sidebar-field)] px-3 focus-within:border-[var(--focus)]">
-              <Search aria-hidden="true" className="size-4 text-[var(--text-secondary)]" />
+            <label className="search-input-shell flex min-w-0 flex-1 items-center gap-3 rounded-[10px] border border-[var(--border)] bg-[var(--sidebar-field)] px-4 focus-within:border-[var(--focus)]">
+              <Search aria-hidden="true" className="size-[18px] text-[var(--text-tertiary)]" />
               <span className="sr-only">{t("searchPlaceholder")}</span>
               <input
                 aria-describedby="search-syntax-hint"
-                className="h-8 min-w-0 flex-1 bg-transparent text-[12px] outline-none placeholder:text-[var(--text-placeholder)]"
+                className="h-11 min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-[var(--text-placeholder)]"
                 disabled={!catalogReady}
                 id="catalog-search-input"
                 onChange={(event) => setDraft({ ...draft, text: event.target.value })}
@@ -311,7 +298,7 @@ export function SearchScreen({
               {t("search")}
             </Button>
               </form>
-              <p className="mt-1.5 text-[11px] leading-4 text-[var(--text-tertiary)]" id="search-syntax-hint">
+              <p className="mt-3 text-[12px] leading-5 text-[var(--text-tertiary)]" id="search-syntax-hint">
                 {t("searchSyntaxHint")}
               </p>
 
@@ -357,12 +344,12 @@ export function SearchScreen({
             </p>
           ) : null}
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-3">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-4">
             <div>
               <p
                 aria-atomic="true"
                 aria-live="polite"
-                className="ui-mono text-[11px] font-semibold leading-4"
+                className="text-[13px] font-bold leading-5"
                 role="status"
               >
                 {catalogWorking || (search.isPending && jobs.length === 0)
@@ -396,6 +383,7 @@ export function SearchScreen({
             </div>
           ) : null}
             </div>
+          </div>
 
             <Feed
               canLoadNextPage={
@@ -413,7 +401,6 @@ export function SearchScreen({
               nextCursor={nextCursor}
               onLoadMore={loadMore}
             />
-          </div>
         </div>
       </section>
 

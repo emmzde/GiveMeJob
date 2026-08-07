@@ -110,8 +110,10 @@ export function JobDetail({
 
   return (
     <aside
+      aria-hidden={!dataVisible}
       className="detail-panel scroll-region min-h-0 min-w-0 overflow-y-auto bg-[var(--panel-card)]"
       data-visible={dataVisible ? "true" : "false"}
+      inert={!dataVisible}
     >
       {isLoading ? <div className="p-4"><JobDetailSkeleton /></div> : null}
       {!isLoading && detail.data ? (

@@ -116,7 +116,7 @@ describe("AppShell themes", () => {
     fireEvent.click(titlebar.getByRole("button", { name: t("closeEmmy") }));
     act(() => vi.advanceTimersByTime(17));
     expect(container.querySelector(".emmy-dock")).toHaveAttribute("data-visible", "false");
-    act(() => vi.advanceTimersByTime(160));
+    act(() => vi.advanceTimersByTime(560));
     expect(container.querySelector(".emmy-dock")).toBeNull();
   });
 });

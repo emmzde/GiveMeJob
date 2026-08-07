@@ -40,7 +40,7 @@ export function FilterSection({
         )}
         <ChevronDown
           aria-hidden="true"
-          className="size-4 text-[var(--text-secondary)] transition-transform group-open:rotate-180"
+          className="size-4 text-[var(--text-secondary)] transition-transform duration-300 ease-[var(--ease)] group-open:rotate-180"
         />
       </summary>
       <fieldset className="min-w-0 border-0 px-1 pb-1 pt-1">

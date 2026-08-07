@@ -17,7 +17,7 @@ interface AppShellProps {
 
 const MIN_EMMY_WIDTH = 400;
 const MAX_EMMY_WIDTH = 480;
-const PANEL_MOTION_MS = 160;
+const PANEL_MOTION_MS = 560;
 const EmmyPanel = lazy(() =>
   import("@/features/emmy/EmmyPanel").then((module) => ({ default: module.EmmyPanel })),
 );

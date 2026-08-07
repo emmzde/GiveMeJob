@@ -79,10 +79,7 @@ Score показан как «Совпадение», а не вероятнос
 Production build вынес Emmy в отдельный lazy chunk `4.14 kB`. Profile,
 Shortlist и Settings также загружаются отдельными chunks; Profile после первого
 открытия остаётся смонтированным, поэтому незаписанный draft не теряется.
-Initial JS составляет `530.21 kB` (`158.97 kB` gzip). В production
-`index.html` нет внутреннего `impeccable-design-contract`.
-
-Impeccable mechanical detector завершился без findings. Frontend suite:
+Initial JS составляет `530.21 kB` (`158.97 kB` gzip). Frontend suite:
 32 files / 151 tests; TypeScript strict, ESLint и production build прошли.
 
 ## Quality environment note

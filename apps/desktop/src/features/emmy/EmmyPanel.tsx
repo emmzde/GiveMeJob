@@ -257,7 +257,7 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
           <span className="truncate">{conversationTitle}</span>
           <ChevronDown
             aria-hidden="true"
-            className="size-3.5 shrink-0 text-[var(--text-tertiary)] transition-transform duration-150 group-aria-[expanded=true]:rotate-180"
+            className="size-3.5 shrink-0 text-[var(--text-tertiary)] transition-transform duration-300 ease-[var(--ease)] group-aria-[expanded=true]:rotate-180"
           />
           <span className="sr-only">{stateLabel}</span>
         </Button>
@@ -390,7 +390,7 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
           />
           <button
             aria-label={busy ? t("emmyWorking") : t("emmySend")}
-            className="emmy-send-button group grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--text)] bg-[var(--text)] text-[var(--bg)] transition-[transform,opacity,background-color,border-color] duration-150 ease-[var(--ease)] active:scale-[0.95] hover:opacity-90 disabled:border-[var(--border)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-disabled)] disabled:active:scale-100"
+            className="emmy-send-button group grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--text)] bg-[var(--text)] text-[var(--bg)] transition-[transform,opacity,background-color,border-color,box-shadow] duration-300 ease-[var(--ease)] active:scale-[0.96] hover:opacity-90 disabled:border-[var(--border)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-disabled)] disabled:active:scale-100"
             disabled={!available || busy || draft.trim().length === 0}
             type="submit"
           >
@@ -438,9 +438,9 @@ function WelcomeState({ onReply }: { onReply(reply: string): void }) {
                 onClick={() => onReply(reply)}
                 type="button"
               >
-                <Icon aria-hidden="true" className="size-4 shrink-0 text-[var(--text-tertiary)] transition-transform duration-150 ease-[var(--ease)] group-hover:-translate-y-px group-hover:text-[var(--text)]" />
+                <Icon aria-hidden="true" className="size-4 shrink-0 text-[var(--text-tertiary)] transition-transform duration-300 ease-[var(--ease)] group-hover:-translate-y-px group-hover:text-[var(--text)]" />
                 <span className="min-w-0 flex-1 truncate font-medium">{label}</span>
-                <ArrowUpRight aria-hidden="true" className="size-3.5 shrink-0 translate-x-1 text-[var(--text-disabled)] opacity-0 transition-[transform,opacity] duration-150 ease-[var(--ease)] group-hover:translate-x-0 group-hover:opacity-100" />
+                <ArrowUpRight aria-hidden="true" className="size-3.5 shrink-0 translate-x-1 text-[var(--text-disabled)] opacity-0 transition-[transform,opacity] duration-300 ease-[var(--ease)] group-hover:translate-x-0 group-hover:opacity-100" />
               </button>
             );
           })}

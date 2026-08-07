@@ -87,7 +87,7 @@ const initialUiState: Pick<
   theme: "system",
   language: initialLanguage,
   commandPaletteOpen: false,
-  filtersVisible: false,
+  filtersVisible: true,
 };
 
 export const useAppUiStore = create<AppUiState>((set) => ({

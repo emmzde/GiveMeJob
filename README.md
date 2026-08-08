@@ -1,3 +1,5 @@
+<p align="right">🌐 <strong>English</strong> · <a href="README.ru.md">Русский</a></p>
+
 # GiveMeJob!
 
 **Search 78,719 jobs entirely offline, get explainable matches, and ask Emmy to work with local career tools while your profile and shortlist stay on your PC.**

@@ -1,49 +1,80 @@
 # GiveMeJob!
 
+**Search 78,719 jobs entirely offline, get explainable matches, and ask Emmy to work with local career tools while your profile and shortlist stay on your PC.**
+
+![GiveMeJob local search, filters, vacancy list and job details](docs/screenshots/interface.png)
+
 [![Quality](https://github.com/emmzde/GiveMeJob/actions/workflows/quality.yml/badge.svg)](https://github.com/emmzde/GiveMeJob/actions/workflows/quality.yml)
-[![Windows release](https://img.shields.io/github/v/release/emmzde/GiveMeJob?include_prereleases&sort=semver)](https://github.com/emmzde/GiveMeJob/releases)
+[![Latest release](https://img.shields.io/github/v/release/emmzde/GiveMeJob?sort=semver)](https://github.com/emmzde/GiveMeJob/releases/latest)
+[![License: MIT](https://img.shields.io/github/license/emmzde/GiveMeJob)](LICENSE)
+[![Tauri 2](https://img.shields.io/badge/Tauri-2-242424?logo=tauri)](https://tauri.app/)
+[![Rust](https://img.shields.io/badge/Rust-stable-242424?logo=rust)](https://www.rust-lang.org/)
 
-GiveMeJob! is an offline-first Windows job-search desktop app. It combines a
-frozen local vacancy catalog, SQLite FTS5 search, a candidate profile,
-explainable match scores and an optional AI career assistant named Emmy.
+| Emmy compares jobs through local tools | Left-click Emmy to pet her |
+| --- | --- |
+| ![Emmy searches the local catalog and compares two Rust vacancies](docs/screenshots/emmy-ai.png) | ![Emmy reacts with hearts when petted](docs/screenshots/emmy-petting.png) |
 
-> Pet-project status: the app is usable, but installers are currently unsigned
-> and Windows may show a SmartScreen warning. Only download builds from this
-> repository's Releases page and verify `SHA256SUMS.txt`.
+## Why
 
-## Highlights
+I was tired of scrolling through nearly identical job boards and giving every new service the same personal data. GiveMeJob! is my attempt to make job search calmer and more inspectable: the catalog is local, matching explains itself, and AI is an optional assistant rather than the database.
 
-- local full-text search across 78,719 frozen vacancies;
-- filters, shortlist and deterministic pagination without a hosted backend;
-- explainable matching against a locally stored candidate profile;
-- optional Emmy assistant with BYOK credentials stored in Windows Credential
-  Manager;
-- Russian and English UI, keyboard navigation and accessibility tests;
-- NSIS installer and portable ZIP produced by GitHub Actions.
+## Key features
 
-## Stack
+- **Real offline search.** SQLite FTS5 searches a frozen catalog of 78,719 vacancies without a hosted backend or an internet connection.
+- **Emmy, a tool-using career assistant.** Emmy can search, compare, explain matches and propose shortlist changes through typed local tools; writes require confirmation.
+- **Explainable matching.** Candidate-to-job scores are deterministic and break down skills, role, seniority, location and salary instead of hiding behind a black box.
+- **Local-first privacy.** Profiles, saved jobs and search data stay on the device. Network access is used only for original vacancy links or an AI provider the user explicitly enables.
+- **Resilient AI routing.** BYOK credentials live in Windows Credential Manager, with validation, provider fallback and a custom OpenAI-compatible endpoint.
 
-- Tauri 2 and Rust for the native Windows shell and local data layer;
-- React 19, TypeScript, Vite and TanStack Query for the UI;
-- SQLite FTS5 for offline search;
-- Python 3.13 tooling for deterministic catalog exports.
+## Tech stack
 
-## Local development
+| Layer | Technology | Role |
+| --- | --- | --- |
+| Desktop shell | **Tauri 2** | Native Windows lifecycle, packaging and secure IPC |
+| Core | **Rust** | Search commands, matching, persistence and Emmy orchestration |
+| Interface | **React 19 + TypeScript 6** | Accessible, bilingual desktop UI |
+| Local data | **SQLite + FTS5** | Frozen catalog, full-text search and user state |
+| Tooling | **Vite, Vitest, Python 3.13** | Frontend builds, tests and deterministic catalog exports |
 
-Requirements: Node.js 24+, pnpm 11.9, stable Rust and Python 3.13 with
-[uv](https://docs.astral.sh/uv/).
+## Architecture
+
+```mermaid
+flowchart LR
+    UI["React desktop UI"] -->|typed Tauri IPC| Core["Rust application core"]
+    Core --> Search["SQLite FTS5 catalog"]
+    Core --> State["Local profile and shortlist"]
+    Core --> Emmy["Emmy agent loop"]
+    Emmy --> Tools["Read-only search, compare and match tools"]
+    Emmy --> Confirm["Confirmed shortlist writes"]
+    Emmy --> Router["Provider router"]
+    Router -. only when enabled .-> LLM["External AI provider"]
+    Core --> Vault["Windows Credential Manager"]
+```
+
+The React layer never reads the database directly. It calls a narrow Tauri command surface; Rust validates every request, runs local search or persistence, and returns typed payloads. Emmy uses the same local capabilities as tools, keeps mutations behind a confirmation step, and reaches the network only through the provider router.
+
+## Quick start
+
+### Install on Windows
+
+1. Open the [latest GitHub Release](https://github.com/emmzde/GiveMeJob/releases/latest).
+2. Download the NSIS installer or the portable ZIP.
+3. Verify the download against `SHA256SUMS.txt`, then launch GiveMeJob!.
+
+The v1.0.0 binaries are currently unsigned, so Windows SmartScreen may show a warning. Download builds only from this repository.
+
+### Run from source
+
+Requirements: Node.js 24+, pnpm 11.9, stable Rust, and Python 3.13 with [uv](https://docs.astral.sh/uv/).
 
 ```powershell
 corepack enable
 pnpm install --frozen-lockfile
 uv sync --locked --all-groups
-
 pnpm desktop:dev
 ```
 
-The desktop app does not need a PostgreSQL server at runtime. PostgreSQL is
-used only by the developer-side catalog exporter. Copy `.env.example` to `.env`
-only when you work on that exporter; never commit the resulting file.
+The app needs no PostgreSQL server at runtime. PostgreSQL is used only by the developer-side catalog exporter; copy `.env.example` to `.env` only for exporter work and never commit it.
 
 ## Quality gates
 
@@ -51,37 +82,25 @@ only when you work on that exporter; never commit the resulting file.
 pnpm quality
 ```
 
-The command checks aligned release metadata, TypeScript, ESLint, 180 frontend
-tests, the production web bundle, Rust formatting/checks/tests/clippy and the
-Python exporter suite. The same gates run in GitHub Actions for every pull
-request.
+The release gate aligns project metadata, type-checks and lints the UI, runs the frontend, Rust and Python suites, builds the production web layer, and treats Clippy warnings as errors. GitHub Actions repeats the same checks on `main` and pull requests.
 
-## Releases
+## Repository map
 
-Windows artifacts are built from the default branch by the manually approved
-`Windows release` workflow. It verifies the frozen catalog hash, runs the
-quality gates, creates an NSIS installer and portable ZIP, and can publish both
-to a versioned GitHub Release with SHA-256 checksums.
+| Path | Contents |
+| --- | --- |
+| `apps/desktop` | React frontend and Tauri/Rust desktop application |
+| `config` | Search configuration and frozen-catalog manifest |
+| `tools/catalog_export` | Deterministic PostgreSQL-to-SQLite export pipeline |
+| `tests` | Exporter and contract tests |
+| `docs` | Architecture notes, release process and verification evidence |
 
-See [docs/RELEASING.md](docs/RELEASING.md) for the release checklist and GitHub
-environment setup.
+## Known limitations and roadmap
 
-## Repository layout
+- [ ] Sign Windows binaries to remove the SmartScreen warning.
+- [ ] Add in-app catalog updates; v1.0.0 ships a frozen July 2026 snapshot.
+- [ ] Package macOS and Linux builds after the Windows workflow is stable.
+- [ ] Expand end-to-end testing on clean Windows virtual machines.
 
-- `apps/desktop` — Tauri desktop application;
-- `config` — product, search and frozen-catalog metadata;
-- `tools/catalog_export` — deterministic catalog export utilities;
-- `tests` — exporter and contract tests;
-- `docs/evidence` — historical acceptance and benchmark records.
+## License
 
-## Security and privacy
-
-Search, profiles and shortlists stay on the local machine. Network access is
-used only when the user opens an original vacancy or enables an AI provider.
-Read [SECURITY.md](SECURITY.md) before configuring demo provider credentials.
-
-## Contributing and license
-
-Small, focused pull requests are welcome; see
-[CONTRIBUTING.md](CONTRIBUTING.md). No open-source license has been selected
-yet, so the repository does not currently grant reuse or redistribution rights.
+GiveMeJob! is released under the [MIT License](LICENSE).

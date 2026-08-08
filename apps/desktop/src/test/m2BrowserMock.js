@@ -51,6 +51,7 @@ const emmyConfiguredProviders = new Set(["groq", "gemini", "openrouter", "cerebr
 function emmyConfiguration() {
   return {
     available: emmyConfiguredProviders.size > 0,
+    customApi: null,
     providers: ["groq", "gemini", "openrouter", "cerebras"].map((provider) => ({
       provider,
       configured: emmyConfiguredProviders.has(provider),

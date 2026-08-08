@@ -34,7 +34,7 @@ before presenting the installer as a trusted commercial distribution.
 7. Download the result and verify install, launch, offline search and original
    vacancy links on a clean Windows machine.
 
-The workflow derives the tag from project metadata (for example, `v0.1.0`),
+The workflow derives the tag from project metadata (for example, `v1.0.0`),
 creates it at the selected `main` commit and publishes the NSIS installer,
 portable ZIP and `SHA256SUMS.txt`. It refuses to overwrite an existing release.
 

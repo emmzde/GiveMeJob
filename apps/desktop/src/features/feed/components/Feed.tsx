@@ -1,5 +1,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
+  Building2,
   CalendarDays,
   ChartNoAxesColumnIncreasing,
   CircleDollarSign,
@@ -203,7 +204,7 @@ export function Feed({
       >
         <button
           aria-current={isSelected ? "true" : undefined}
-          className={`job-feed-row group block w-full border px-5 py-4 pr-14 text-left transition-[background-color,border-color,transform,box-shadow] duration-300 ease-[var(--ease)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] active:scale-[0.995] ${
+          className={`job-feed-row group block w-full border px-5 py-4 pr-14 text-left transition-[background-color,border-color] duration-300 ease-[var(--ease)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] ${
             isSelected
               ? "border-[var(--border-strong)] bg-[var(--surface-active)]"
               : "border-transparent hover:bg-[var(--bg-hover)]"
@@ -214,16 +215,23 @@ export function Feed({
           tabIndex={selectedId === job.id || (selectedId === null && index === 0) ? 0 : -1}
           type="button"
         >
-          <span className="min-w-0 flex-1">
-            <span className="flex min-w-0 items-start gap-2">
+          <span className="flex min-w-0 items-start gap-3">
+            <span aria-hidden="true" className="job-company-avatar">
+              <Building2 className="size-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex min-w-0 items-start gap-2">
               <span className="min-w-0 flex-1">
                 <span
-                  className="block truncate text-[15px] font-bold leading-5 tracking-[-0.015em] text-[var(--text)]"
+                  className="job-feed-title block truncate text-[15px] font-semibold leading-5 tracking-[-0.015em] text-[var(--text)]"
                 >
                   {normalizeJobTitle(job.title)}
                 </span>
-                <span className="mt-0.5 block truncate text-[12px] font-medium leading-4 text-[var(--text-secondary)]">
-                  {job.company}
+                <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[13px] leading-4 text-[var(--text-secondary)]">
+                  <span className="truncate">{job.company}</span>
+                  <span aria-hidden="true" className="text-[var(--text-tertiary)]">·</span>
+                  <MapPin aria-hidden="true" className="size-3 shrink-0" />
+                  <span className="max-w-40 truncate">{job.locationText || "—"}</span>
                 </span>
               </span>
               <MatchBadge
@@ -231,15 +239,11 @@ export function Feed({
                 hasProfile={matches.hasProfile}
                 isLoading={matches.isPending}
               />
-            </span>
-            <span className="job-feed-secondary mt-2.5 flex min-w-0 flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[11.5px] leading-4 text-[var(--text-tertiary)]">
-              <span className="inline-flex min-w-0 items-center gap-1">
-                <MapPin aria-hidden="true" className="size-3.5 shrink-0" />
-                <span className="max-w-44 truncate">{job.locationText || "—"}</span>
               </span>
+              <span className="job-feed-secondary mt-3 flex min-w-0 flex-wrap items-center gap-x-3.5 gap-y-2 text-[12px] leading-4 text-[var(--text-tertiary)]">
               {job.remoteMode ? (
-                <span className="inline-flex items-center gap-1">
-                  <Wifi aria-hidden="true" className="size-3.5 shrink-0" />
+                <span className="job-mode-badge inline-flex items-center gap-1.5">
+                  <Wifi aria-hidden="true" className="size-3 shrink-0" />
                   {remoteModeLabels[job.remoteMode]}
                 </span>
               ) : null}
@@ -249,16 +253,17 @@ export function Feed({
                   {seniorityLabels[job.seniority]}
                 </span>
               ) : null}
-              <span className="inline-flex items-center gap-1 text-[11.5px] text-[var(--text-secondary)]">
+              <span className="job-salary inline-flex items-center gap-1.5 text-[var(--text-secondary)]">
                 <CircleDollarSign aria-hidden="true" className="size-3.5 shrink-0" />
                 {salary ?? t("salaryNotSpecified")}
               </span>
               {postedDate ? (
-                <span className="inline-flex items-center gap-1 text-[11.5px]">
+                <span className="inline-flex items-center gap-1.5">
                   <CalendarDays aria-hidden="true" className="size-3.5 shrink-0" />
                   {t("posted")} {postedDate}
                 </span>
               ) : null}
+              </span>
             </span>
           </span>
         </button>

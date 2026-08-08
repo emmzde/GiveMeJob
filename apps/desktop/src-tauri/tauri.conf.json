@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "GiveMeJob!",
   "version": "0.1.0",
-  "identifier": "app.givemejob.desktop",
+  "identifier": "com.emmzde.givemejob",
   "build": {
     "beforeDevCommand": "pnpm web:dev",
     "devUrl": "http://localhost:5173",
@@ -37,7 +37,7 @@
     ],
     "resources": ["resources/*"],
     "category": "Productivity",
-    "shortDescription": "Локальный поиск работы и объяснимое совпадение",
-    "longDescription": "Офлайн-каталог вакансий для Windows с локальным поиском, профилем и AI-маскотом Emmy."
+    "shortDescription": "Offline Windows job search with explainable matching",
+    "longDescription": "An offline-first Windows job catalog with local search, a candidate profile, explainable matching and the optional Emmy AI assistant."
   }
 }

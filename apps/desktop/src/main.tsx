@@ -7,6 +7,7 @@ import { AppErrorBoundary } from "@/app/AppErrorBoundary";
 import { appQueryClient } from "@/app/queryClient";
 import { useAppUiStore } from "@/app/store/appUiStore";
 import { applyDocumentTheme, resolveTheme } from "@/app/theme";
+import "@fontsource-variable/inter";
 import "@fontsource-variable/jetbrains-mono";
 import "@fontsource-variable/manrope";
 import "@fontsource-variable/plus-jakarta-sans";

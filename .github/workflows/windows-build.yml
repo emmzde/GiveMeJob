@@ -1,21 +1,38 @@
-name: Windows build
+name: Windows release
 
 on:
   workflow_dispatch:
     inputs:
       catalog_url:
-        description: URL of the catalog-v1.sqlite.zst release asset
+        description: Immutable HTTPS URL of catalog-v1.sqlite.zst
         required: true
         type: string
+      publish_release:
+        description: Create the version tag and publish a GitHub Release
+        required: true
+        default: false
+        type: boolean
+      prerelease:
+        description: Mark the published release as a prerelease
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: read
 
+concurrency:
+  group: windows-release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
-    name: NSIS and portable ZIP
+    name: Build and verify Windows artifacts
     runs-on: windows-latest
+    timeout-minutes: 60
     environment: release
+    outputs:
+      version: ${{ steps.metadata.outputs.version }}
     steps:
       - uses: actions/checkout@v6
 
@@ -35,6 +52,21 @@ jobs:
           workspaces: apps/desktop/src-tauri -> target
 
       - run: pnpm install --frozen-lockfile
+
+      - name: Validate release metadata and source branch
+        id: metadata
+        shell: pwsh
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          PUBLISH_RELEASE: ${{ inputs.publish_release }}
+        run: |
+          pnpm quality:metadata
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          "version=$version" >> $env:GITHUB_OUTPUT
+          if ($env:PUBLISH_RELEASE -eq "true" -and $env:GITHUB_REF_NAME -ne $env:DEFAULT_BRANCH) {
+            throw "Published releases must be built from the default branch ($env:DEFAULT_BRANCH)."
+          }
+
       - run: pnpm -C apps/desktop typecheck
       - run: pnpm -C apps/desktop lint
       - run: pnpm -C apps/desktop test
@@ -44,11 +76,18 @@ jobs:
         env:
           CATALOG_URL: ${{ inputs.catalog_url }}
         run: |
+          if (-not $env:CATALOG_URL.StartsWith("https://")) {
+            throw "The catalog URL must use HTTPS."
+          }
           $destination = "apps/desktop/src-tauri/resources/catalog-v1.sqlite.zst"
           Invoke-WebRequest -Uri $env:CATALOG_URL -OutFile $destination
           $manifest = Get-Content config/catalog-manifest.json -Raw | ConvertFrom-Json
-          $actual = (Get-FileHash $destination -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($actual -ne $manifest.archive_sha256) {
+          $actualSize = (Get-Item $destination).Length
+          if ($actualSize -ne $manifest.archive_size_bytes) {
+            throw "Catalog archive size mismatch: expected $($manifest.archive_size_bytes), got $actualSize"
+          }
+          $actualHash = (Get-FileHash $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -ne $manifest.archive_sha256) {
             throw "Catalog archive SHA-256 mismatch"
           }
 
@@ -56,30 +95,17 @@ jobs:
         working-directory: apps/desktop/src-tauri
         run: |
           cargo fmt --check
-          cargo test
-          cargo clippy --all-targets -- -D warnings
+          cargo test --all-targets --all-features
+          cargo clippy --all-targets --all-features -- -D warnings
 
-      - name: Build NSIS installer with release demo credentials
+      - name: Build NSIS installer
         shell: pwsh
         env:
           GIVEMEJOB_GROQ_DEMO_KEY: ${{ secrets.GIVEMEJOB_GROQ_DEMO_KEY }}
           GIVEMEJOB_GEMINI_DEMO_KEY: ${{ secrets.GIVEMEJOB_GEMINI_DEMO_KEY }}
           GIVEMEJOB_OPENROUTER_DEMO_KEY: ${{ secrets.GIVEMEJOB_OPENROUTER_DEMO_KEY }}
           GIVEMEJOB_CEREBRAS_DEMO_KEY: ${{ secrets.GIVEMEJOB_CEREBRAS_DEMO_KEY }}
-        run: |
-          $required = @(
-            "GIVEMEJOB_GROQ_DEMO_KEY",
-            "GIVEMEJOB_GEMINI_DEMO_KEY",
-            "GIVEMEJOB_OPENROUTER_DEMO_KEY",
-            "GIVEMEJOB_CEREBRAS_DEMO_KEY"
-          )
-          foreach ($name in $required) {
-            $value = [Environment]::GetEnvironmentVariable($name)
-            if ([string]::IsNullOrWhiteSpace($value)) {
-              throw "Required release secret is not configured: $name"
-            }
-          }
-          pnpm -C apps/desktop tauri build --bundles nsis
+        run: pnpm -C apps/desktop tauri build --bundles nsis
 
       - name: Create portable ZIP
         shell: pwsh
@@ -89,7 +115,7 @@ jobs:
           Copy-Item apps/desktop/src-tauri/resources/catalog-v1.sqlite.zst portable/resources/
           Compress-Archive -Path portable/* -DestinationPath GiveMeJob-portable-x64.zip
 
-      - name: Verify catalog resource paths in Windows artifacts
+      - name: Verify packaged catalog and create checksums
         shell: pwsh
         run: |
           $manifest = Get-Content config/catalog-manifest.json -Raw | ConvertFrom-Json
@@ -104,16 +130,69 @@ jobs:
           if ($null -eq $installer) {
             throw "NSIS installer was not produced"
           }
-          $nsisPath = "resources\\$($manifest.archive_file)"
+          $nsisPath = "resources\$($manifest.archive_file)"
           $nsisListing = & 7z l -slt $installer.FullName
           if ($nsisListing -notcontains "Path = $nsisPath") {
             throw "NSIS catalog resource is missing at $nsisPath"
           }
 
+          $releaseFiles = @($installer, (Get-Item GiveMeJob-portable-x64.zip))
+          $checksums = foreach ($file in $releaseFiles) {
+            $hash = (Get-FileHash $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($file.Name)"
+          }
+          Set-Content -Path SHA256SUMS.txt -Value $checksums -Encoding ascii
+          New-Item -ItemType Directory -Force release-assets | Out-Null
+          Copy-Item $installer.FullName release-assets/
+          Copy-Item GiveMeJob-portable-x64.zip release-assets/
+          Copy-Item SHA256SUMS.txt release-assets/
+
       - uses: actions/upload-artifact@v7
         with:
-          name: GiveMeJob-Windows
+          name: GiveMeJob-Windows-v${{ steps.metadata.outputs.version }}
           if-no-files-found: error
-          path: |
-            apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
-            GiveMeJob-portable-x64.zip
+          retention-days: 14
+          path: release-assets/*
+
+  publish:
+    name: Publish GitHub Release
+    if: ${{ inputs.publish_release }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: GiveMeJob-Windows-v${{ needs.build.outputs.version }}
+          path: release-assets
+
+      - name: Create immutable versioned release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ inputs.prerelease }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          tag="v${VERSION}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $tag already exists and will not be overwritten." >&2
+            exit 1
+          fi
+
+          args=(
+            "$tag"
+            release-assets/*
+            --repo "$GITHUB_REPOSITORY"
+            --target "$GITHUB_SHA"
+            --title "GiveMeJob! $tag"
+            --generate-notes
+          )
+          if [[ "$PRERELEASE" == "true" ]]; then
+            args+=(--prerelease)
+          else
+            args+=(--latest)
+          fi
+          gh release create "${args[@]}"

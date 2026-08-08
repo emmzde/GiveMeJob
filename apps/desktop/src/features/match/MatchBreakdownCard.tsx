@@ -27,7 +27,7 @@ function ReasonList({
   const Icon = kind === "strength" ? CircleCheck : CircleAlert;
   return (
     <div>
-      <h4 className="text-xs font-semibold">
+      <h4 className="match-reason-label text-xs font-semibold">
         {kind === "strength" ? t("matchStrengths") : t("matchGaps")}
       </h4>
       <ul className="mt-2 space-y-2">
@@ -63,7 +63,7 @@ export function MatchBreakdownCard({ breakdown }: { breakdown: MatchBreakdown })
       className="surface-card mt-4 p-4"
     >
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="text-base font-semibold" id="match-breakdown-heading">
+        <h3 className="match-section-label text-base font-semibold" id="match-breakdown-heading">
           {t("matchBreakdown")}
         </h3>
         <p className="text-sm font-semibold tabular-nums text-[var(--text)]">

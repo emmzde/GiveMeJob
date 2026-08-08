@@ -8,10 +8,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   catalog-export:
     name: Catalog exporter
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
 
@@ -33,6 +38,7 @@ jobs:
   desktop-web:
     name: Desktop web layer
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
@@ -41,6 +47,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm quality:metadata
       - run: pnpm -C apps/desktop typecheck
       - run: pnpm -C apps/desktop lint
       - run: pnpm -C apps/desktop test
@@ -49,6 +56,7 @@ jobs:
   desktop-rust:
     name: Desktop Rust
     runs-on: windows-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: apps/desktop/src-tauri
@@ -61,6 +69,6 @@ jobs:
         with:
           workspaces: apps/desktop/src-tauri -> target
       - run: cargo fmt --check
-      - run: cargo check
-      - run: cargo test
-      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo check --all-targets --all-features
+      - run: cargo test --all-targets --all-features
+      - run: cargo clippy --all-targets --all-features -- -D warnings

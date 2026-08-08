@@ -1,5 +1,6 @@
 import {
   BriefcaseBusiness,
+  Building2,
   ChartNoAxesColumnIncreasing,
   ChevronDown,
   CircleDollarSign,
@@ -120,6 +121,9 @@ export function JobDetail({
         <article>
           <header className="border-b border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
             <div className="flex items-start gap-3">
+              <span aria-hidden="true" className="job-detail-company-avatar">
+                <Building2 className="size-5" />
+              </span>
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium text-[var(--text-secondary)]">
                   {detail.data.company}
@@ -176,6 +180,7 @@ export function JobDetail({
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Button
                 aria-describedby="original-link-description"
+                className="job-original-button"
                 disabled={isOpeningOriginal}
                 onClick={() => void openSelectedOriginal()}
                 type="button"
@@ -219,7 +224,7 @@ export function JobDetail({
 
           {detail.data.skills.length > 0 ? (
             <section className="border-t border-[var(--border)] px-4 py-4" aria-labelledby="job-skills-heading">
-              <h3 className="text-xs font-semibold" id="job-skills-heading">
+              <h3 className="detail-section-label text-xs font-semibold" id="job-skills-heading">
                 {t("skills")}
               </h3>
               <ul className="mt-2 flex flex-wrap gap-1.5">
@@ -239,7 +244,7 @@ export function JobDetail({
             aria-labelledby="job-description-heading"
             className="border-t border-[var(--border)] px-4 py-4"
           >
-            <h3 className="text-xs font-semibold" id="job-description-heading">
+            <h3 className="detail-section-label text-xs font-semibold" id="job-description-heading">
               {t("description")}
             </h3>
             <JobDescription description={detail.data.description} />

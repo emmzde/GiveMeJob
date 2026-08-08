@@ -48,17 +48,17 @@
   --danger-border: #f1a8a8;
   --on-danger: #ffffff;
 
-  --shadow-sm: 0 1px 2px rgba(18, 18, 16, 0.07);
-  --shadow-md: 0 22px 56px rgba(17, 17, 15, 0.2);
+  --shadow-sm: none;
+  --shadow-md: none;
   --radius-sm: 6px;
   --radius-md: 8px;
-  --radius-lg: 14px;
+  --radius-lg: 8px;
   --titlebar-height: 64px;
   --sidebar-width: 250px;
   --filter-width: 240px;
   --detail-width: 360px;
   --statusbar-height: 0px;
-  --font: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font: "Inter Variable", "Inter", "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-brand: "Manrope Variable", "Manrope", "Segoe UI Variable Display", "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono Variable", "JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -89,56 +89,71 @@
 }
 
 [data-theme="dark"] {
-  --bg: #0e0f12;
-  --bg-secondary: #111218;
-  --bg-raised: #1b1d24;
-  --bg-hover: #1c1e27;
-  --bg-active: #242730;
-  --surface-0: #0e0f12;
-  --surface-1: #17181f;
-  --surface-2: #1b1d24;
-  --surface-3: #242730;
-  --surface-hover: #1c1e27;
-  --surface-active: #242730;
-  --sidebar: #131418;
-  --sidebar-field: #1b1d24;
-  --panel-frame: #15161c;
-  --panel-card: #17181f;
-  --emmy-bg: #131418;
+  --bg-page: #1c1c1c;
+  --bg-sidebar: #161616;
+  --bg-card: #1c1c1c;
+  --bg-card-hover: #242424;
+  --border-default: #3d3d3d;
+  --border-subtle: #252525;
+  --text-primary: #ffffff;
+  --text-secondary: #d4d4d4;
+  --text-supporting: #b7b7b7;
+  --text-muted: #909090;
+  --text-tertiary: #737373;
+  --accent-positive: #0f8f68;
+  --accent-negative: #d64550;
+  --accent-warning: #d97706;
+  --accent-active: #d1d1d1;
+  --accent-neutral: #909090;
 
-  --text: #f3f4f6;
-  --text-secondary: #9ca3af;
-  --text-tertiary: #6b7280;
-  --text-placeholder: #8b909b;
-  --text-disabled: #4b5563;
-  --border: #242731;
-  --border-strong: #343949;
+  --bg: #1c1c1c;
+  --bg-secondary: #1b1b1b;
+  --bg-raised: var(--bg-card);
+  --bg-hover: var(--bg-card-hover);
+  --bg-active: var(--bg-card-hover);
+  --surface-0: var(--bg-page);
+  --surface-1: var(--bg-card);
+  --surface-2: #1b1b1b;
+  --surface-3: var(--border-subtle);
+  --surface-hover: var(--bg-card-hover);
+  --surface-active: var(--bg-card-hover);
+  --sidebar: var(--bg-sidebar);
+  --sidebar-field: #1b1b1b;
+  --panel-frame: var(--border-subtle);
+  --panel-card: var(--bg-card);
+  --emmy-bg: var(--bg-sidebar);
 
-  --accent: #3b82f6;
-  --accent-hover: #60a5fa;
-  --accent-muted: rgba(59, 130, 246, 0.14);
-  --accent-border: rgba(59, 130, 246, 0.48);
-  --on-accent: #ffffff;
-  --focus: #3b82f6;
-  --overlay: rgba(0, 0, 0, 0.72);
+  --text: var(--text-primary);
+  --text-placeholder: #909090;
+  --text-disabled: var(--text-tertiary);
+  --border: var(--border-default);
+  --border-strong: var(--text-tertiary);
 
-  --positive: #22c55e;
-  --positive-muted: rgba(34, 197, 94, 0.12);
-  --positive-border: rgba(34, 197, 94, 0.25);
-  --warning: #f59e0b;
-  --warning-muted: #35250b;
-  --warning-border: #76500d;
-  --danger: #ef4444;
-  --danger-border: #7f2f38;
-  --on-danger: #ffffff;
+  --accent: var(--accent-active);
+  --accent-hover: var(--text-primary);
+  --accent-muted: var(--bg-card-hover);
+  --accent-border: var(--border-default);
+  --on-accent: #171717;
+  --focus: var(--accent-active);
+  --overlay: var(--bg-sidebar);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28);
-  --shadow-md: 0 24px 64px rgba(0, 0, 0, 0.58);
+  --positive: var(--accent-positive);
+  --positive-muted: var(--bg-card-hover);
+  --positive-border: var(--accent-positive);
+  --warning: var(--accent-warning);
+  --warning-muted: var(--bg-card-hover);
+  --warning-border: var(--accent-warning);
+  --danger: var(--accent-negative);
+  --danger-border: var(--accent-negative);
+  --on-danger: var(--text-primary);
 
-  --match-strong: #22c55e;
-  --match-medium: #f59e0b;
-  --match-weak: #fb923c;
-  --match-none: #f87171;
+  --shadow-sm: none;
+  --shadow-md: none;
+
+  --match-strong: var(--accent-positive);
+  --match-medium: var(--accent-neutral);
+  --match-weak: var(--accent-negative);
+  --match-none: var(--accent-negative);
 
   --emmy-fur: #e8a04d;
   --emmy-fur-shadow: #b86d29;

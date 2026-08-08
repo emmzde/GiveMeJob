@@ -77,7 +77,7 @@ impl HttpProviderTransport {
         }
         if request.provider == EmmyProvider::Openrouter {
             builder = builder
-                .header("HTTP-Referer", "https://github.com/givemejob-app/givemejob")
+                .header("HTTP-Referer", "https://github.com/emmzde/GiveMeJob")
                 .header("X-Title", "GiveMeJob!");
         }
         let response = builder.send().await.map_err(map_reqwest_error)?;

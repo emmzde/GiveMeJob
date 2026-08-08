@@ -54,4 +54,6 @@ Thumbs.db
 *.tmp
 *.bak
 .artifacts/
+.tmp/
+tmp/
 .test-tmp/

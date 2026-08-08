@@ -1,8 +1,5 @@
 import {
   BriefcaseBusiness,
-  Database,
-  ListFilter,
-  Rows3,
   Search,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,7 +19,7 @@ import { ActiveFilterChips } from "@/features/feed/components/ActiveFilterChips"
 import { Feed } from "@/features/feed/components/Feed";
 import { Filters } from "@/features/feed/components/Filters";
 import { SortControl } from "@/features/feed/components/SortControl";
-import { formatCount, formatSnapshotDate } from "@/features/feed/jobPresentation";
+import { formatCount } from "@/features/feed/jobPresentation";
 import {
   searchPageQueryKey,
   useSearchPage,
@@ -47,20 +44,6 @@ interface SearchScreenProps {
   catalog: CatalogViewState;
   recoverCatalog(): Promise<CatalogStatus>;
   isRecovering: boolean;
-}
-
-function MetricSparkline({ variant }: { variant: "primary" | "steady" | "signal" }) {
-  const paths = {
-    primary: "M2 29 10 12 18 20 27 6 36 25 46 13 56 21 66 9 78 18",
-    steady: "M2 24 12 25 21 16 31 19 40 10 51 13 60 8 69 17 78 7",
-    signal: "M2 27 12 22 22 24 32 13 42 18 52 10 63 14 70 8 78 12",
-  } as const;
-  return (
-    <svg aria-hidden="true" className="metric-sparkline" fill="none" viewBox="0 0 80 34">
-      <path className="metric-sparkline-base" d="M2 30H78" />
-      <path className="metric-sparkline-value" d={paths[variant]} />
-    </svg>
-  );
 }
 
 function queriesEqual(left: SearchQuery, right: SearchQuery): boolean {
@@ -150,11 +133,6 @@ export function SearchScreen({
   const searchError = search.isError
     ? t(hasCommittedInteraction ? "submitSearchError" : "initialSearchError")
     : null;
-  const snapshotDate =
-    catalog.status?.state === "ready"
-      ? formatSnapshotDate(catalog.status.sourceFrozenAt)
-      : null;
-  const totalResults = firstPage?.total ?? jobs.length;
   const catalogTotal =
     catalog.status?.state === "ready" ? catalog.status.totalJobs : jobs.length;
   const detailVisible = selectedId !== null && panel === "job_detail";
@@ -215,51 +193,6 @@ export function SearchScreen({
               </h1>
             </div>
           </div>
-
-          <div className="search-overview mt-5" aria-label={t("searchOverview")}>
-            <article className="search-metric search-metric-primary" data-tone="primary">
-              <div className="search-metric-header">
-                <p className="truncate text-[12px] font-semibold text-[var(--text)]">
-                  {t("resultMetric")}
-                </p>
-                <ListFilter aria-hidden="true" className="size-4 text-[var(--text-secondary)]" />
-              </div>
-              <p className="search-metric-value">{formatCount(totalResults)}</p>
-              <MetricSparkline variant="primary" />
-              <p className="mt-2 truncate text-[11px] leading-4 text-[var(--text-secondary)]">
-                {t("resultMetricHint")}
-              </p>
-            </article>
-            <article className="search-metric search-metric-context" data-tone="steady">
-              <span className="sr-only">
-                {t("catalogTotal")}: {formatCount(catalogTotal)} {t("jobsFound")}
-              </span>
-              <div className="search-metric-header">
-                <p className="truncate text-[11px] font-medium text-[var(--text-secondary)]">
-                  {t("catalogMetric")}
-                </p>
-                <Database aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />
-              </div>
-              <p className="search-metric-value">{formatCount(catalogTotal)}</p>
-              <MetricSparkline variant="steady" />
-              <p className="mt-2 truncate text-[10px] leading-4 text-[var(--text-tertiary)]">
-                {snapshotDate ? `${t("catalogSnapshot")}: ${snapshotDate}` : t("localCatalog")}
-              </p>
-            </article>
-            <article className="search-metric search-metric-secondary" data-tone="signal">
-              <div className="search-metric-header">
-                <p className="truncate text-[11px] font-medium text-[var(--text-tertiary)]">
-                  {t("loadedMetric")}
-                </p>
-                <Rows3 aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />
-              </div>
-              <p className="search-metric-value">{formatCount(jobs.length)}</p>
-              <MetricSparkline variant="signal" />
-              <p className="mt-2 truncate text-[10px] leading-4 text-[var(--text-tertiary)]">
-                {t("loadedMetricHint")}
-              </p>
-            </article>
-          </div>
         </div>
 
         <div className="job-results-panel mx-6 mb-6 flex min-h-0 flex-1 flex-col gap-4">
@@ -270,7 +203,7 @@ export function SearchScreen({
               {t("searchResults")}
             </h2>
             <span className="text-[12px] text-[var(--text-tertiary)]">
-              {t("localCatalog")}
+              {t("catalogTotal")}: {formatCount(catalogTotal)} {t("jobsFound")}
             </span>
           </div>
 

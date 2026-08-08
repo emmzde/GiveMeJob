@@ -646,7 +646,7 @@ mod tests {
             .contains("Пользователь ищет Rust-вакансии и рассматривает вакансию 1.")));
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn whole_turn_stops_at_the_configured_budget() {
         let fixture = Fixture::new();
         let router = LlmRouter::with_dependencies(

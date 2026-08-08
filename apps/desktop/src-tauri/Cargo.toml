@@ -44,6 +44,9 @@ unicode-normalization = "0.1"
 zeroize = "1"
 zstd = "0.13"
 
+[dev-dependencies]
+tokio = { version = "1", features = ["test-util"] }
+
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
   "Win32_Foundation",

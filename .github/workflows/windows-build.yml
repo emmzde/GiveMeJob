@@ -136,16 +136,19 @@ jobs:
             throw "NSIS catalog resource is missing at $nsisPath"
           }
 
-          $releaseFiles = @($installer, (Get-Item GiveMeJob-portable-x64.zip))
+          New-Item -ItemType Directory -Force release-assets | Out-Null
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $releaseInstaller = "release-assets/GiveMeJob_$($version)_x64-setup.exe"
+          $releasePortable = "release-assets/GiveMeJob-portable-x64.zip"
+          Copy-Item $installer.FullName $releaseInstaller
+          Copy-Item GiveMeJob-portable-x64.zip $releasePortable
+
+          $releaseFiles = @((Get-Item $releaseInstaller), (Get-Item $releasePortable))
           $checksums = foreach ($file in $releaseFiles) {
             $hash = (Get-FileHash $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
             "$hash  $($file.Name)"
           }
-          Set-Content -Path SHA256SUMS.txt -Value $checksums -Encoding ascii
-          New-Item -ItemType Directory -Force release-assets | Out-Null
-          Copy-Item $installer.FullName release-assets/
-          Copy-Item GiveMeJob-portable-x64.zip release-assets/
-          Copy-Item SHA256SUMS.txt release-assets/
+          Set-Content -Path release-assets/SHA256SUMS.txt -Value $checksums -Encoding ascii
 
       - uses: actions/upload-artifact@v7
         with:

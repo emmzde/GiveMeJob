@@ -21,7 +21,7 @@ database configured through an untracked `.env` file.
 
 - Add or update tests for behavior changes.
 - Keep all five project versions aligned; `pnpm quality:metadata` checks them.
-- Follow `design-tokens.md` for visual work. Do not introduce new visual values
+- Follow `docs/design-tokens.css` for visual work. Do not introduce new visual values
   or generic framework accents outside the documented tokens.
 - Do not commit generated installers, catalog archives, temporary screenshots,
   credentials or local databases.

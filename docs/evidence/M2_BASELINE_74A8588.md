@@ -6,7 +6,6 @@
 ## Commit и CI
 
 - commit: `74a8588e9fbd9db95e55843965a15e479803bb3e`;
-- branch на момент проверки: `codex/docs-windows-pet-mvp`;
 - workflow: `quality.yml`;
 - exact-SHA run: [30624049746](https://github.com/emmzde/GiveMeJob/actions/runs/30624049746);
 - conclusion: `success`;

@@ -1,7 +1,7 @@
 # M2 final acceptance — 2026-08-01
 
 Статус этой записи: **M2 complete**. Все обязательные hard gates из
-`AGENTS.md`, `docs/PLAN.md` и `docs/METRICS.md` фактически пройдены. Следующий
+`docs/PLAN.md` и `docs/METRICS.md` фактически пройдены. Следующий
 разрешённый этап — M3; работы M3 в рамках этой записи не выполнялись.
 
 ## Provenance

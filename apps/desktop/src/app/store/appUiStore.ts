@@ -84,10 +84,10 @@ const initialUiState: Pick<
   welcomeCompleted: readWelcomeCompleted(),
   selectedId: null,
   panel: null,
-  theme: "system",
+  theme: "dark",
   language: initialLanguage,
   commandPaletteOpen: false,
-  filtersVisible: true,
+  filtersVisible: false,
 };
 
 export const useAppUiStore = create<AppUiState>((set) => ({

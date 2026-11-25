@@ -13,7 +13,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "@/app/App";
 import { createAppQueryClient } from "@/app/queryClient";
 import { resetAppUiStore, useAppUiStore } from "@/app/store/appUiStore";
-import { formatCount } from "@/features/feed/jobPresentation";
 import {
   createSearchQuery,
   jobIdSchema,
@@ -221,6 +220,15 @@ async function expectLatestSearchPayload(overrides: Partial<SearchQuery>): Promi
   });
 }
 
+function showSearchFilters(): void {
+  fireEvent.click(screen.getByRole("button", { name: t("showFilters") }));
+}
+
+async function openSampleJob(): Promise<void> {
+  fireEvent.click(await screen.findByRole("button", { name: /Senior Rust Engineer/ }));
+  await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+}
+
 describe("App", () => {
   beforeEach(() => {
     resetAppUiStore();
@@ -267,11 +275,65 @@ describe("App", () => {
     matchMocks.getMatchBreakdowns.mockResolvedValue([]);
   });
 
+  it("keeps the dashboard open on first load and shows details when a job is clicked", async () => {
+    render(<App />);
+    const row = await screen.findByRole("button", { name: /Senior Rust Engineer/ }, { timeout: 5000 });
+
+    expect(screen.getByRole("heading", { level: 1, name: t("searchTitle") })).toBeInTheDocument();
+    expect(row).toHaveAttribute("aria-current", "true");
+    expect(useAppUiStore.getState()).toMatchObject({ selectedId: sampleJob.id, panel: null });
+    expect(screen.queryByRole("button", { name: t("closeDetails") })).not.toBeInTheDocument();
+
+    await openSampleJob();
+
+    expect(useAppUiStore.getState().panel).toBe("job_detail");
+    expect(screen.getByRole("button", { name: t("openOriginal") })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole("button", { name: t("closeDetails") }));
+
+    expect(useAppUiStore.getState()).toMatchObject({ selectedId: sampleJob.id, panel: null });
+    expect(screen.queryByRole("button", { name: t("closeDetails") })).not.toBeInTheDocument();
+  });
+
+  it("keeps Emmy open when the initial search finishes", async () => {
+    const initialPage = deferred<JobSearchPage>();
+    catalogMocks.searchLocalJobs.mockReturnValue(initialPage.promise);
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: t("emmy") }));
+    await screen.findByRole("complementary", { name: t("emmyPanelLabel") });
+
+    await act(async () => {
+      initialPage.resolve({ items: [sampleJob], nextCursor: null, total: 1 });
+      await initialPage.promise;
+    });
+
+    expect(await screen.findByRole("button", { name: /Senior Rust Engineer/ })).toBeInTheDocument();
+    expect(useAppUiStore.getState()).toMatchObject({ selectedId: sampleJob.id, panel: "emmy" });
+    expect(screen.getByRole("complementary", { name: t("emmyPanelLabel") })).toBeInTheDocument();
+  });
+
+  it("starts with filters collapsed and keeps them available from the toolbar", async () => {
+    render(<App />);
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
+
+    expect(screen.queryByRole("checkbox", { name: t("remoteModeRemote") })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: t("showFilters") })).toHaveAttribute("aria-expanded", "false");
+
+    showSearchFilters();
+
+    expect(screen.getByRole("checkbox", { name: t("remoteModeRemote") })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: t("hideFilters") })).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: t("hideFilters") }));
+
+    expect(screen.queryByRole("checkbox", { name: t("remoteModeRemote") })).not.toBeInTheDocument();
+  });
+
   it("opens Emmy as an honest offline panel without simulated chat", async () => {
     render(<App />);
     await screen.findByRole(
-      "heading",
-      { level: 2, name: sampleJob.title },
+      "button",
+      { name: /Senior Rust Engineer/ },
       { timeout: 5_000 },
     );
 
@@ -288,7 +350,7 @@ describe("App", () => {
       { label: "Rust", canonicalName: "Rust (programming language)", count: 1_240 },
     ]);
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
     fireEvent.click(screen.getByRole("button", { name: t("profile") }));
 
     expect(await screen.findByRole("heading", { level: 1, name: t("profileTitle") })).toBeInTheDocument();
@@ -326,7 +388,7 @@ describe("App", () => {
 
   it("preserves an unsaved profile draft while switching screens", async () => {
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
     fireEvent.click(screen.getByRole("button", { name: t("profile") }));
     fireEvent.click(await screen.findByRole("button", { name: t("createProfile") }));
     const country = screen.getByRole("textbox", { name: t("country") });
@@ -340,7 +402,7 @@ describe("App", () => {
 
   it("shows a field error and focuses the first invalid profile field", async () => {
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
     fireEvent.click(screen.getByRole("button", { name: t("profile") }));
     fireEvent.click(await screen.findByRole("button", { name: t("createProfile") }));
     const salary = screen.getByRole("textbox", { name: t("minimumSalary") });
@@ -356,7 +418,7 @@ describe("App", () => {
   it("retries a failed profile load without restarting the application", async () => {
     profileMocks.getProfile.mockRejectedValue(new Error("user.sqlite unavailable"));
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
     fireEvent.click(screen.getByRole("button", { name: t("profile") }));
 
     expect(await screen.findByText(t("profileLoadError"))).toBeInTheDocument();
@@ -368,7 +430,7 @@ describe("App", () => {
 
   it("saves a vacancy, opens the shortlist, and removes it with the S shortcut", async () => {
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
 
     fireEvent.click(screen.getAllByRole("button", { name: t("saveToShortlist") })[0]!);
     await waitFor(() => {
@@ -400,6 +462,7 @@ describe("App", () => {
     matchMocks.getMatchBreakdown.mockResolvedValue(sampleMatch);
 
     render(<App />);
+    await openSampleJob();
 
     const breakdownHeading = await screen.findByRole("heading", {
       level: 3,
@@ -415,7 +478,7 @@ describe("App", () => {
 
   it("keeps search-only shortcuts inactive on the profile screen", async () => {
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
     const selectedBeforeNavigation = useAppUiStore.getState().selectedId;
 
     fireEvent.click(screen.getByRole("button", { name: t("profile") }));
@@ -508,7 +571,7 @@ describe("App", () => {
     publishStatus?.(readyStatus);
 
     expect(
-      await screen.findByRole("heading", { level: 2, name: sampleJob.title }),
+      await screen.findByRole("button", { name: /Senior Rust Engineer/ }),
     ).toBeInTheDocument();
     expect(catalogMocks.searchLocalJobs).toHaveBeenCalledTimes(1);
   });
@@ -528,7 +591,7 @@ describe("App", () => {
       expect(catalogMocks.recoverLocalCatalog).toHaveBeenCalledTimes(1);
     });
     expect(
-      await screen.findByRole("heading", { level: 2, name: sampleJob.title }),
+      await screen.findByRole("button", { name: /Senior Rust Engineer/ }),
     ).toBeInTheDocument();
   });
 
@@ -538,7 +601,7 @@ describe("App", () => {
       .mockRejectedValueOnce(new Error("search failed"));
 
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
 
     fireEvent.change(screen.getByRole("textbox", { name: t("searchPlaceholder") }), {
       target: { value: "rust" },
@@ -553,7 +616,7 @@ describe("App", () => {
 
   it("keeps text changes in the draft until submit", async () => {
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
 
     const input = screen.getByRole("textbox", { name: t("searchPlaceholder") });
     fireEvent.change(input, { target: { value: "r" } });
@@ -574,7 +637,8 @@ describe("App", () => {
       .mockReturnValueOnce(nextPage.promise);
 
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
+    showSearchFilters();
 
     fireEvent.click(screen.getByRole("checkbox", { name: t("remoteModeRemote") }));
     await waitFor(() => expect(catalogMocks.searchLocalJobs).toHaveBeenCalledTimes(2));
@@ -618,9 +682,10 @@ describe("App", () => {
     });
 
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
     const input = screen.getByRole("textbox", { name: t("searchPlaceholder") });
 
+    showSearchFilters();
     fireEvent.change(input, { target: { value: "slow" } });
     fireEvent.click(screen.getByRole("checkbox", { name: t("remoteModeRemote") }));
     await waitFor(() => expect(catalogMocks.searchLocalJobs).toHaveBeenCalledTimes(2));
@@ -642,7 +707,8 @@ describe("App", () => {
 
   it("loads source choices from IPC and renders every filter as an accessible group", async () => {
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
+    showSearchFilters();
 
     expect(catalogMocks.getFilterOptions).toHaveBeenCalledTimes(1);
     for (const name of [
@@ -693,7 +759,8 @@ describe("App", () => {
     "sends the exact search payload for $label",
     async ({ expected, name }) => {
       render(<App />);
-      await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+      await screen.findByRole("button", { name: /Senior Rust Engineer/ });
+      showSearchFilters();
 
       fireEvent.click(screen.getByRole("checkbox", { name }));
 
@@ -703,7 +770,7 @@ describe("App", () => {
 
   it("sends the exact search payload for the sort control", async () => {
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
 
     fireEvent.click(screen.getByRole("radio", { name: t("sortSalary") }));
 
@@ -712,7 +779,8 @@ describe("App", () => {
 
   it("commits a valid minimum salary as the exact numeric payload", async () => {
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
+    showSearchFilters();
     const input = screen.getByRole("textbox", { name: t("salaryMinimum") });
 
     fireEvent.change(input, { target: { value: "125000" } });
@@ -725,7 +793,8 @@ describe("App", () => {
     "does not commit invalid minimum salary %s",
     async (value) => {
       render(<App />);
-      await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+      await screen.findByRole("button", { name: /Senior Rust Engineer/ });
+      showSearchFilters();
       const input = screen.getByRole("textbox", { name: t("salaryMinimum") });
 
       fireEvent.change(input, { target: { value } });
@@ -738,7 +807,8 @@ describe("App", () => {
 
   it("sends the exact source value supplied by filter-options IPC", async () => {
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
+    showSearchFilters();
 
     fireEvent.click(await screen.findByRole("checkbox", { name: /^Greenhouse/ }));
 
@@ -754,7 +824,8 @@ describe("App", () => {
       },
     ]);
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
+    showSearchFilters();
     const input = screen.getByRole("combobox", { name: t("skillsFilter") });
 
     fireEvent.change(input, { target: { value: "Python" } });
@@ -773,7 +844,8 @@ describe("App", () => {
       { label: "Berlin", canonicalValue: "Berlin", kind: "city", count: 16 },
     ]);
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
+    showSearchFilters();
     const input = screen.getByRole("combobox", { name: t("locationsFilter") });
 
     fireEvent.change(input, { target: { value: "Ber" } });
@@ -789,7 +861,8 @@ describe("App", () => {
 
   it("removes one active chip and keeps the remaining exact payload", async () => {
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
+    showSearchFilters();
     fireEvent.click(screen.getByRole("checkbox", { name: t("remoteModeRemote") }));
     fireEvent.click(screen.getByRole("checkbox", { name: t("senioritySenior") }));
     await expectLatestSearchPayload({
@@ -808,7 +881,8 @@ describe("App", () => {
 
   it("combines filters and sort, then resets them while preserving search text", async () => {
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await screen.findByRole("button", { name: /Senior Rust Engineer/ });
+    showSearchFilters();
     fireEvent.change(screen.getByRole("textbox", { name: t("searchPlaceholder") }), {
       target: { value: "rust platform" },
     });
@@ -835,8 +909,7 @@ describe("App", () => {
 
   it("loads detail separately and opens the original by job ID", async () => {
     render(<App />);
-
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await openSampleJob();
 
     expect(catalogMocks.getLocalJob).toHaveBeenCalledWith(sampleJob.id);
     const selectedFeedItem = screen.getByRole("button", {
@@ -856,7 +929,7 @@ describe("App", () => {
 
   it("keeps technical provenance collapsed until the user requests it", async () => {
     render(<App />);
-    await screen.findByRole("heading", { level: 2, name: sampleJob.title });
+    await openSampleJob();
 
     const summary = screen.getByText(t("technicalDetails"));
     const disclosure = summary.closest("details");
@@ -873,6 +946,7 @@ describe("App", () => {
 
   it("renders untrusted descriptions as inert text without active links", async () => {
     render(<App />);
+    await openSampleJob();
 
     const description = await screen.findByTestId("job-description");
     expect(description).toHaveTextContent("javascript:alert(1)");
@@ -884,6 +958,7 @@ describe("App", () => {
   it("keeps the local card available when the system browser cannot open", async () => {
     catalogMocks.openOriginalJob.mockRejectedValue({ code: "open_failed" });
     render(<App />);
+    await openSampleJob();
 
     await screen.findByTestId("job-description");
     fireEvent.click(screen.getByRole("button", { name: t("openOriginal") }));
@@ -893,10 +968,11 @@ describe("App", () => {
     expect(screen.getByRole("heading", { level: 2, name: sampleJob.title })).toBeInTheDocument();
   });
 
-  it("supports Ctrl+Enter for the selected original", async () => {
+  it("supports Ctrl+Enter for the selected original while dashboard details are closed", async () => {
     render(<App />);
 
     await screen.findByTestId("job-description");
+    expect(useAppUiStore.getState().panel).toBeNull();
     fireEvent.keyDown(window, { ctrlKey: true, key: "Enter" });
 
     expect(catalogMocks.openOriginalJob).toHaveBeenCalledWith(sampleJob.id);
@@ -912,6 +988,7 @@ describe("App", () => {
     fireEvent.keyDown(window, { key: "/" });
     expect(searchInput).toHaveFocus();
 
+    showSearchFilters();
     const salaryInput = screen.getByRole("textbox", { name: t("salaryMinimum") });
     salaryInput.focus();
     fireEvent.keyDown(salaryInput, { key: "/" });
@@ -955,10 +1032,7 @@ describe("App", () => {
     render(<App />);
 
     expect(await screen.findByText(`1 ${t("resultsFound")}`)).toBeInTheDocument();
-    const catalogTotal = `${t("catalogTotal")}: ${formatCount(readyStatus.totalJobs)} ${t("jobsFound")}`;
-    expect(
-      screen.getByText((_, element) => element?.textContent === catalogTotal),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(t("catalogTotal"))).not.toBeInTheDocument();
   });
 
   it("offers a typo suggestion as a button and applies it only after confirmation", async () => {

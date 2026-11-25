@@ -1,6 +1,5 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
-  Building2,
   CalendarDays,
   ChartNoAxesColumnIncreasing,
   CircleDollarSign,
@@ -19,6 +18,7 @@ import {
   remoteModeLabels,
   seniorityLabels,
 } from "@/features/feed/searchLabels";
+import { CompanyAvatar } from "@/components/ui/company-avatar";
 import { MatchBadge } from "@/features/match/MatchBadge";
 import { useJobMatches } from "@/features/match/hooks";
 import { ShortlistButton } from "@/features/shortlist/ShortlistButton";
@@ -216,9 +216,7 @@ export function Feed({
           type="button"
         >
           <span className="flex min-w-0 items-start gap-3">
-            <span aria-hidden="true" className="job-company-avatar">
-              <Building2 className="size-4" />
-            </span>
+            <CompanyAvatar className="job-company-avatar" name={job.company} />
             <span className="min-w-0 flex-1">
               <span className="flex min-w-0 items-start gap-2">
               <span className="min-w-0 flex-1">

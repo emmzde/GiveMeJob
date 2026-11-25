@@ -71,7 +71,7 @@ describe("EmmyTimeline", () => {
     );
 
     expect(container.querySelector("[data-streaming='false']")?.textContent).toContain("Нашла подходящие вакансии");
-    expect(container.querySelector(".emmy-thinking-glyph")).not.toBeNull();
+    expect(container.querySelector(".emmy-thinking-spark")).not.toBeNull();
     expect(container.querySelector(".lucide-sparkles")).toBeNull();
   });
 });

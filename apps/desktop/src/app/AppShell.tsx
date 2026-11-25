@@ -122,11 +122,11 @@ export function AppShell({ catalog, children }: AppShellProps) {
   }
 
   return (
-    <main className="app-shell flex h-screen min-h-[620px] min-w-[320px] flex-col overflow-hidden bg-[var(--bg)] text-[var(--text)]">
-      <DesktopTitlebar catalog={catalog} />
+    <main className="app-shell flex h-screen min-w-[320px] flex-col overflow-hidden bg-[var(--bg)] text-[var(--text)]">
+      <DesktopTitlebar catalog={catalog} commandTriggerRef={commandTriggerRef} />
       <div className="app-stage flex min-h-0 flex-1">
-        <NavigationSidebar commandTriggerRef={commandTriggerRef} />
-        <div className="min-w-0 flex-1 overflow-hidden bg-[var(--bg)]">{children}</div>
+        <NavigationSidebar />
+        <div className="app-content min-w-0 flex-1 overflow-hidden bg-[var(--bg)]">{children}</div>
         {emmyDockMounted ? (
           <div
             aria-hidden={!emmyDockVisible}

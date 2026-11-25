@@ -1,0 +1,211 @@
+/*
+ * Emmy — layered raster rig (tail · body · head) driven purely by CSS.
+ * Pivots are percentages of the 640px canvas the layers were cut on.
+ */
+.emmy-mascot {
+  --emmy-gaze-x: 0;
+  --emmy-gaze-y: 0;
+  position: relative;
+  display: inline-block;
+  flex: none;
+  container-type: size;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.emmy-mascot[data-interactive="true"] { cursor: grab; outline: none; }
+.emmy-mascot[data-interactive="true"]:active { cursor: grabbing; }
+.emmy-mascot[data-interactive="true"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: 24%; }
+
+.emmy-rig,
+.emmy-layer {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+img.emmy-layer { object-fit: contain; pointer-events: none; -webkit-user-drag: none; }
+.emmy-rig { transform-origin: 47.5% 98%; }
+.emmy-body { transform-origin: 47.5% 99%; animation: emmy-breathe 3.6s var(--ease-in-out) infinite alternate; }
+.emmy-tail { transform-origin: 70.5% 79.5%; animation: emmy-wag 1.15s var(--ease-in-out) infinite alternate; }
+.emmy-head-gaze {
+  transform-origin: 47.5% 59.5%;
+  transform:
+    translate(calc(var(--emmy-gaze-x) * 2.2%), calc(var(--emmy-gaze-y) * 1.6%))
+    rotate(calc(var(--emmy-gaze-x) * 6deg));
+  transition:
+    transform 420ms var(--ease-out),
+    translate 320ms var(--ease-out);
+}
+.emmy-head { transform-origin: 47.5% 59.5%; animation: emmy-float 5.2s var(--ease-in-out) infinite alternate; }
+
+/* Faces: "open" is the opaque base, the others fade in over it so the head never turns see-through. */
+.emmy-face[data-face="closed"],
+.emmy-face[data-face="happy"] { opacity: 0; transition: opacity 90ms linear; }
+.emmy-mascot[data-eyes="closed"] .emmy-face[data-face="closed"] { opacity: 1; transition-duration: 60ms; }
+.emmy-mascot[data-eyes="happy"] .emmy-face[data-face="happy"] { opacity: 1; transition-duration: 160ms; }
+
+/* ── States ── */
+.emmy-mascot[data-state="listening"] .emmy-head { animation-name: emmy-listen; animation-duration: 2.8s; }
+.emmy-mascot[data-state="listening"] .emmy-tail { animation-duration: 0.55s; }
+
+.emmy-mascot[data-state="thinking"] .emmy-head { animation-name: emmy-ponder; animation-duration: 3.2s; }
+.emmy-mascot[data-state="thinking"] .emmy-tail { animation-duration: 1.8s; }
+
+.emmy-mascot[data-state="searching"] .emmy-head { animation: emmy-sniff 1.5s var(--ease-in-out) infinite; }
+.emmy-mascot[data-state="searching"] .emmy-tail { animation-duration: 0.3s; }
+
+.emmy-mascot[data-state="success"] .emmy-rig { animation: emmy-hop 900ms var(--ease-out) 2; }
+.emmy-mascot[data-state="success"] .emmy-tail { animation-duration: 0.2s; }
+
+.emmy-mascot[data-state="empty"] .emmy-head { animation-name: emmy-puzzled; animation-duration: 2.6s; }
+.emmy-mascot[data-state="empty"] .emmy-tail { animation-duration: 2.4s; }
+
+.emmy-mascot[data-state="error"] .emmy-head { animation-name: emmy-droop; animation-duration: 3.4s; }
+.emmy-mascot[data-state="error"] .emmy-tail { animation: none; rotate: 8deg; transform-origin: 70.5% 79.5%; }
+.emmy-mascot[data-state="error"] .emmy-rig { filter: saturate(0.78); }
+
+.emmy-mascot[data-state="offline"] .emmy-head { animation-name: emmy-doze; animation-duration: 3.6s; }
+.emmy-mascot[data-state="offline"] .emmy-body { animation-duration: 3.6s; }
+.emmy-mascot[data-state="offline"] .emmy-tail { animation: none; }
+
+/* ── Interaction ── */
+.emmy-mascot[data-interactive="true"][data-hovered="true"] .emmy-head-gaze { translate: 0 -1.6%; }
+.emmy-mascot[data-interactive="true"][data-hovered="true"] .emmy-tail { animation-duration: 0.42s; }
+.emmy-mascot[data-petted="true"] .emmy-rig { animation: emmy-squish 520ms var(--ease-out); }
+.emmy-mascot[data-petted="true"] .emmy-head { animation: emmy-nuzzle 380ms var(--ease-in-out) infinite alternate; }
+.emmy-mascot[data-petted="true"] .emmy-tail { animation-duration: 0.16s; }
+
+/* ── Effects ── */
+.emmy-fx { position: absolute; pointer-events: none; opacity: 0; transition: opacity 240ms var(--ease); }
+.emmy-mascot[data-state="thinking"] .emmy-fx-thinking,
+.emmy-mascot[data-state="offline"] .emmy-fx-sleep,
+.emmy-mascot[data-state="empty"] .emmy-fx-question,
+.emmy-mascot[data-state="success"] .emmy-fx-sparkles { opacity: 1; }
+.emmy-mascot[data-petted="true"] .emmy-fx-sleep { opacity: 0; }
+
+.emmy-fx-thinking { top: 4%; right: 6%; display: flex; gap: 3cqw; padding: 3cqw 4cqw; border-radius: 999px; background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.emmy-fx-thinking i { width: 3.6cqw; height: 3.6cqw; border-radius: 50%; background: var(--text-secondary); animation: emmy-dot 1.2s var(--ease-in-out) infinite; }
+.emmy-fx-thinking i:nth-child(2) { animation-delay: 160ms; }
+.emmy-fx-thinking i:nth-child(3) { animation-delay: 320ms; }
+
+.emmy-fx-sleep { top: 2%; right: 12%; width: 22cqw; height: 26cqw; }
+.emmy-fx-sleep i {
+  position: absolute;
+  color: var(--accent);
+  font-family: var(--font-brand);
+  font-style: normal;
+  font-weight: 500;
+  line-height: 1;
+  animation: emmy-z 2.8s var(--ease-out) infinite;
+}
+.emmy-fx-sleep i:nth-child(1) { bottom: 0; left: 0; font-size: 9cqw; }
+.emmy-fx-sleep i:nth-child(2) { bottom: 30%; left: 45%; font-size: 12cqw; animation-delay: 1.4s; }
+
+.emmy-fx-question {
+  top: 0;
+  right: 14%;
+  color: var(--accent);
+  font-family: var(--font-brand);
+  font-size: 20cqw;
+  font-weight: 300;
+  line-height: 1;
+  animation: emmy-bob 1.6s var(--ease-in-out) infinite alternate;
+}
+
+.emmy-fx-sparkles { inset: 0; }
+.emmy-fx-sparkles i {
+  position: absolute;
+  width: 9cqw;
+  height: 9cqw;
+  background: var(--gold);
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+  animation: emmy-twinkle 900ms var(--ease-out) infinite;
+}
+.emmy-fx-sparkles i:nth-child(1) { top: 6%; left: 12%; }
+.emmy-fx-sparkles i:nth-child(2) { top: 0; right: 14%; width: 12cqw; height: 12cqw; animation-delay: 220ms; }
+.emmy-fx-sparkles i:nth-child(3) { top: 34%; right: 2%; width: 7cqw; height: 7cqw; animation-delay: 440ms; }
+
+.emmy-heart {
+  position: absolute;
+  z-index: 2;
+  width: 13cqw;
+  min-width: 12px;
+  height: 13cqw;
+  min-height: 12px;
+  pointer-events: none;
+  translate: -50% -50%;
+  animation: emmy-heart 1.3s var(--ease-out) forwards;
+}
+.emmy-heart svg { display: block; width: 100%; height: 100%; fill: #ff6b9a; filter: drop-shadow(0 2px 6px rgba(255, 80, 140, 0.45)); }
+
+@container (max-width: 60px) {
+  .emmy-fx,
+  .emmy-heart { display: none; }
+}
+
+/* ── Keyframes ── */
+@keyframes emmy-breathe { from { transform: scale(1, 1); } to { transform: scale(1.008, 1.016); } }
+@keyframes emmy-wag { from { transform: rotate(-6deg); } to { transform: rotate(8deg); } }
+@keyframes emmy-float {
+  0% { transform: translateY(0) rotate(-1.4deg); }
+  100% { transform: translateY(-0.8%) rotate(1.6deg); }
+}
+@keyframes emmy-listen {
+  0% { transform: translateY(-1.2%) rotate(-7deg); }
+  100% { transform: translateY(-0.4%) rotate(-4.5deg); }
+}
+@keyframes emmy-ponder {
+  0% { transform: translate(0.6%, -0.6%) rotate(4deg); }
+  100% { transform: translate(1.2%, -1.2%) rotate(7deg); }
+}
+@keyframes emmy-sniff {
+  0%, 100% { transform: rotate(-6deg) translateY(0.6%); }
+  50% { transform: rotate(6deg) translateY(0.6%); }
+}
+@keyframes emmy-puzzled {
+  0% { transform: rotate(8deg); }
+  100% { transform: rotate(11deg) translateY(-0.6%); }
+}
+@keyframes emmy-droop {
+  0% { transform: translateY(2.2%) rotate(-3deg); }
+  100% { transform: translateY(2.8%) rotate(-4.5deg); }
+}
+@keyframes emmy-doze {
+  0% { transform: translateY(1.2%) rotate(-2.5deg); }
+  100% { transform: translateY(2.2%) rotate(-3.5deg); }
+}
+@keyframes emmy-hop {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  18% { transform: translateY(0) scale(1.04, 0.95); }
+  45% { transform: translateY(-7%) scale(0.97, 1.04); }
+  72% { transform: translateY(0) scale(1.03, 0.97); }
+}
+@keyframes emmy-squish {
+  0% { transform: scale(1, 1); }
+  30% { transform: scale(1.045, 0.95); }
+  60% { transform: scale(0.985, 1.02); }
+  100% { transform: scale(1, 1); }
+}
+@keyframes emmy-nuzzle {
+  from { transform: rotate(-4deg) translateY(1%); }
+  to { transform: rotate(4deg) translateY(0.4%); }
+}
+@keyframes emmy-dot { 0%, 100% { transform: translateY(0); opacity: 0.45; } 40% { transform: translateY(-40%); opacity: 1; } }
+@keyframes emmy-z {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.7); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translate(40%, -120%) scale(1.1); }
+}
+@keyframes emmy-bob { from { transform: translateY(0) rotate(-6deg); } to { transform: translateY(-12%) rotate(6deg); } }
+@keyframes emmy-twinkle {
+  0%, 100% { transform: scale(0.3) rotate(0); opacity: 0; }
+  45% { transform: scale(1) rotate(45deg); opacity: 1; }
+}
+@keyframes emmy-heart {
+  0% { opacity: 0; transform: scale(0.3); }
+  16% { opacity: 1; transform: scale(1.15); }
+  30% { transform: scale(1); }
+  100% { opacity: 0; transform: translate(calc(var(--heart-drift, 0) * 16cqw), -42cqw) scale(0.8) rotate(calc(var(--heart-drift, 0) * 18deg)); }
+}

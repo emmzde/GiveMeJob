@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { createAppQueryClient } from "@/app/queryClient";
@@ -40,7 +40,20 @@ describe("EmmyProviderSettings", () => {
     expect(screen.getByLabelText(t("emmyModel"))).toHaveValue("local-model");
     expect(screen.getByLabelText(t("emmyApiKey"))).toHaveAttribute("placeholder", t("emmyOptionalKey"));
     expect(screen.getByRole("button", { name: t("emmyUpdateApi") })).toBeInTheDocument();
-    expect(screen.queryByText("OpenRouter")).not.toBeInTheDocument();
-    expect(screen.queryByText("Groq")).not.toBeInTheDocument();
+    expect(screen.getAllByLabelText(t("emmyApiKey"))).toHaveLength(1);
+    expect(screen.getByRole("button", { name: /LM Studio/ })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("fills the address from a quick-setup preset", () => {
+    render(
+      <QueryClientProvider client={createAppQueryClient()}>
+        <EmmyProviderSettings />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Groq" }));
+    expect(screen.getByLabelText(t("emmyBaseUrl"))).toHaveValue("https://api.groq.com/openai/v1");
+    expect(screen.getByLabelText(t("emmyModel"))).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Groq" })).toHaveAttribute("aria-pressed", "true");
   });
 });

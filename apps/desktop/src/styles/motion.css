@@ -1,0 +1,99 @@
+/*
+ * Motion layer. Short, eased, transform/opacity only — no blur or scale on
+ * text, so glyphs stay crisp. Reduced-motion is collapsed globally in tokens.
+ */
+/* Screen change: a soft rise. */
+.app-screen-motion[data-active="true"] { animation: ui-rise 380ms var(--glide) backwards; }
+
+/* Search page entrance, staggered top → bottom. */
+.app-screen-motion[data-active="true"] .page-head { animation: ui-rise 460ms var(--glide) backwards; }
+.app-screen-motion[data-active="true"] .search-showcase-stack > :nth-child(1) { animation: ui-rise 520ms 60ms var(--glide) backwards; }
+.app-screen-motion[data-active="true"] .search-showcase-stack > :nth-child(2) { animation: ui-rise 520ms 110ms var(--glide) backwards; }
+.app-screen-motion[data-active="true"] .showcase-emmy { animation: ui-rise 560ms 150ms var(--glide) backwards; }
+.app-screen-motion[data-active="true"] .search-controls-card { animation: ui-rise 520ms 190ms var(--glide) backwards; }
+.app-screen-motion[data-active="true"] .results-head { animation: ui-rise 520ms 230ms var(--glide) backwards; }
+
+/* Result cards fade up as they appear (also when the virtual list mounts new rows). */
+.job-feed-item.job-feed-item { animation: ui-rise 420ms var(--glide) backwards !important; }
+.job-feed-region [role="list"] > [role="presentation"]:nth-child(2) .job-feed-item { animation-delay: 40ms !important; }
+.job-feed-region [role="list"] > [role="presentation"]:nth-child(3) .job-feed-item { animation-delay: 80ms !important; }
+.job-feed-region [role="list"] > [role="presentation"]:nth-child(4) .job-feed-item { animation-delay: 120ms !important; }
+.job-feed-region [role="list"] > [role="presentation"]:nth-child(5) .job-feed-item { animation-delay: 160ms !important; }
+.job-feed-region [role="list"] > [role="presentation"]:nth-child(6) .job-feed-item { animation-delay: 200ms !important; }
+
+.shortlist-row { animation: ui-rise 420ms var(--glide) backwards; }
+.workspace-section { animation: ui-rise 460ms var(--glide) backwards; }
+.workspace-section:nth-child(2) { animation-delay: 50ms; }
+.workspace-section:nth-child(3) { animation-delay: 100ms; }
+.workspace-section:nth-child(4) { animation-delay: 150ms; }
+
+/* Tactile press feedback on cards and pills. */
+.notch-card,
+.pill-button-solid,
+.pill-button-outline,
+.titlebar-icon-button,
+.titlebar-search,
+.emmy-titlebar-trigger,
+.sidebar-nav-item,
+.job-feed-row {
+  transition-property: background-color, border-color, color, box-shadow, transform, opacity;
+  transition-duration: 200ms;
+  transition-timing-function: var(--glide);
+}
+.app-shell .notch-card:active,
+.welcome-screen .notch-card:active { transform: scale(0.985); }
+.app-shell .pill-button-solid:active:not(:disabled),
+.app-shell .pill-button-outline:active,
+.welcome-screen .pill-button-solid:active,
+.app-shell .titlebar-icon-button:active,
+.app-shell .emmy-titlebar-trigger:active { transform: scale(0.96); }
+.app-shell .job-feed-row:active { transform: scale(0.995); }
+.app-shell .sidebar-nav-item:active { transform: scale(0.98); }
+
+/* Icons ease, arrows nudge. */
+.pill-button-solid svg,
+.pill-button-outline svg { transition: transform 260ms var(--spring); }
+.pill-button-solid:hover svg,
+.pill-button-outline:hover svg { transform: translateX(3px); }
+.notch-corner-button { transition: color 200ms var(--glide), border-color 200ms var(--glide), transform 420ms var(--spring); }
+.showcase-glyph { transition: transform 420ms var(--spring); }
+.notch-card:hover .showcase-glyph { transform: translateY(-2px) rotate(-3deg); }
+.sidebar-nav-item svg { transition: transform 300ms var(--spring), color 200ms var(--glide); }
+.sidebar-nav-item:hover svg { transform: translateX(1px) scale(1.06); }
+.sidebar-nav-dot { animation: ui-pop 420ms var(--spring) backwards; }
+.sidebar-nav-item.is-active { animation: ui-fade 260ms var(--glide) backwards; }
+
+/* Bookmark toggles pop. */
+[aria-pressed="true"] > .lucide-bookmark,
+[aria-pressed="true"] .lucide-bookmark-check { animation: ui-pop 380ms var(--spring); }
+
+/* Panels: smooth glide for filters, details and Emmy. */
+.emmy-dock { transition: width var(--motion-panel) var(--glide), margin var(--motion-panel) var(--glide); }
+.emmy-dock-stage { transition: opacity 360ms var(--glide), transform var(--motion-panel) var(--glide); }
+
+/* Match gauge draws itself in. */
+.match-gauge-value { animation: ui-gauge 1100ms 120ms var(--glide) backwards; }
+.match-gauge g { animation: ui-pop 520ms 900ms var(--spring) backwards; }
+.match-gauge-value-text { animation: ui-rise 600ms 200ms var(--glide) backwards; }
+.match-component-fill { animation: ui-grow 900ms 200ms var(--glide) backwards; transform-origin: left center; }
+
+/* Command palette */
+[cmdk-overlay] { animation: ui-fade 200ms var(--glide) backwards; }
+[cmdk-dialog] { animation: ui-rise 280ms var(--glide) backwards; }
+
+/* Brand mark draws on the welcome screen. */
+
+/* Skeletons shimmer instead of blinking. */
+.animate-pulse {
+  animation: ui-shimmer 1.6s linear infinite;
+  background-image: linear-gradient(100deg, transparent 20%, color-mix(in srgb, var(--text) 5%, transparent) 50%, transparent 80%);
+  background-size: 200% 100%;
+}
+
+@keyframes ui-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes ui-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ui-pop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.18); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes ui-gauge { from { stroke-dasharray: 0 100; } }
+@keyframes ui-grow { from { transform: scaleX(0); } }
+@keyframes ui-draw { to { stroke-dashoffset: 0; } }
+@keyframes ui-shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }

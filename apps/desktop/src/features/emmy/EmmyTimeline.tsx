@@ -15,7 +15,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { EmmyComparisonTable } from "@/features/emmy/EmmyComparisonTable";
 import { EmmyJobCard } from "@/features/emmy/EmmyJobCard";
-import { EmmyMascot } from "@/features/emmy/EmmyMascot";
+import { EmmyAvatar } from "@/features/emmy/EmmyAvatar";
 import type { JobId } from "@/lib/catalog";
 import type {
   EmmyMessage,
@@ -198,9 +198,7 @@ function AssistantMessage({
 }) {
   return (
     <div className="flex items-start gap-2">
-      <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-1)]">
-        <EmmyMascot className="size-6" state={revealing ? "thinking" : "idle"} />
-      </span>
+      <EmmyAvatar className="mt-0.5 size-8 shrink-0" state={revealing ? "thinking" : "idle"} />
       <div className="min-w-0 flex-1">
         <StreamingCopy active={revealing} key={revealing ? "streaming" : "complete"} onComplete={onComplete} text={content.text} />
         {!revealing ? (
@@ -307,28 +305,40 @@ function Notice({ error }: { error: LlmError }) {
 }
 
 function LiveActivity({ event }: { event: EmmyStateEvent }) {
+  const label = event.tool ? toolLabel(event.tool) : t("emmyThinking");
   return (
-    <div className="flex items-center gap-2 text-xs leading-4 text-[var(--text-tertiary)]" role="status">
-      <span className="grid size-7 place-items-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-1)] text-[var(--text)]">
-        <ThinkingGlyph searching={event.state === "searching"} />
-      </span>
-      <span>{event.tool ? toolLabel(event.tool) : t("emmyThinking")}</span>
+    <div className="emmy-live-activity" data-searching={event.state === "searching"} role="status">
+      <ThinkingSpark />
+      <span className="emmy-shimmer-text">{label}</span>
     </div>
   );
 }
 
-function ThinkingGlyph({ searching }: { searching: boolean }) {
+/** Eight-ray spark: rotates in eased steps while its rays breathe in sequence. */
+function ThinkingSpark() {
   return (
-    <svg
-      aria-hidden="true"
-      className="emmy-thinking-glyph size-4"
-      data-searching={searching}
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <path className="emmy-thinking-corners" d="M8 4H4v4m12-4h4v4M8 20H4v-4m12 4h4v-4" stroke="currentColor" strokeLinecap="square" strokeWidth="1.5" />
-      <path className="emmy-thinking-trace" d="M3 12h4l2.2-4.5 4.1 9 2.2-4.5H21" stroke="currentColor" strokeLinecap="square" strokeLinejoin="miter" strokeWidth="1.5" />
-      <rect className="emmy-thinking-node" fill="currentColor" height="3" width="3" x="2" y="10.5" />
+    <svg aria-hidden="true" className="emmy-thinking-spark" fill="none" viewBox="0 0 24 24">
+      <defs>
+        <linearGradient gradientUnits="userSpaceOnUse" id="emmy-spark-gradient" x1="4" x2="20" y1="20" y2="4">
+          <stop offset="0" stopColor="#5EEAD4" />
+          <stop offset="0.55" stopColor="#8B9CFF" />
+          <stop offset="1" stopColor="#C084FC" />
+        </linearGradient>
+      </defs>
+      <g className="emmy-spark-rotor" stroke="url(#emmy-spark-gradient)" strokeLinecap="round" strokeWidth="2.4">
+        {Array.from({ length: 8 }, (_, index) => (
+          <line
+            className="emmy-spark-ray"
+            key={index}
+            style={{ "--ray": index } as React.CSSProperties}
+            transform={`rotate(${index * 45} 12 12)`}
+            x1="12"
+            x2="12"
+            y1={index % 2 === 0 ? 2.5 : 5.2}
+            y2="9.2"
+          />
+        ))}
+      </g>
     </svg>
   );
 }

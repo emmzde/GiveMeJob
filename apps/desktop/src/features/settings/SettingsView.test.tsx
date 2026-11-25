@@ -24,14 +24,14 @@ const readyCatalog: CatalogViewState = {
 };
 
 describe("SettingsView", () => {
-  it("uses one scrolling canvas with flat semantic sections", () => {
+  it("groups settings into Emmy, appearance and catalog sections", () => {
     render(<SettingsView catalog={readyCatalog} />);
 
     expect(screen.queryByRole("navigation", { name: t("settingsTitle") })).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: t("appearance") })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: t("language") })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: t("localCatalog") })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: t("emmyCredentials") })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: t("settingsGroupEmmy") })).toBeInTheDocument();
     expect(screen.getByTestId("provider-route")).toBeInTheDocument();
     expect(screen.getByText("catalog-v1")).toBeInTheDocument();
   });

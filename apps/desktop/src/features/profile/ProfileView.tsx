@@ -5,6 +5,7 @@ import type { FormEvent, KeyboardEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconTile } from "@/components/ui/icon-tile";
 import { FilterAutocomplete } from "@/features/feed/components/FilterAutocomplete";
 import type { FilterSuggestion } from "@/features/feed/components/FilterAutocomplete";
 import { remoteModeLabels, seniorityLabels } from "@/features/feed/searchLabels";
@@ -360,7 +361,7 @@ export function ProfileView() {
         ) : null}
         {!profile.isPending && !profile.isError && profile.data === null && !editing ? (
           <div className="profile-empty-state grid min-h-80 place-content-center px-6 py-12 text-center">
-            <span aria-hidden="true" className="empty-state-glyph mx-auto"><UserRound className="size-5" /></span>
+            <IconTile className="mx-auto" icon={UserRound} size="lg" tone="violet" />
             <h2 className="text-sm font-semibold">{t("profileEmpty")}</h2>
             <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-[var(--text-secondary)]">{t("profileEmptyHint")}</p>
             <Button className="mx-auto mt-5" onClick={() => setEditing(true)} type="button"><Plus aria-hidden="true" className="size-4" />{t("createProfile")}</Button>

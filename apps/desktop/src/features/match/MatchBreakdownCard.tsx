@@ -52,6 +52,40 @@ function ReasonList({
   );
 }
 
+function MatchGauge({ score }: { score: number }) {
+  const clamped = Math.max(0, Math.min(100, score));
+  const angle = Math.PI * (1 - clamped / 100);
+  const markerX = 100 + 80 * Math.cos(angle);
+  const markerY = 100 - 80 * Math.sin(angle);
+  return (
+    <div aria-hidden="true" className="match-gauge">
+      <svg fill="none" viewBox="0 0 200 112">
+        <defs>
+          <linearGradient gradientUnits="userSpaceOnUse" id="match-gauge-gradient" x1="20" x2="180" y1="0" y2="0">
+            <stop offset="0" stopColor="#A78BFA" />
+            <stop offset="0.6" stopColor="#4ADE80" />
+            <stop offset="1" stopColor="#5EEAD4" />
+          </linearGradient>
+        </defs>
+        <path className="match-gauge-track" d="M20 100a80 80 0 0 1 160 0" pathLength={100} />
+        <path
+          className="match-gauge-value"
+          d="M20 100a80 80 0 0 1 160 0"
+          pathLength={100}
+          stroke="url(#match-gauge-gradient)"
+          strokeDasharray={`${clamped} 100`}
+        />
+        <g transform={`translate(${markerX.toFixed(2)} ${markerY.toFixed(2)})`}>
+          <circle className="match-gauge-marker-halo" r="9" />
+          <path className="match-gauge-marker" d="M0-6.5 1.6-1.6 6.5 0 1.6 1.6 0 6.5-1.6 1.6-6.5 0-1.6-1.6Z" />
+        </g>
+      </svg>
+      <span className="match-gauge-value-text">{clamped}</span>
+      <span className="match-gauge-caption">{t("matchLabel")}</span>
+    </div>
+  );
+}
+
 export function MatchBreakdownCard({ breakdown }: { breakdown: MatchBreakdown }) {
   const entries = Object.entries(breakdown.components) as [
     MatchComponentName,
@@ -60,37 +94,32 @@ export function MatchBreakdownCard({ breakdown }: { breakdown: MatchBreakdown })
   return (
     <section
       aria-labelledby="match-breakdown-heading"
-      className="surface-card mt-4 p-4"
+      className="match-card mt-4"
     >
-      <div className="flex items-baseline justify-between gap-3">
-        <h3 className="match-section-label text-base font-semibold" id="match-breakdown-heading">
-          {t("matchBreakdown")}
-        </h3>
-        <p className="text-sm font-semibold tabular-nums text-[var(--text)]">
-          {breakdown.score}% {t("matchLabel")}
-        </p>
-      </div>
-      <div className="mt-4 space-y-2.5">
+      <h3 className="match-card-title" id="match-breakdown-heading">
+        {t("matchBreakdown")}
+      </h3>
+      <p className="sr-only">
+        {breakdown.score}% {t("matchLabel")}
+      </p>
+      <MatchGauge score={breakdown.score} />
+      <div className="match-components">
         {entries.map(([component, score]) => (
-          <div className="grid grid-cols-[minmax(0,1fr)_96px_52px] items-center gap-2 text-xs" key={component}>
-            <span className="truncate text-[var(--text-secondary)]">{componentLabels[component]}</span>
-            <span className="h-1.5 overflow-hidden rounded-[var(--radius-sm)] bg-[var(--surface-active)]">
+          <div className="match-component" key={component}>
+            <span className="match-component-label">{componentLabels[component]}</span>
+            <span className="match-component-track">
               {score === null ? null : (
-                <span
-                  aria-hidden="true"
-                  className="block h-full bg-[var(--text-secondary)]"
-                  style={{ width: `${score}%` }}
-                />
+                <span aria-hidden="true" className="match-component-fill" style={{ width: `${score}%` }} />
               )}
             </span>
-            <span className="text-right tabular-nums text-[var(--text-tertiary)]">
+            <span className="match-component-value">
               {score === null ? t("matchUnknown") : `${score}%`}
             </span>
           </div>
         ))}
       </div>
       {breakdown.strengths.length > 0 || breakdown.gaps.length > 0 ? (
-        <div className="mt-5 grid gap-4 border-t border-[var(--border)] pt-4 md:grid-cols-2">
+        <div className="match-reasons">
           <ReasonList kind="strength" reasons={breakdown.strengths} />
           <ReasonList kind="gap" reasons={breakdown.gaps} />
         </div>

@@ -1,6 +1,5 @@
 import {
   BriefcaseBusiness,
-  Building2,
   ChartNoAxesColumnIncreasing,
   ChevronDown,
   CircleDollarSign,
@@ -13,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAppUiStore } from "@/app/store/appUiStore";
 import { Button } from "@/components/ui/button";
+import { CompanyAvatar } from "@/components/ui/company-avatar";
 import {
   employmentTypeLabels,
   formatSourceLabel,
@@ -121,9 +121,7 @@ export function JobDetail({
         <article>
           <header className="border-b border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
             <div className="flex items-start gap-3">
-              <span aria-hidden="true" className="job-detail-company-avatar">
-                <Building2 className="size-5" />
-              </span>
+              <CompanyAvatar className="job-detail-company-avatar" name={detail.data.company} />
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium text-[var(--text-secondary)]">
                   {detail.data.company}

@@ -18,7 +18,26 @@ interface EmmyMascotProps {
   trackPointer?: boolean;
 }
 
+interface Heart {
+  id: number;
+  x: number;
+  y: number;
+  drift: number;
+}
+
 const PET_DURATION_MS = 1_200;
+const HEART_LIFETIME_MS = 1_300;
+const MAX_HEARTS = 8;
+// Distance the pointer has to travel over Emmy to count as one stroke.
+const STROKE_PRESSED_PX = 48;
+const STROKE_HOVER_PX = 150;
+const ASSET_ROOT = "/brand/emmy";
+
+let heartSeed = 0;
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+}
 
 export function EmmyMascot({
   className,
@@ -26,14 +45,17 @@ export function EmmyMascot({
   state = "offline",
   trackPointer = false,
 }: EmmyMascotProps) {
-  const mascotRef = useRef<SVGSVGElement>(null);
+  const mascotRef = useRef<HTMLDivElement>(null);
   const petTimerRef = useRef<number | null>(null);
+  const strokeRef = useRef<{ x: number; y: number; travelled: number } | null>(null);
   const [hovered, setHovered] = useState(false);
   const [petted, setPetted] = useState(false);
+  const [blinking, setBlinking] = useState(false);
+  const [hearts, setHearts] = useState<Heart[]>([]);
 
   const resetGaze = useCallback(() => {
-    mascotRef.current?.style.setProperty("--emmy-gaze-x", "0px");
-    mascotRef.current?.style.setProperty("--emmy-gaze-y", "0px");
+    mascotRef.current?.style.setProperty("--emmy-gaze-x", "0");
+    mascotRef.current?.style.setProperty("--emmy-gaze-y", "0");
   }, []);
 
   useEffect(() => {
@@ -41,34 +63,53 @@ export function EmmyMascot({
       resetGaze();
       return;
     }
-
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     function followPointer(event: globalThis.PointerEvent): void {
       const mascot = mascotRef.current;
-      if (!mascot || reducedMotion.matches) return;
-
+      if (!mascot) return;
+      if (reducedMotion.matches) {
+        resetGaze();
+        return;
+      }
       const bounds = mascot.getBoundingClientRect();
       const deltaX = event.clientX - (bounds.left + bounds.width / 2);
       const deltaY = event.clientY - (bounds.top + bounds.height / 2);
-      const gazeX = Math.max(-2.5, Math.min(2.5, deltaX / 56));
-      const gazeY = Math.max(-1.75, Math.min(1.75, deltaY / 64));
-      mascot.style.setProperty("--emmy-gaze-x", `${gazeX.toFixed(2)}px`);
-      mascot.style.setProperty("--emmy-gaze-y", `${gazeY.toFixed(2)}px`);
-    }
-
-    function handleMotionPreference(): void {
-      if (reducedMotion.matches) resetGaze();
+      const reach = Math.max(bounds.width, 120) * 1.6;
+      const gazeX = Math.max(-1, Math.min(1, deltaX / reach));
+      const gazeY = Math.max(-1, Math.min(1, deltaY / reach));
+      mascot.style.setProperty("--emmy-gaze-x", gazeX.toFixed(2));
+      mascot.style.setProperty("--emmy-gaze-y", gazeY.toFixed(2));
     }
 
     window.addEventListener("pointermove", followPointer, { passive: true });
-    reducedMotion.addEventListener("change", handleMotionPreference);
     return () => {
       window.removeEventListener("pointermove", followPointer);
-      reducedMotion.removeEventListener("change", handleMotionPreference);
       resetGaze();
     };
   }, [resetGaze, trackPointer]);
+
+  // Natural, irregular blinking while awake.
+  useEffect(() => {
+    if (state === "offline" || prefersReducedMotion()) return;
+    let openTimer: number | null = null;
+    let nextTimer: number | null = null;
+    function schedule(): void {
+      nextTimer = window.setTimeout(() => {
+        setBlinking(true);
+        openTimer = window.setTimeout(() => {
+          setBlinking(false);
+          schedule();
+        }, 140);
+      }, 2_400 + Math.random() * 3_600);
+    }
+    schedule();
+    return () => {
+      if (openTimer !== null) window.clearTimeout(openTimer);
+      if (nextTimer !== null) window.clearTimeout(nextTimer);
+      setBlinking(false);
+    };
+  }, [state]);
 
   useEffect(
     () => () => {
@@ -77,131 +118,138 @@ export function EmmyMascot({
     [],
   );
 
-  const petEmmy = useCallback(() => {
-    if (!interactive) return;
-    if (petTimerRef.current !== null) window.clearTimeout(petTimerRef.current);
-    setPetted(true);
-    petTimerRef.current = window.setTimeout(() => {
-      setPetted(false);
-      petTimerRef.current = null;
-    }, PET_DURATION_MS);
-  }, [interactive]);
+  const spawnHeart = useCallback((x: number, y: number) => {
+    if (prefersReducedMotion()) return;
+    const heart: Heart = { id: ++heartSeed, x, y, drift: (Math.random() - 0.5) * 2 };
+    setHearts((current) => [...current.slice(-(MAX_HEARTS - 1)), heart]);
+    window.setTimeout(() => {
+      setHearts((current) => current.filter((item) => item.id !== heart.id));
+    }, HEART_LIFETIME_MS);
+  }, []);
 
-  function handlePointerDown(event: PointerEvent<SVGSVGElement>): void {
+  const petEmmy = useCallback(
+    (x = 50, y = 30) => {
+      if (!interactive) return;
+      if (petTimerRef.current !== null) window.clearTimeout(petTimerRef.current);
+      setPetted(true);
+      spawnHeart(x, y);
+      petTimerRef.current = window.setTimeout(() => {
+        setPetted(false);
+        petTimerRef.current = null;
+      }, PET_DURATION_MS);
+    },
+    [interactive, spawnHeart],
+  );
+
+  function relativePoint(event: PointerEvent<HTMLDivElement>): { x: number; y: number } {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (bounds.width === 0 || bounds.height === 0) return { x: 50, y: 30 };
+    return {
+      x: ((event.clientX - bounds.left) / bounds.width) * 100,
+      y: ((event.clientY - bounds.top) / bounds.height) * 100,
+    };
+  }
+
+  function handlePointerDown(event: PointerEvent<HTMLDivElement>): void {
     if (event.button !== 0) return;
     event.preventDefault();
-    petEmmy();
+    const point = relativePoint(event);
+    strokeRef.current = { x: event.clientX, y: event.clientY, travelled: 0 };
+    petEmmy(point.x, point.y);
   }
 
-  function handleKeyDown(event: KeyboardEvent<SVGSVGElement>): void {
+  function handlePointerMove(event: PointerEvent<HTMLDivElement>): void {
+    const previous = strokeRef.current;
+    strokeRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      travelled: (previous?.travelled ?? 0) + (previous ? Math.hypot(event.clientX - previous.x, event.clientY - previous.y) : 0),
+    };
+    const threshold = event.buttons === 1 ? STROKE_PRESSED_PX : STROKE_HOVER_PX;
+    if (strokeRef.current.travelled >= threshold) {
+      strokeRef.current.travelled = 0;
+      const point = relativePoint(event);
+      petEmmy(point.x, point.y);
+    }
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
-    petEmmy();
+    petEmmy(50, 24);
   }
 
+  const eyes =
+    petted || state === "success"
+      ? "happy"
+      : state === "offline" || blinking
+        ? "closed"
+        : "open";
+
   return (
-    <svg
+    <div
       aria-hidden={interactive ? undefined : "true"}
       aria-label={interactive ? t("petEmmy") : undefined}
       className={cn("emmy-mascot size-9", className)}
+      data-eyes={eyes}
       data-hovered={hovered}
       data-interactive={interactive}
       data-petted={petted}
       data-state={state}
-      focusable={interactive ? "true" : "false"}
       onKeyDown={interactive ? handleKeyDown : undefined}
       onPointerDown={interactive ? handlePointerDown : undefined}
       onPointerEnter={interactive ? () => setHovered(true) : undefined}
-      onPointerLeave={interactive ? () => setHovered(false) : undefined}
+      onPointerLeave={
+        interactive
+          ? () => {
+              setHovered(false);
+              strokeRef.current = null;
+            }
+          : undefined
+      }
+      onPointerMove={interactive ? handlePointerMove : undefined}
       ref={mascotRef}
       role={interactive ? "button" : undefined}
-      shapeRendering="crispEdges"
       tabIndex={interactive ? 0 : undefined}
-      viewBox="0 0 96 96"
     >
-      <g className="emmy-tail">
-        <path
-          d="M66 56h12v4h6v6h4v14h-4v6h-6v4H64V80h8v-4h4V66H66Z"
-          fill="var(--emmy-outline)"
-        />
-        <path d="M68 60h9v4h5v5h3v9h-4v5h-9v-6h4V65h-8Z" fill="var(--emmy-fur-shadow)" />
-        <path d="M77 64h5v5h3v7h-6v-5h-5v-5h3Z" fill="var(--emmy-cream)" />
-      </g>
+      <span className="emmy-rig">
+        <img alt="" className="emmy-layer emmy-tail" draggable={false} src={`${ASSET_ROOT}/tail.webp`} />
+        <img alt="" className="emmy-layer emmy-body" draggable={false} src={`${ASSET_ROOT}/body.webp`} />
+        <span className="emmy-layer emmy-head-gaze">
+          <span className="emmy-layer emmy-head">
+            <img alt="" className="emmy-layer emmy-face" data-face="open" draggable={false} src={`${ASSET_ROOT}/head.webp`} />
+            <img alt="" className="emmy-layer emmy-face" data-face="closed" draggable={false} src={`${ASSET_ROOT}/head-closed.webp`} />
+            <img alt="" className="emmy-layer emmy-face" data-face="happy" draggable={false} src={`${ASSET_ROOT}/head-happy.webp`} />
+          </span>
+        </span>
+      </span>
 
-      <g className="emmy-body">
-        <path d="M26 50h42v4h6v8h4v24h-6v6H24v-6h-6V64h4V56h4Z" fill="var(--emmy-outline)" />
-        <path d="M28 54h38v4h5v8h3v17h-6v5H28v-5h-6V66h4v-8h2Z" fill="var(--emmy-fur)" />
-        <path d="M38 54h20v8h4v23h-6v3H40v-3h-6V62h4Z" fill="var(--emmy-cream)" />
-        <path d="M23 72h12v16H23Zm38 0h12v16H61Z" fill="var(--emmy-fur-shadow)" />
-        <path d="M23 82h14v6H23Zm36 0h14v6H59Z" fill="var(--emmy-highlight)" />
-        <path d="M27 86h3v4h-3Zm7 0h3v4h-3Zm25 0h3v4h-3Zm7 0h3v4h-3Z" fill="var(--emmy-outline)" />
-      </g>
-
-      <g className="emmy-head">
-        <g className="emmy-ear emmy-ear-left">
-          <path d="M20 30V14h6v-6h14v22Z" fill="var(--emmy-outline)" />
-          <path d="M24 28V16h5v-4h7v18Z" fill="var(--emmy-fur-shadow)" />
-          <path d="M27 22v-5h5v9Z" fill="var(--emmy-ear)" />
-        </g>
-        <g className="emmy-ear emmy-ear-right">
-          <path d="M56 30V8h14v6h6v16Z" fill="var(--emmy-outline)" />
-          <path d="M60 30V12h7v4h5v12Z" fill="var(--emmy-fur-shadow)" />
-          <path d="M64 26v-9h5v5Z" fill="var(--emmy-ear)" />
-        </g>
-
-        <path d="M26 18h40v4h8v8h4v24h-4v8h-8v4H26v-4h-8v-8h-4V30h4v-8h8Z" fill="var(--emmy-outline)" />
-        <path d="M28 22h36v4h7v7h3v18h-4v7h-7v4H29v-4h-7v-7h-4V33h4v-7h6Z" fill="var(--emmy-fur)" />
-        <path d="M26 22h12v4h10v-4h16v4h7v7h3v6H62v-4H34v4H18v-6h4v-7h4Z" fill="var(--emmy-highlight)" opacity=".34" />
-        <path d="M22 44h12v4h28v-4h8v14h-7v4H29v-4h-7Z" fill="var(--emmy-cream)" />
-        <path d="M34 42h28v18H34Z" fill="var(--emmy-cream)" />
-
-        <g className="emmy-eyes">
-          <path d="M27 34h14v12H27Zm28 0h14v12H55Z" fill="var(--emmy-outline)" />
-          <path d="M30 37h8v6h-8Zm28 0h8v6h-8Z" fill="var(--emmy-highlight)" />
-          <g className="emmy-pupils" fill="var(--emmy-eye)">
-            <path d="M33 38h5v5h-5Zm28 0h5v5h-5Z" />
-          </g>
-        </g>
-        <g className="emmy-closed-eyes" fill="var(--emmy-eye)">
-          <path d="M28 39h3v3h3v2h-6Zm8 0h3v5h-6v-2h3Zm20 0h3v3h3v2h-6Zm8 0h3v5h-6v-2h3Z" />
-        </g>
-        <g className="emmy-bliss-eyes" fill="var(--emmy-eye)">
-          <path d="M27 40h3v-3h3v-2h3v2h3v3h3v3h-4v-3h-3v-2h-2v2h-3v3h-3Zm28 0h3v-3h3v-2h3v2h3v3h3v3h-4v-3h-3v-2h-2v2h-3v3h-3Z" />
-        </g>
-
-        <g className="emmy-face-normal">
-          <path d="M43 48h10v4h-3v3h-4v-3h-3Z" fill="var(--emmy-nose)" />
-          <path d="M38 55h8v3h4v-3h8v3h-5v4H43v-4h-5Z" fill="var(--emmy-outline)" />
-          <path d="M42 55h4v2h4v-2h4v3h-4v2h-4v-2h-4Z" fill="var(--emmy-highlight)" />
-        </g>
-        <g className="emmy-face-bliss">
-          <path d="M43 47h10v4h-3v3h-4v-3h-3Z" fill="var(--emmy-nose)" />
-          <path d="M39 54h18v6h-4v4H43v-4h-4Z" fill="var(--emmy-outline)" />
-          <path d="M44 58h8v6h-8Z" fill="var(--emmy-tongue)" />
-        </g>
-        <g className="emmy-blush" fill="var(--emmy-blush)">
-          <path d="M23 49h8v4h-8Zm42 0h8v4h-8Z" />
-        </g>
-      </g>
-
-      <g className="emmy-thinking-marks" fill="var(--text-tertiary)">
-        <rect height="4" width="4" x="72" y="15" />
-        <rect height="5" width="5" x="79" y="9" />
-        <rect height="6" width="6" x="87" y="4" />
-      </g>
-      <g className="emmy-search-marks" fill="var(--emmy-accent)">
-        <path d="M77 45h7v2h4v3h-4v-1h-7Zm1 8h6v2h4v3h-4v-1h-6Z" />
-      </g>
-      <path className="emmy-empty-mark" d="M79 5h10v3h4v10h-4v4h-4v5h-4v-8h4v-4h3v-6h-7v4h-5V9h3Zm2 27h5v5h-5Z" fill="var(--text-tertiary)" />
-      <g className="emmy-success-marks" fill="var(--positive)">
-        <path d="M10 10h4v6h6v4h-6v6h-4v-6H4v-4h6Zm72 14h3v4h4v3h-4v4h-3v-4h-4v-3h4Z" />
-      </g>
-      <g className="emmy-sleep-marks" fill="var(--text-tertiary)">
-        <path d="M74 12h10v4l-5 6h5v4H73v-4l6-6h-5Zm10-9h8v3l-4 4h4v3h-9v-3l4-4h-3Z" />
-      </g>
-      <g className="emmy-pet-hearts" fill="var(--emmy-blush)">
-        <path d="M12 17h4v-3h5v3h4v6h-3v3h-4v4h-4v-4h-3v-3H8v-6Zm65-6h3V8h4v3h3v5h-3v3h-2v3h-3v-3h-2v-3h-2v-5Z" />
-      </g>
-    </svg>
+      <span className="emmy-fx emmy-fx-thinking">
+        <i />
+        <i />
+        <i />
+      </span>
+      <span className="emmy-fx emmy-fx-sleep">
+        <i>z</i>
+        <i>z</i>
+      </span>
+      <span className="emmy-fx emmy-fx-question">?</span>
+      <span className="emmy-fx emmy-fx-sparkles">
+        <i />
+        <i />
+        <i />
+      </span>
+      {hearts.map((heart) => (
+        <span
+          className="emmy-heart"
+          key={heart.id}
+          style={{ left: `${heart.x}%`, top: `${heart.y}%`, "--heart-drift": heart.drift } as React.CSSProperties}
+        >
+          <svg viewBox="0 0 24 24">
+            <path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.2 3 4.5 6.6 4.5c2.1 0 3.6 1.1 5.4 3.1 1.8-2 3.3-3.1 5.4-3.1 3.6 0 5.7 3.7 4.2 7.2C19.5 16.4 12 21 12 21Z" />
+          </svg>
+        </span>
+      ))}
+    </div>
   );
 }

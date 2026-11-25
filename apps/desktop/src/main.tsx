@@ -7,11 +7,14 @@ import { AppErrorBoundary } from "@/app/AppErrorBoundary";
 import { appQueryClient } from "@/app/queryClient";
 import { useAppUiStore } from "@/app/store/appUiStore";
 import { applyDocumentTheme, resolveTheme } from "@/app/theme";
-import "@fontsource-variable/inter";
+import "@fontsource-variable/inter/opsz.css";
 import "@fontsource-variable/jetbrains-mono";
-import "@fontsource-variable/manrope";
-import "@fontsource-variable/plus-jakarta-sans";
 import "@/styles/index.css";
+import "@/styles/oled.css";
+import "@/styles/emmy-mascot.css";
+import "@/styles/motion.css";
+import "@/styles/settings.css";
+import "@/styles/crisp.css";
 
 applyDocumentTheme(
   document.documentElement,

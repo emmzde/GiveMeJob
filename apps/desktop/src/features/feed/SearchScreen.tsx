@@ -1,7 +1,4 @@
-import {
-  BriefcaseBusiness,
-  Search,
-} from "lucide-react";
+import { ArrowRight, Bookmark, Search, UserRound } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { InfiniteData } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -9,6 +6,8 @@ import type { FormEvent } from "react";
 
 import { useAppUiStore } from "@/app/store/appUiStore";
 import { Button } from "@/components/ui/button";
+import { CornerArrow } from "@/components/ui/corner-arrow";
+import { IconTile } from "@/components/ui/icon-tile";
 import {
   catalogStageLabel,
   isCatalogReady,
@@ -30,7 +29,9 @@ import {
 } from "@/features/feed/searchDraft";
 import type { SearchDraft } from "@/features/feed/searchDraft";
 import { flattenUniqueJobs } from "@/features/feed/searchPages";
+import { EmmyMascot } from "@/features/emmy/EmmyMascot";
 import { JobDetail } from "@/features/job/components/JobDetail";
+import { useShortlistRecords } from "@/features/shortlist/hooks";
 import type {
   CatalogStatus,
   JobSearchPage,
@@ -68,8 +69,10 @@ export function SearchScreen({
   const panel = useAppUiStore((state) => state.panel);
   const screen = useAppUiStore((state) => state.screen);
   const setPanel = useAppUiStore((state) => state.setPanel);
+  const setScreen = useAppUiStore((state) => state.setScreen);
   const filtersVisible = useAppUiStore((state) => state.filtersVisible);
   const catalogReady = isCatalogReady(catalog);
+  const shortlistCount = useShortlistRecords().data?.length ?? 0;
   const search = useSearchPage(committedQuery, catalogReady);
   const retainedData =
     search.isError && retainedQuery
@@ -120,8 +123,13 @@ export function SearchScreen({
   useEffect(() => {
     if (pages.length === 0 || search.isPlaceholderData || search.isError) return;
     const currentSelectionExists = jobs.some((job) => job.id === selectedId);
-    if (!currentSelectionExists) selectJob(jobs[0]?.id ?? null);
-  }, [jobs, pages.length, search.isError, search.isPlaceholderData, selectJob, selectedId]);
+    if (!currentSelectionExists) {
+      selectJob(jobs[0]?.id ?? null);
+      if (selectedId === null && !hasCommittedInteraction) {
+        setPanel(panel === "emmy" ? "emmy" : null);
+      }
+    }
+  }, [hasCommittedInteraction, jobs, pages.length, panel, search.isError, search.isPlaceholderData, selectJob, selectedId, setPanel]);
 
   const selectedJob = useMemo(
     () => jobs.find((job) => job.id === selectedId) ?? null,
@@ -133,8 +141,6 @@ export function SearchScreen({
   const searchError = search.isError
     ? t(hasCommittedInteraction ? "submitSearchError" : "initialSearchError")
     : null;
-  const catalogTotal =
-    catalog.status?.state === "ready" ? catalog.status.totalJobs : jobs.length;
   const detailVisible = selectedId !== null && panel === "job_detail";
 
   function commit(nextDraft: SearchDraft, refetchEqualQuery: boolean): void {
@@ -171,6 +177,7 @@ export function SearchScreen({
   return (
     <div
       className="search-layout"
+      data-compact={hasCommittedInteraction || filtersVisible || panel !== null}
       data-detail-visible={detailVisible ? "true" : "false"}
       data-filters-visible={filtersVisible ? "true" : "false"}
     >
@@ -181,108 +188,145 @@ export function SearchScreen({
         visible={filtersVisible}
       />
 
-      <section className="job-workbench flex min-h-0 min-w-0 flex-col border-r border-[var(--border)] bg-[var(--bg)]">
-        <div className="search-page-header shrink-0 px-6 pb-5 pt-5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
-                {t("localCatalog")}
-              </p>
-              <h1 className="search-title text-[28px] font-extrabold leading-8 tracking-[-0.035em]">
-                {t("searchTitle")}
-              </h1>
+      <section className="job-workbench flex min-h-0 min-w-0 flex-col">
+        <header className="search-page-header page-head shrink-0">
+          <h1 className="search-title page-title">{t("searchTitle")}</h1>
+          <div className="page-head-meta">
+            {shortlistCount > 0 ? (
+              <span className="meta-pill">
+                <Bookmark aria-hidden="true" className="size-3.5" />
+                <span className="meta-pill-key">{t("shortlist")}</span>
+                <span className="meta-pill-value">{formatCount(shortlistCount)}</span>
+              </span>
+            ) : null}
+          </div>
+        </header>
+
+        <div className="job-results-panel flex min-h-0 flex-1 flex-col">
+          <div className="search-showcase">
+            <div className="search-showcase-stack">
+              <button className="notch-card showcase-tile" onClick={() => setScreen("shortlist")} type="button">
+                <IconTile icon={Bookmark} size="lg" tone="gold" />
+                <span className="showcase-copy">
+                  <span className="showcase-kicker">{t("shortlist")}</span>
+                  <span className="showcase-title">{t("careerShortlistCopy")}</span>
+                </span>
+                <CornerArrow />
+              </button>
+              <button className="notch-card showcase-tile" onClick={() => setScreen("profile")} type="button">
+                <IconTile icon={UserRound} size="lg" tone="violet" />
+                <span className="showcase-copy">
+                  <span className="showcase-kicker">{t("profile")}</span>
+                  <span className="showcase-title">{t("careerProfileCopy")}</span>
+                </span>
+                <CornerArrow />
+              </button>
+            </div>
+            <div className="showcase-emmy">
+              <div className="showcase-emmy-copy">
+                <p className="showcase-emmy-title">Emmy</p>
+                <p className="showcase-emmy-text">{t("careerEmmyCopy")}</p>
+                <button className="pill-button-outline" onClick={() => setPanel("emmy")} type="button">
+                  {t("careerAssistantAction")}
+                </button>
+              </div>
+              <EmmyMascot className="showcase-emmy-mascot" interactive state="idle" trackPointer />
             </div>
           </div>
-        </div>
 
-        <div className="job-results-panel mx-6 mb-6 flex min-h-0 flex-1 flex-col gap-4">
           <div className="search-controls-card shrink-0">
-          <div className="search-controls-header">
-            <h2 className="flex min-w-0 items-center gap-2 text-[14px] font-bold">
-              <span className="panel-glyph"><BriefcaseBusiness aria-hidden="true" className="size-3.5" /></span>
-              {t("searchResults")}
-            </h2>
-            <span className="text-[12px] text-[var(--text-tertiary)]">
-              {t("catalogTotal")}: {formatCount(catalogTotal)} {t("jobsFound")}
-            </span>
-          </div>
-
             <div className="search-controls-body">
-              <form className="flex gap-2" onSubmit={submitSearch}>
-            <label className="search-input-shell flex min-w-0 flex-1 items-center gap-3 rounded-[10px] border border-[var(--border)] bg-[var(--sidebar-field)] px-4 focus-within:border-[var(--focus)]">
-              <Search aria-hidden="true" className="size-[18px] text-[var(--text-tertiary)]" />
-              <span className="sr-only">{t("searchPlaceholder")}</span>
-              <input
-                aria-describedby="search-syntax-hint"
-                className="h-11 min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-[var(--text-placeholder)]"
-                disabled={!catalogReady}
-                id="catalog-search-input"
-                onChange={(event) => setDraft({ ...draft, text: event.target.value })}
-                placeholder={t("searchPlaceholder")}
-                ref={searchInputRef}
-                value={draft.text}
-              />
-            </label>
-            <Button
-              disabled={search.isFetching || !catalogReady}
-              type="submit"
-              variant="default"
-            >
-              {t("search")}
-            </Button>
+              <form className="search-form" onSubmit={submitSearch}>
+                <label className="search-input-shell">
+                  <Search aria-hidden="true" className="size-[18px] shrink-0" />
+                  <span className="sr-only">{t("searchPlaceholder")}</span>
+                  <input
+                    aria-describedby="search-syntax-hint"
+                    disabled={!catalogReady}
+                    id="catalog-search-input"
+                    onChange={(event) => setDraft({ ...draft, text: event.target.value })}
+                    placeholder={t("searchPlaceholder")}
+                    ref={searchInputRef}
+                    value={draft.text}
+                  />
+                  <kbd aria-hidden="true" className="search-input-key">/</kbd>
+                </label>
+                <button
+                  className="pill-button-solid"
+                  disabled={search.isFetching || !catalogReady}
+                  type="submit"
+                >
+                  {t("search")}
+                  <ArrowRight aria-hidden="true" className="size-4" />
+                </button>
               </form>
-              <p className="mt-3 text-[12px] leading-5 text-[var(--text-tertiary)]" id="search-syntax-hint">
+              <p className="sr-only" id="search-syntax-hint">
                 {t("searchSyntaxHint")}
               </p>
 
-          <ActiveFilterChips draft={draft} onChange={changeFilters} />
+              <ActiveFilterChips draft={draft} onChange={changeFilters} />
 
-          {catalog.status && catalogWorking ? (
-            <div
-              aria-atomic="true"
-              aria-live="polite"
-              className="mt-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] p-3"
-              role="status"
-            >
-              <div className="flex items-center justify-between gap-3 text-xs">
-                <span>{catalogStageLabel(catalog.status)}</span>
-                <span>{catalog.status.progress}%</span>
-              </div>
-              <progress
-                aria-label={t("catalogProgress")}
-                className="mt-2 h-1.5 w-full accent-[var(--text)]"
-                max={100}
-                value={catalog.status.progress}
-              />
+              {catalog.status && catalogWorking ? (
+                <div
+                  aria-atomic="true"
+                  aria-live="polite"
+                  className="inline-status"
+                  role="status"
+                >
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <span>{catalogStageLabel(catalog.status)}</span>
+                    <span className="tabular-nums">{catalog.status.progress}%</span>
+                  </div>
+                  <progress
+                    aria-label={t("catalogProgress")}
+                    className="slim-progress"
+                    max={100}
+                    value={catalog.status.progress}
+                  />
+                </div>
+              ) : null}
+              {catalog.isError || catalog.status?.state === "missing" || catalog.status?.state === "error" ? (
+                <div className="mt-3">
+                  <Button
+                    disabled={isRecovering}
+                    onClick={() => void recoverCatalog().catch(() => undefined)}
+                    type="button"
+                  >
+                    {isRecovering ? t("catalogRetrying") : t("catalogRetry")}
+                  </Button>
+                </div>
+              ) : null}
+              {searchError ? (
+                <p aria-live="assertive" className="inline-status" role="alert">
+                  {searchError}
+                </p>
+              ) : null}
             </div>
-          ) : null}
-          {catalog.isError || catalog.status?.state === "missing" || catalog.status?.state === "error" ? (
-            <div className="mt-3">
-              <Button
-                disabled={isRecovering}
-                onClick={() => void recoverCatalog().catch(() => undefined)}
-                type="button"
-              >
-                {isRecovering ? t("catalogRetrying") : t("catalogRetry")}
-              </Button>
-            </div>
-          ) : null}
-          {searchError ? (
-            <p
-              aria-live="assertive"
-              className="mt-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-sm"
-              role="alert"
-            >
-              {searchError}
-            </p>
-          ) : null}
+          </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-4">
-            <div>
+          <div className="results-head">
+            <SortControl
+              disabled={!catalogReady || search.isFetching}
+              onChange={(sort) => changeFilters({ ...draft, sort })}
+              value={draft.sort}
+            />
+            <div className="results-head-meta">
+              {suggestion ? (
+                <span className="results-suggestion">
+                  <span>{t("typoSuggestion")}:</span>
+                  <button
+                    disabled={!catalogReady || search.isFetching}
+                    onClick={applySuggestion}
+                    type="button"
+                  >
+                    {suggestion}
+                  </button>
+                </span>
+              ) : null}
               <p
                 aria-atomic="true"
                 aria-live="polite"
-                className="text-[13px] font-bold leading-5"
+                className="results-count"
                 role="status"
               >
                 {catalogWorking || (search.isPending && jobs.length === 0)
@@ -290,50 +334,27 @@ export function SearchScreen({
                   : `${formatCount(firstPage?.total ?? jobs.length)} ${t("resultsFound")}`}
               </p>
               {search.isFetching && !search.isFetchingNextPage && jobs.length > 0 ? (
-                <p className="mt-0.5 text-[11px] leading-4 text-[var(--text-secondary)]">
-                  {t("resultsLoading")}
-                </p>
+                <p className="sr-only">{t("resultsLoading")}</p>
               ) : null}
-            </div>
-            <SortControl
-              disabled={!catalogReady || search.isFetching}
-              onChange={(sort) => changeFilters({ ...draft, sort })}
-              value={draft.sort}
-            />
-          </div>
-          {suggestion ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
-              <span>{t("typoSuggestion")}:</span>
-              <Button
-                className="h-8 px-2.5 text-xs"
-                disabled={!catalogReady || search.isFetching}
-                onClick={applySuggestion}
-                type="button"
-                variant="outline"
-              >
-                {suggestion}
-              </Button>
-            </div>
-          ) : null}
             </div>
           </div>
 
-            <Feed
-              canLoadNextPage={
-                catalogReady &&
-                nextCursor !== null &&
-                !search.isFetching &&
-                !search.isFetchingNextPage
-              }
-              errorMessage={searchError}
-              isCatalogReady={catalogReady}
-              isFetching={search.isFetching}
-              isFetchingNextPage={search.isFetchingNextPage}
-              isInitialLoading={isInitialSearchLoading}
-              jobs={jobs}
-              nextCursor={nextCursor}
-              onLoadMore={loadMore}
-            />
+          <Feed
+            canLoadNextPage={
+              catalogReady &&
+              nextCursor !== null &&
+              !search.isFetching &&
+              !search.isFetchingNextPage
+            }
+            errorMessage={searchError}
+            isCatalogReady={catalogReady}
+            isFetching={search.isFetching}
+            isFetchingNextPage={search.isFetchingNextPage}
+            isInitialLoading={isInitialSearchLoading}
+            jobs={jobs}
+            nextCursor={nextCursor}
+            onLoadMore={loadMore}
+          />
         </div>
       </section>
 

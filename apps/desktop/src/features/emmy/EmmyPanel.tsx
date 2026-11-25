@@ -335,7 +335,7 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
       ) : conversation.isError ? (
         <div className="grid min-h-0 flex-1 place-items-center p-6 text-center">
           <div>
-            <EmmyMascot className="mx-auto size-14" state="error" />
+            <EmmyMascot className="mx-auto size-24" state="error" />
             <p className="mt-3 text-sm font-semibold">{t("emmyConversationError")}</p>
             <Button className="mt-3" onClick={() => void conversation.refetch()} type="button" variant="outline">
               <RotateCcw aria-hidden="true" className="size-4" />
@@ -407,7 +407,7 @@ export function EmmyPanel({ onClose }: { onClose(): void }) {
 function OfflineState({ onSettings }: { onSettings(): void }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col justify-end px-5 pb-5">
-      <EmmyMascot className="size-24" interactive state="offline" trackPointer />
+      <EmmyMascot className="size-36" interactive state="offline" trackPointer />
       <h2 className="mt-3 max-w-64 text-[21px] font-bold leading-7 tracking-[-0.025em]">{t("emmyOfflineTitle")}</h2>
       <p className="mt-2 max-w-72 text-[13px] leading-5 text-[var(--text-secondary)]">{t("emmyOfflineDescription")}</p>
       <Button className="mt-4 self-start" onClick={onSettings} type="button" variant="outline">
@@ -422,7 +422,7 @@ function WelcomeState({ onReply }: { onReply(reply: string): void }) {
   return (
     <div className="scroll-region flex min-h-0 flex-1 flex-col justify-end overflow-y-auto px-5 pb-4">
       <div className="emmy-welcome">
-        <EmmyMascot className="emmy-welcome-mascot size-20" interactive state="idle" trackPointer />
+        <EmmyMascot className="emmy-welcome-mascot size-36" interactive state="idle" trackPointer />
         <h2 className="emmy-welcome-title mt-3 text-[18px] font-bold leading-6 tracking-[-0.025em]">
           {t("emmyWelcomeTitle")}
         </h2>

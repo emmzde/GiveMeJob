@@ -4,7 +4,7 @@
 
 **Ищите среди 78 719 вакансий полностью офлайн, получайте объяснимый процент совпадения и поручайте Emmy работу с локальными карьерными инструментами — профиль и избранное остаются на вашем компьютере.**
 
-![Локальный поиск GiveMeJob с фильтрами, списком вакансий и подробной карточкой](docs/screenshots/interface.png)
+![Главный экран GiveMeJob: локальный поиск, сортировка, список вакансий и Emmy](docs/screenshots/interface.png)
 
 [![Quality](https://github.com/emmzde/GiveMeJob/actions/workflows/quality.yml/badge.svg)](https://github.com/emmzde/GiveMeJob/actions/workflows/quality.yml)
 [![Последний релиз](https://img.shields.io/github/v/release/emmzde/GiveMeJob?sort=semver)](https://github.com/emmzde/GiveMeJob/releases/latest)
@@ -12,9 +12,11 @@
 [![Tauri 2](https://img.shields.io/badge/Tauri-2-242424?logo=tauri)](https://tauri.app/)
 [![Rust](https://img.shields.io/badge/Rust-stable-242424?logo=rust)](https://www.rust-lang.org/)
 
-| Emmy сравнивает вакансии через локальные инструменты | Нажмите ЛКМ, чтобы погладить Emmy |
+| Emmy, карьерный ассистент | Нажмите ЛКМ или проведите по Emmy, чтобы погладить |
 | --- | --- |
-| ![Emmy ищет в локальном каталоге и сравнивает две Rust-вакансии](docs/screenshots/emmy-ai.png) | ![Emmy радуется и показывает сердечки, когда её гладят](docs/screenshots/emmy-petting.png) |
+| ![Панель чата Emmy рядом со списком вакансий](docs/screenshots/emmy-ai.png) | ![Emmy жмурится и показывает сердечки, когда её гладят](docs/screenshots/emmy-petting.png) |
+| **Объяснимое совпадение** | **Настройки** |
+| ![Карточка вакансии со шкалой совпадения и разбором по факторам](docs/screenshots/job-match.png) | ![Настройки по группам: подключение Emmy, тема и язык, каталог](docs/screenshots/settings.png) |
 
 ## Зачем я это сделал
 

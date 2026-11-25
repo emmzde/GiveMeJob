@@ -1,14 +1,46 @@
-import { Bot, Database, Languages, MonitorCog } from "lucide-react";
+import { Database, Languages, Palette, Sparkles } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { LanguageControl } from "@/app/LanguageControl";
 import { ThemeControl } from "@/app/ThemeControl";
-import { EmmyProviderSettings } from "@/features/emmy/EmmyProviderSettings";
+import { IconTile, type IconTileTone } from "@/components/ui/icon-tile";
 import type { CatalogViewState } from "@/features/catalog/catalogStatus";
+import { EmmyProviderSettings } from "@/features/emmy/EmmyProviderSettings";
 import { formatCount, formatSnapshotDate } from "@/features/feed/jobPresentation";
 import { t } from "@/lib/i18n";
 
-function SettingRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return <div className="settings-data-row"><dt className="text-xs font-medium text-[var(--text-secondary)]">{label}</dt><dd className="ui-mono rounded-[var(--radius-sm)] bg-[var(--surface-2)] px-2 py-1 text-right text-[10px] font-semibold text-[var(--text)]">{value}</dd></div>;
+function SettingsGroup({
+  children,
+  icon,
+  id,
+  title,
+  tone,
+}: {
+  children: ReactNode;
+  icon: LucideIcon;
+  id: string;
+  title: string;
+  tone: IconTileTone;
+}) {
+  return (
+    <section aria-labelledby={id} className="settings-group">
+      <h2 className="settings-group-title" id={id}>
+        <IconTile icon={icon} size="sm" tone={tone} />
+        {title}
+      </h2>
+      <div className="settings-card">{children}</div>
+    </section>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="settings-row">
+      <dt className="settings-row-label">{label}</dt>
+      <dd className="settings-row-value">{value}</dd>
+    </div>
+  );
 }
 
 export function SettingsView({ catalog }: { catalog: CatalogViewState }) {
@@ -18,52 +50,44 @@ export function SettingsView({ catalog }: { catalog: CatalogViewState }) {
     <div className="workspace-page settings-page">
       <section className="workspace-frame settings-workspace">
         <header className="workspace-header">
-          <div className="flex items-start gap-3">
-            <span aria-hidden="true" className="workspace-header-glyph"><MonitorCog className="size-4" /></span>
-            <div>
-            <h1 className="workspace-title">{t("settingsTitle")}</h1>
-            <p className="workspace-description">{t("settingsDescription")}</p>
-            </div>
-          </div>
+          <h1 className="workspace-title">{t("settingsTitle")}</h1>
         </header>
 
         <div className="settings-content scroll-region">
-          <section className="workspace-section" aria-labelledby="appearance-heading">
-            <div className="workspace-section-header">
-              <h2 className="workspace-section-title" id="appearance-heading"><MonitorCog aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />{t("appearance")}</h2>
-              <p className="workspace-section-copy">{t("theme")}</p>
-            </div>
-            <ThemeControl />
-          </section>
+          <div className="settings-stack">
+            <SettingsGroup icon={Sparkles} id="emmy-settings-heading" title={t("settingsGroupEmmy")} tone="violet">
+              <EmmyProviderSettings />
+            </SettingsGroup>
 
-          <section className="workspace-section" aria-labelledby="language-heading">
-            <div className="workspace-section-header">
-              <h2 className="workspace-section-title" id="language-heading"><Languages aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />{t("language")}</h2>
-              <p className="workspace-section-copy">{t("languageDescription")}</p>
-            </div>
-            <LanguageControl />
-          </section>
+            <SettingsGroup icon={Palette} id="appearance-heading" title={t("appearance")} tone="blue">
+              <div className="settings-block">
+                <div className="settings-row-text">
+                  <p className="settings-row-label">{t("theme")}</p>
+                  <p className="settings-row-hint">{t("settingsThemeHint")}</p>
+                </div>
+                <ThemeControl />
+              </div>
+              <section aria-labelledby="language-heading" className="settings-row settings-row-control">
+                <div className="settings-row-text">
+                  <h3 className="settings-row-label" id="language-heading">
+                    <Languages aria-hidden="true" className="settings-row-glyph size-4" />
+                    {t("language")}
+                  </h3>
+                  <p className="settings-row-hint">{t("languageDescription")}</p>
+                </div>
+                <LanguageControl />
+              </section>
+            </SettingsGroup>
 
-          <section className="workspace-section" aria-labelledby="catalog-heading">
-            <div className="workspace-section-header">
-              <h2 className="workspace-section-title" id="catalog-heading"><Database aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />{t("localCatalog")}</h2>
-              <p className="workspace-section-copy">{t("catalogSnapshotDate")}: {status?.sourceFrozenAt ? formatSnapshotDate(status.sourceFrozenAt) : unavailable}</p>
-            </div>
-            <dl className="settings-data-list">
-              <SettingRow label={t("jobsIndexed")} value={status?.state === "ready" ? formatCount(status.totalJobs) : unavailable} />
-              <SettingRow label={t("catalogVersion")} value={status?.catalogVersion ?? unavailable} />
-            </dl>
-          </section>
-
-          <section className="workspace-section" aria-labelledby="emmy-settings-heading">
-            <div className="workspace-section-header">
-              <h2 className="workspace-section-title" id="emmy-settings-heading"><Bot aria-hidden="true" className="size-4 text-[var(--text-tertiary)]" />{t("emmyCredentials")}</h2>
-              <p className="workspace-section-copy">
-                {t("emmyCredentialsDescription")}
-              </p>
-            </div>
-            <EmmyProviderSettings />
-          </section>
+            <SettingsGroup icon={Database} id="catalog-heading" title={t("localCatalog")} tone="gold">
+              <p className="settings-card-note">{t("settingsCatalogHint")}</p>
+              <dl>
+                <InfoRow label={t("jobsIndexed")} value={status?.state === "ready" ? formatCount(status.totalJobs) : unavailable} />
+                <InfoRow label={t("catalogSnapshotDate")} value={status?.sourceFrozenAt ? formatSnapshotDate(status.sourceFrozenAt) : unavailable} />
+                <InfoRow label={t("catalogVersion")} value={status?.catalogVersion ?? unavailable} />
+              </dl>
+            </SettingsGroup>
+          </div>
         </div>
       </section>
     </div>

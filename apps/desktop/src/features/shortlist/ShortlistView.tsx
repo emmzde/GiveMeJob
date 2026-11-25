@@ -5,6 +5,7 @@ import { useMemo, useRef } from "react";
 
 import { useAppUiStore } from "@/app/store/appUiStore";
 import { Button } from "@/components/ui/button";
+import { IconTile } from "@/components/ui/icon-tile";
 import {
   formatSalaryRange,
   normalizeJobTitle,
@@ -163,7 +164,7 @@ export function ShortlistView({ catalogVersion }: { catalogVersion: string | nul
       ) : null}
       {!shortlist.isPending && !shortlist.isError && records.length === 0 ? (
         <div className="grid min-h-0 flex-1 place-content-center px-6 text-center">
-          <span aria-hidden="true" className="empty-state-glyph mx-auto"><Bookmark className="size-5" /></span>
+          <IconTile className="mx-auto" icon={Bookmark} size="lg" tone="gold" />
           <h2 className="mt-3 text-sm font-semibold">{t("shortlistEmpty")}</h2>
           <p className="mt-2 max-w-sm text-xs leading-5 text-[var(--text-secondary)]">
             {t("shortlistEmptyHint")}

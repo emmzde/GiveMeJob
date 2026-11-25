@@ -1,6 +1,7 @@
 import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 
+import { BrandMark, BrandWordmark } from "@/components/brand/BrandMark";
 import { t } from "@/lib/i18n";
 
 interface AppErrorBoundaryProps {
@@ -39,8 +40,8 @@ export class AppErrorBoundary extends Component<
             role="alert"
           >
             <header className="flex h-12 items-center gap-2 border-b border-[var(--border)] bg-[var(--panel-frame)] px-4">
-              <span aria-hidden="true" className="brand-mark size-5" />
-              <span className="brand-wordmark"><span>GiveMe</span><span className="brand-wordmark-strong">Job!</span></span>
+              <BrandMark size={28} />
+              <BrandWordmark />
             </header>
             <div className="p-5">
               <p className="ui-mono text-[10px] uppercase tracking-[0.08em] text-[var(--danger)]">Error</p>

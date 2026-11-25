@@ -13,10 +13,10 @@ describe("WelcomeScreen", () => {
   it("switches language before entering the workspace", () => {
     render(<WelcomeScreen />);
 
-    expect(screen.getByRole("heading", { level: 1, name: /Добро пожаловать/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /Работа, которая подходит/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "EN" }));
 
-    expect(screen.getByRole("heading", { level: 1, name: /Welcome/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /Work that fits/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Get started" })).toBeInTheDocument();
     expect(useAppUiStore.getState().language).toBe("en");
   });

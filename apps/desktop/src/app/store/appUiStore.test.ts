@@ -15,7 +15,8 @@ describe("app UI store", () => {
       welcomeCompleted: true,
       selectedId: null,
       panel: null,
-      theme: "system",
+      theme: "dark",
+      filtersVisible: false,
     });
     expect(state).not.toHaveProperty("jobs");
     expect(state).not.toHaveProperty("searchResults");

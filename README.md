@@ -4,7 +4,7 @@
 
 **Search 78,719 jobs entirely offline, get explainable matches, and ask Emmy to work with local career tools while your profile and shortlist stay on your PC.**
 
-![GiveMeJob local search, filters, vacancy list and job details](docs/screenshots/interface.png)
+![GiveMeJob dashboard: local search, sort tabs, vacancy list and Emmy](docs/screenshots/interface.png)
 
 [![Quality](https://github.com/emmzde/GiveMeJob/actions/workflows/quality.yml/badge.svg)](https://github.com/emmzde/GiveMeJob/actions/workflows/quality.yml)
 [![Latest release](https://img.shields.io/github/v/release/emmzde/GiveMeJob?sort=semver)](https://github.com/emmzde/GiveMeJob/releases/latest)
@@ -12,9 +12,11 @@
 [![Tauri 2](https://img.shields.io/badge/Tauri-2-242424?logo=tauri)](https://tauri.app/)
 [![Rust](https://img.shields.io/badge/Rust-stable-242424?logo=rust)](https://www.rust-lang.org/)
 
-| Emmy compares jobs through local tools | Left-click Emmy to pet her |
+| Emmy, the career assistant | Left-click or stroke Emmy to pet her |
 | --- | --- |
-| ![Emmy searches the local catalog and compares two Rust vacancies](docs/screenshots/emmy-ai.png) | ![Emmy reacts with hearts when petted](docs/screenshots/emmy-petting.png) |
+| ![Emmy chat panel next to the vacancy list](docs/screenshots/emmy-ai.png) | ![Emmy closes her eyes and shows hearts when petted](docs/screenshots/emmy-petting.png) |
+| **Explainable match score** | **Settings** |
+| ![Vacancy details with the match gauge and per-factor breakdown](docs/screenshots/job-match.png) | ![Grouped settings: Emmy connection presets, theme and language, catalog info](docs/screenshots/settings.png) |
 
 ## Why
 

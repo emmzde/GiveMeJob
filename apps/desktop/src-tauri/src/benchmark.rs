@@ -202,15 +202,16 @@ impl CliArgs {
         let mut catalog = None;
         let mut config = None;
         let mut output = None;
-        for pair in arguments.chunks_exact(2) {
-            let destination = match pair[0].as_str() {
+        let (pairs, _) = arguments.as_chunks::<2>();
+        for [option, value] in pairs {
+            let destination = match option.as_str() {
                 "--catalog" => &mut catalog,
                 "--config" => &mut config,
                 "--output" => &mut output,
                 option => return Err(format!("unknown benchmark option: {option}")),
             };
-            if destination.replace(PathBuf::from(&pair[1])).is_some() {
-                return Err(format!("duplicate benchmark option: {}", pair[0]));
+            if destination.replace(PathBuf::from(value)).is_some() {
+                return Err(format!("duplicate benchmark option: {option}"));
             }
         }
         Ok(Self {

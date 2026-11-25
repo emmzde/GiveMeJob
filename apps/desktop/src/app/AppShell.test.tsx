@@ -32,6 +32,7 @@ describe("AppShell themes", () => {
   });
 
   it("tracks system color changes and always sets the resolved data-theme", () => {
+    useAppUiStore.getState().setTheme("system");
     let listener: ((event: MediaQueryListEvent) => void) | undefined;
     let systemPrefersDark = false;
     vi.stubGlobal(
@@ -63,7 +64,7 @@ describe("AppShell themes", () => {
     expect(document.documentElement).toHaveAttribute("data-theme", "dark");
   });
 
-  it("applies an explicit session theme from UI state", () => {
+  it("starts in dark mode and applies an explicit light session theme", () => {
     render(
       <QueryClientProvider client={createAppQueryClient()}>
         <AppShell catalog={readyCatalog}>
@@ -72,9 +73,11 @@ describe("AppShell themes", () => {
       </QueryClientProvider>,
     );
 
-    act(() => useAppUiStore.getState().setTheme("dark"));
-
     expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+
+    act(() => useAppUiStore.getState().setTheme("light"));
+
+    expect(document.documentElement).toHaveAttribute("data-theme", "light");
   });
 
   it("uses one Emmy trigger in the titlebar and toggles the chat panel", () => {

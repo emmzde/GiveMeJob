@@ -13,8 +13,8 @@ describe("EmmyMascot", () => {
   it("follows the pointer only when tracking is enabled", () => {
     render(<EmmyMascot state="idle" trackPointer />);
     const mascot = document.querySelector(".emmy-mascot");
-    expect(mascot).toBeInstanceOf(SVGSVGElement);
-    if (!(mascot instanceof SVGSVGElement)) throw new Error("Expected Emmy SVG");
+    expect(mascot).toBeInstanceOf(HTMLElement);
+    if (!(mascot instanceof HTMLElement)) throw new Error("Expected Emmy element");
 
     vi.spyOn(mascot, "getBoundingClientRect").mockReturnValue({
       bottom: 96,
@@ -28,9 +28,9 @@ describe("EmmyMascot", () => {
       y: 0,
     });
 
-    fireEvent.pointerMove(window, { clientX: 192, clientY: 0 });
-    expect(mascot.style.getPropertyValue("--emmy-gaze-x")).toBe("2.50px");
-    expect(mascot.style.getPropertyValue("--emmy-gaze-y")).toBe("-0.75px");
+    fireEvent.pointerMove(window, { clientX: 1_000, clientY: 0 });
+    expect(mascot.style.getPropertyValue("--emmy-gaze-x")).toBe("1.00");
+    expect(mascot.style.getPropertyValue("--emmy-gaze-y")).toBe("-0.25");
   });
 
   it("shows a bliss reaction when petted with the mouse or keyboard", () => {
@@ -48,8 +48,25 @@ describe("EmmyMascot", () => {
 
     fireEvent.keyDown(mascot, { key: "Enter" });
     expect(mascot).toHaveAttribute("data-petted", "true");
+    expect(mascot).toHaveAttribute("data-eyes", "happy");
     fireEvent.pointerLeave(mascot);
     expect(mascot).toHaveAttribute("data-hovered", "false");
+  });
+
+  it("counts a pressed stroke across Emmy as petting", () => {
+    vi.useFakeTimers();
+    render(<EmmyMascot interactive state="idle" />);
+    const mascot = screen.getByRole("button", { name: t("petEmmy") });
+
+    fireEvent.pointerMove(mascot, { buttons: 1, clientX: 0, clientY: 10 });
+    expect(mascot).toHaveAttribute("data-petted", "false");
+    fireEvent.pointerMove(mascot, { buttons: 1, clientX: 60, clientY: 10 });
+    expect(mascot).toHaveAttribute("data-petted", "true");
+  });
+
+  it("sleeps with closed eyes while offline", () => {
+    render(<EmmyMascot state="offline" />);
+    expect(document.querySelector(".emmy-mascot")).toHaveAttribute("data-eyes", "closed");
   });
 
   it("stays decorative when interaction is disabled", () => {
